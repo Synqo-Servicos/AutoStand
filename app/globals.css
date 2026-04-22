@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme inline {
+  --color-primary:   #1E293B;
+  --color-primary-l: #334155;
+  --color-accent:    #DC2626;
+  --color-accent-d:  #B91C1C;
+  --color-bg:        #F8FAFC;
+  --color-fg:        #0F172A;
+  --font-heading:    'Syncopate', sans-serif;
+  --font-body:       'Inter', system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background: #F8FAFC;
+  color: #0F172A;
+}
