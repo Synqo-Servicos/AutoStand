@@ -11,7 +11,7 @@ aliases:
 # Milestone 2 — Self-service + Billing
 
 > [!info] Status: em andamento
-> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1, 3 e 4 concluídas.**
+> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1, 3, 4 e 5 concluídas.**
 
 ## Decisões que orientam o milestone
 
@@ -37,8 +37,8 @@ Ver [[Decisões]] para o racional completo. Em resumo:
 > [!success] Fase 4 — Sistema de layouts/temas ✅ CONCLUÍDA
 > O storefront renderiza a partir de `layout_config`: 3 estilos de hero (`StorefrontHero`), 5 estilos de card (`VehicleCard`), 3 ou 4 cards por fila. `resolveLayoutConfig` preenche os padrões. A concessionária demo recebeu um `layout_config` distinto no seed para servir de vitrine lado a lado.
 
-> [!todo] Fase 5 — Customização self-service
-> `/admin/personalizar` — editor com preview ao vivo; controles liberados/travados por `capabilities` do plano.
+> [!success] Fase 5 — Customização self-service ✅ CONCLUÍDA
+> `/admin/personalizar` — editor (`PersonalizarEditor`) com preview **client-side** ao vivo, reaproveitando `StorefrontHero`/`VehicleCard`. Cores e textos do hero para todos os planos; layout (`layout_config`) liberado/travado por `capabilitiesFor`. `PATCH /api/personalizar` com gating também no servidor.
 
 > [!todo] Fase 6 — Billing no painel + gating
 > `/admin/assinatura` (plano, Stripe Customer Portal); gating por plano; tenant suspenso → página "indisponível".

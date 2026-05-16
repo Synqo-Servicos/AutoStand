@@ -28,3 +28,34 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
 export function resolveLayoutConfig(config: LayoutConfig | null | undefined): LayoutConfig {
   return { ...DEFAULT_LAYOUT_CONFIG, ...(config ?? {}) };
 }
+
+/** Variantes disponíveis — usadas pelos seletores da UI de personalização. */
+export const HERO_STYLES: readonly LayoutConfig["heroStyle"][] = ["gradient", "solid", "image"];
+export const CARD_STYLES: readonly LayoutConfig["cardStyle"][] = [
+  "elevated",
+  "bordered",
+  "minimal",
+  "compact",
+  "overlay",
+];
+
+/**
+ * Valida/saneia uma config crua (ex.: payload do cliente) — campo a campo,
+ * caindo no padrão quando o valor é inválido. Nunca confie no cliente.
+ */
+export function sanitizeLayoutConfig(raw: unknown): LayoutConfig {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  return {
+    heroStyle: HERO_STYLES.includes(r.heroStyle as LayoutConfig["heroStyle"])
+      ? (r.heroStyle as LayoutConfig["heroStyle"])
+      : DEFAULT_LAYOUT_CONFIG.heroStyle,
+    heroImageUrl:
+      typeof r.heroImageUrl === "string" && r.heroImageUrl.trim()
+        ? r.heroImageUrl.trim()
+        : null,
+    cardStyle: CARD_STYLES.includes(r.cardStyle as LayoutConfig["cardStyle"])
+      ? (r.cardStyle as LayoutConfig["cardStyle"])
+      : DEFAULT_LAYOUT_CONFIG.cardStyle,
+    cardsPerRow: r.cardsPerRow === 4 ? 4 : 3,
+  };
+}

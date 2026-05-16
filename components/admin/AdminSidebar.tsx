@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Car, ArrowLeftRight, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, Car, ArrowLeftRight, Users, Palette, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 const NAV = [
-  { href: "/admin/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/admin/veiculos",   label: "Veículos",   icon: Car },
-  { href: "/admin/transacoes", label: "Transações", icon: ArrowLeftRight },
-  { href: "/admin/leads",      label: "Leads",      icon: Users },
+  { href: "/admin/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
+  { href: "/admin/veiculos",     label: "Veículos",     icon: Car },
+  { href: "/admin/transacoes",   label: "Transações",   icon: ArrowLeftRight },
+  { href: "/admin/leads",        label: "Leads",        icon: Users },
+  { href: "/admin/personalizar", label: "Personalizar", icon: Palette },
 ];
 
 export function AdminSidebar({ tenantName }: { tenantName: string }) {
