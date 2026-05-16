@@ -57,6 +57,7 @@ AUTH_SECRET=...                # segredo do NextAuth
 AUTH_URL=http://localhost:3000
 BLOB_READ_WRITE_TOKEN=         # Vercel Blob (upload de fotos)
 PLATFORM_HOSTS=localhost,127.0.0.1,app.localhost
+PLATFORM_DOMAIN=autostand.com.br  # base do subdomínio <slug>.autostand.com.br
 ANTHROPIC_API_KEY=             # análise de IA (Fase 8) — chave da Anthropic
 AI_MODEL=                      # opcional — modelo de IA (padrão: claude-haiku-4-5)
 ```

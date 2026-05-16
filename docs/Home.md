@@ -15,7 +15,7 @@ aliases:
 
 > [!info] Estado atual
 > - [[Milestone 1]] — Multi-tenancy → ✅ **concluído**
-> - [[Milestone 2]] — Self-service + Billing → 🔨 **em andamento** (Fases 1 e 3–8 concluídas; falta pagamento)
+> - [[Milestone 2]] — Self-service + Billing → 🔨 **em andamento** (Fases 1 e 3–9 concluídas; falta só o pagamento)
 > - [[Milestone 3]] — Automação & Distribuição → 🗺️ planejado
 
 ## 🗺️ Mapa da documentação

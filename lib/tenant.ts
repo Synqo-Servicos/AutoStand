@@ -16,6 +16,9 @@ const PLATFORM_HOSTS = (process.env.PLATFORM_HOSTS ?? "localhost,127.0.0.1,app.l
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
+/** Domínio-base da plataforma — `<slug>.PLATFORM_DOMAIN` resolve o tenant por slug. */
+const PLATFORM_DOMAIN = (process.env.PLATFORM_DOMAIN ?? "autostand.com.br").trim().toLowerCase();
+
 export function isPlatformHost(host: string): boolean {
   return PLATFORM_HOSTS.includes(stripPort(host).toLowerCase());
 }
@@ -41,6 +44,13 @@ export async function getCurrentTenant(): Promise<TenantRow | null> {
     return getTenantBySlug(slug);
   }
 
+  // Subdomínio da plataforma: <slug>.autostand.com.br → resolve por slug.
+  if (host.endsWith(`.${PLATFORM_DOMAIN}`)) {
+    const slug = host.slice(0, -(PLATFORM_DOMAIN.length + 1));
+    return slug ? getTenantBySlug(slug) : null;
+  }
+
+  // Qualquer outro host → domínio próprio configurado pelo tenant.
   return getTenantByDomain(host);
 }
 
