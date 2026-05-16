@@ -1,4 +1,4 @@
-import { requireTenant } from "@/lib/tenant";
+import { getAdminTenant } from "@/lib/tenant";
 import { listVehicles } from "@/lib/db";
 import { capabilitiesFor, getPlan } from "@/lib/plans";
 import { PersonalizarEditor } from "@/components/admin/PersonalizarEditor";
@@ -6,7 +6,7 @@ import { PersonalizarEditor } from "@/components/admin/PersonalizarEditor";
 export const dynamic = "force-dynamic";
 
 export default async function PersonalizarPage() {
-  const tenant = await requireTenant();
+  const tenant = await getAdminTenant();
   const vehicles = await listVehicles(tenant.id, { status: "disponivel" });
 
   return (

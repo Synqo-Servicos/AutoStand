@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { listVehicles } from "@/lib/db";
-import { requireTenant } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant";
 import { resolveLayoutConfig } from "@/lib/layout";
 import { StorefrontHero } from "@/components/public/StorefrontHero";
 import { VehicleCard } from "@/components/public/VehicleCard";
@@ -11,7 +11,9 @@ import { VehicleFilters } from "@/components/public/VehicleFilters";
  * Hero, estilo de card e cards por fila vêm de `tenant.layout_config` (Fase 4).
  */
 export async function Storefront({ sp }: { sp: Record<string, string> }) {
-  const tenant = await requireTenant();
+  const tenant = await getCurrentTenant();
+  // Loja não-ativa: o layout do grupo público renderiza a página "indisponível".
+  if (!tenant || tenant.status !== "active") return null;
   const layout = resolveLayoutConfig(tenant.layout_config);
 
   const vehicles = await listVehicles(tenant.id, {

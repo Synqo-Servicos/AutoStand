@@ -50,3 +50,14 @@ export async function requireTenant(): Promise<TenantRow> {
   if (!tenant || tenant.status !== "active") notFound();
   return tenant;
 }
+
+/**
+ * Resolve o tenant para o painel administrativo — aceita **qualquer status**.
+ * Uma loja `suspended` continua usando o /admin (decisão da Fase 6: o lojista
+ * prepara a loja antes de pagar). 404 apenas quando não existe tenant no host.
+ */
+export async function getAdminTenant(): Promise<TenantRow> {
+  const tenant = await getCurrentTenant();
+  if (!tenant) notFound();
+  return tenant;
+}

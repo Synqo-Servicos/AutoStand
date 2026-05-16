@@ -11,7 +11,7 @@ aliases:
 # Milestone 2 — Self-service + Billing
 
 > [!info] Status: em andamento
-> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1, 3, 4 e 5 concluídas.**
+> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1 e 3–6 concluídas; falta a Fase 2 (pagamento) e as 7–9.**
 
 ## Decisões que orientam o milestone
 
@@ -40,8 +40,8 @@ Ver [[Decisões]] para o racional completo. Em resumo:
 > [!success] Fase 5 — Customização self-service ✅ CONCLUÍDA
 > `/admin/personalizar` — editor (`PersonalizarEditor`) com preview **client-side** ao vivo, reaproveitando `StorefrontHero`/`VehicleCard`. Cores e textos do hero para todos os planos; layout (`layout_config`) liberado/travado por `capabilitiesFor`. `PATCH /api/personalizar` com gating também no servidor.
 
-> [!todo] Fase 6 — Billing no painel + gating
-> `/admin/assinatura` (plano, Stripe Customer Portal); gating por plano; tenant suspenso → página "indisponível".
+> [!success] Fase 6 — Billing no painel + gating ✅ CONCLUÍDA
+> Loja não-ativa → página "indisponível" (`LojaIndisponivel`); painel acessível mesmo suspenso (`getAdminTenant`) com banner de pendência; `/admin/assinatura` read-only (plano, status, capabilities). Gestão de pagamento = seam da Fase 2. Ativação pré-Stripe é manual pelo `/superadmin`.
 
 > [!todo] Fase 7 — Links de parceiro
 > `/superadmin/parceiros` — cria parceiro → cupom Stripe → link `?parceiro=`. Relatório de atribuição.

@@ -1,5 +1,5 @@
 import { getDashboardStats } from "@/lib/db";
-import { requireTenant } from "@/lib/tenant";
+import { getAdminTenant } from "@/lib/tenant";
 import { DashboardCard } from "@/components/admin/DashboardCard";
 import { MonthlyTable } from "@/components/admin/MonthlyTable";
 import { formatBRL } from "@/lib/money";
@@ -8,7 +8,7 @@ import { STATUS_LABELS } from "@/lib/constants";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const tenant = await requireTenant();
+  const tenant = await getAdminTenant();
   const stats = await getDashboardStats(tenant.id);
   const disponivel = stats.stockByStatus.find(s => s.status === "disponivel")?.count ?? 0;
   const reservado  = stats.stockByStatus.find(s => s.status === "reservado")?.count ?? 0;

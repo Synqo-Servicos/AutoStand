@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { getRequestHost, isPlatformHost, requireTenant } from "@/lib/tenant";
+import { notFound } from "next/navigation";
+import { getCurrentTenant, getRequestHost, isPlatformHost } from "@/lib/tenant";
 import { PlatformLanding } from "@/components/marketing/PlatformLanding";
 import { Storefront } from "@/components/public/Storefront";
 
@@ -13,7 +14,9 @@ export async function generateMetadata(): Promise<Metadata> {
         "Site, estoque, CRM e financeiro para concessionárias multimarca. Mensalidade fixa, sem comissão por venda.",
     };
   }
-  const tenant = await requireTenant();
+  const tenant = await getCurrentTenant();
+  if (!tenant) notFound();
+  if (tenant.status !== "active") return { title: tenant.name };
   return {
     title: `${tenant.name} — Seminovos${tenant.city ? ` em ${tenant.city}` : ""}`,
     description:

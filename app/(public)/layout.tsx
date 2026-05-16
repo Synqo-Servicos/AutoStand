@@ -1,10 +1,12 @@
+import { notFound } from "next/navigation";
 import { Navbar } from "@/components/public/Navbar";
 import { Footer } from "@/components/public/Footer";
 import { WhatsAppFAB } from "@/components/public/WhatsAppFAB";
 import { TenantProvider } from "@/components/TenantContext";
 import { MarketingHeader } from "@/components/marketing/MarketingHeader";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
-import { getRequestHost, isPlatformHost, requireTenant } from "@/lib/tenant";
+import { LojaIndisponivel } from "@/components/public/LojaIndisponivel";
+import { getCurrentTenant, getRequestHost, isPlatformHost } from "@/lib/tenant";
 
 /**
  * Layout do grupo público — ramifica por host:
@@ -25,8 +27,15 @@ export default async function PublicLayout({ children }: { children: React.React
     );
   }
 
+  const tenant = await getCurrentTenant();
+  if (!tenant) notFound();
+
+  // Fase 6 — loja não-ativa: o site público fica fora do ar.
+  if (tenant.status !== "active") {
+    return <LojaIndisponivel tenant={tenant} />;
+  }
+
   // Storefront da concessionária — tema por tenant via var(--brand-*).
-  const tenant = await requireTenant();
   const themeStyle = {
     "--brand-primary": tenant.primary_color,
     "--brand-primary-d": `color-mix(in srgb, ${tenant.primary_color}, black 28%)`,

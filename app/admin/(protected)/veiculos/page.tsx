@@ -2,14 +2,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { Plus, Pencil } from "lucide-react";
 import { listVehicles } from "@/lib/db";
-import { requireTenant } from "@/lib/tenant";
+import { getAdminTenant } from "@/lib/tenant";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { formatBRL } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
 export default async function VeiculosPage() {
-  const tenant = await requireTenant();
+  const tenant = await getAdminTenant();
   const vehicles = await listVehicles(tenant.id);
 
   return (

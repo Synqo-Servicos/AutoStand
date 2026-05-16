@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getVehicleWithPhotos } from "@/lib/db";
-import { requireTenant } from "@/lib/tenant";
+import { getAdminTenant } from "@/lib/tenant";
 import { VehicleForm } from "@/components/admin/VehicleForm";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export default async function EditVeiculoPage({ params }: Params) {
   const { id } = await params;
-  const tenant = await requireTenant();
+  const tenant = await getAdminTenant();
   const vehicle = await getVehicleWithPhotos(tenant.id, Number(id));
   if (!vehicle) notFound();
 

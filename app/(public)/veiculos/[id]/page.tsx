@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Gauge, Calendar, Fuel, Settings, MapPin } from "lucide-react";
 import { getVehicleWithPhotos } from "@/lib/db";
-import { requireTenant } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant";
 import { PhotoGallery } from "@/components/public/PhotoGallery";
 import { LeadForm } from "@/components/public/LeadForm";
 import { formatBRL } from "@/lib/money";
@@ -14,7 +14,8 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
-  const tenant = await requireTenant();
+  const tenant = await getCurrentTenant();
+  if (!tenant || tenant.status !== "active") return { title: "Loja" };
   const vehicle = await getVehicleWithPhotos(tenant.id, Number(id));
   if (!vehicle) return { title: "Veículo não encontrado" };
   return {
@@ -25,7 +26,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function VehiclePage({ params }: Params) {
   const { id } = await params;
-  const tenant = await requireTenant();
+  const tenant = await getCurrentTenant();
+  // Loja não-ativa: o layout renderiza a página "indisponível".
+  if (!tenant || tenant.status !== "active") return null;
   const vehicle = await getVehicleWithPhotos(tenant.id, Number(id));
   if (!vehicle) notFound();
 

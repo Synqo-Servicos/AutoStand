@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { requireTenant } from "@/lib/tenant";
+import { getAdminTenant } from "@/lib/tenant";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { SubscriptionBanner } from "@/components/admin/SubscriptionBanner";
 
 export default async function AdminProtectedLayout({ children }: { children: React.ReactNode }) {
-  const tenant = await requireTenant();
+  // Aceita loja suspensa — o painel funciona antes do pagamento (Fase 6).
+  const tenant = await getAdminTenant();
   const session = await auth();
   if (!session?.user) redirect("/admin/login");
 
@@ -17,6 +19,7 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
     <div className="flex min-h-screen bg-n50">
       <AdminSidebar tenantName={tenant.name} />
       <div className="flex-1 min-w-0 overflow-auto">
+        {tenant.status !== "active" && <SubscriptionBanner />}
         {children}
       </div>
     </div>
