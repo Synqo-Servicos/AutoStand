@@ -11,7 +11,7 @@ aliases:
 # Milestone 2 — Self-service + Billing
 
 > [!info] Status: em andamento
-> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fase 1 concluída.**
+> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1 e 3 concluídas.**
 
 ## Decisões que orientam o milestone
 
@@ -31,8 +31,8 @@ Ver [[Decisões]] para o racional completo. Em resumo:
 > [!todo] Fase 2 — Stripe: Checkout + Webhooks
 > `lib/stripe.ts`; `POST /api/checkout` (subscription, cobrança imediata da 1ª mensalidade); `POST /api/webhooks/stripe` (provisiona o tenant, sincroniza status, suspende). **Depende de:** conta Stripe + chaves.
 
-> [!todo] Fase 3 — Landing page + cadastro
-> Landing de vendas em `autostand.com.br`; `/assinar` (escolhe plano + subdomínio + dados do admin → tenant `incomplete` → Checkout; lê `?parceiro=`); `/assinar/sucesso`.
+> [!success] Fase 3 — Landing page + cadastro ✅ CONCLUÍDA
+> Landing institucional em `autostand.com.br` + `/assinar` (escolhe plano + subdomínio + dados do admin → cria tenant `incomplete`/`suspended` + admin; lê `?parceiro=`) + `/assinar/sucesso`. `POST /api/assinar`, validação de slug (`lib/slug.ts`). O `(public)` ramifica por host (plataforma vs tenant). O Checkout é um **seam** (`lib/checkout.ts`) que a Fase 2 preenche.
 
 > [!todo] Fase 4 — Sistema de layouts/temas
 > O site público renderiza a partir de `layout_config`: variantes de hero, 4-5 estilos de card, cards por fila. **A fase mais pesada.**

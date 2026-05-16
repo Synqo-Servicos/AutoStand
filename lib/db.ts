@@ -6,13 +6,14 @@ import type {
   LeadRow,
   NewLead,
   NewTenant,
+  PartnerRow,
   TenantRow,
   TransactionRow,
   UserRow,
   VehicleRow,
   VehiclePhotoRow,
 } from "@/lib/schema";
-import { leads, tenants, transactions, users, vehicle_photos, vehicles } from "@/lib/schema";
+import { leads, partners, tenants, transactions, users, vehicle_photos, vehicles } from "@/lib/schema";
 import type { DashboardStats, MonthlyData, StockByStatus } from "@/types/dashboard";
 import type { TransactionInput, TransactionWithVehicle } from "@/types/transaction";
 import type { VehicleInput, VehicleWithPhotos } from "@/types/vehicle";
@@ -518,4 +519,24 @@ export async function listTenantsWithStats(): Promise<TenantWithStats[]> {
     FROM tenants t
     ORDER BY t.created_at DESC
   `)) as TenantWithStats[];
+}
+
+// --- Partners (links de desconto / atribuição) ---
+
+/** Parceiro ativo pelo código de `?parceiro=`. Inativo ou inexistente → null. */
+export async function getPartnerByCode(code: string): Promise<PartnerRow | null> {
+  const [row] = await db
+    .select()
+    .from(partners)
+    .where(and(eq(partners.code, code), eq(partners.status, "active")))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Soma 1 ao contador de cadastros atribuídos a um parceiro. */
+export async function incrementPartnerSignup(id: number): Promise<void> {
+  await db
+    .update(partners)
+    .set({ signup_count: sql`${partners.signup_count} + 1` })
+    .where(eq(partners.id, id));
 }
