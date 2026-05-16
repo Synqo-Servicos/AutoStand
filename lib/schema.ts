@@ -164,6 +164,10 @@ export const partners = sqliteTable("partners", {
   status: text("status").notNull().default("active"),
   /** Quantas concessionárias se cadastraram por este parceiro. */
   signup_count: integer("signup_count").notNull().default(0),
+  /** Limite de cadastros pelo código. Null = ilimitado. */
+  max_uses: integer("max_uses"),
+  /** Validade do código (data ISO YYYY-MM-DD). Null = sem validade. */
+  expires_at: text("expires_at"),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 

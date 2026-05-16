@@ -11,7 +11,7 @@ aliases:
 # Milestone 2 — Self-service + Billing
 
 > [!info] Status: em andamento
-> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1 e 3–6 concluídas; falta a Fase 2 (pagamento) e as 7–9.**
+> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1 e 3–7 concluídas; falta a Fase 2 (pagamento) e as 8–9.**
 
 ## Decisões que orientam o milestone
 
@@ -43,8 +43,8 @@ Ver [[Decisões]] para o racional completo. Em resumo:
 > [!success] Fase 6 — Billing no painel + gating ✅ CONCLUÍDA
 > Loja não-ativa → página "indisponível" (`LojaIndisponivel`); painel acessível mesmo suspenso (`getAdminTenant`) com banner de pendência; `/admin/assinatura` read-only (plano, status, capabilities). Gestão de pagamento = seam da Fase 2. Ativação pré-Stripe é manual pelo `/superadmin`.
 
-> [!todo] Fase 7 — Links de parceiro
-> `/superadmin/parceiros` — cria parceiro → cupom Stripe → link `?parceiro=`. Relatório de atribuição.
+> [!success] Fase 7 — Links de parceiro ✅ CONCLUÍDA
+> `/superadmin/parceiros` — CRUD de parceiros; código reutilizável `?parceiro=` com **limite de usos** e **validade** opcionais (`max_uses`/`expires_at`); link copiável; relatório de atribuição (concessionárias por parceiro). `getPartnerByCode` checa os limites no cadastro. O cupom no provedor de pagamento é seam da Fase 2.
 
 > [!todo] Fase 8 — Análises de IA (Premium)
 > IA analisa a customização e dá recomendações. Tratar como sub-projeto de IA com spec próprio.

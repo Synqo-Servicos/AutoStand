@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, LayoutDashboard, LogOut } from "lucide-react";
+import { Building2, LayoutDashboard, Handshake, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 const NAV = [
   { href: "/superadmin/dashboard", label: "Visão geral", icon: LayoutDashboard },
   { href: "/superadmin/tenants", label: "Concessionárias", icon: Building2 },
+  { href: "/superadmin/parceiros", label: "Parceiros", icon: Handshake },
 ];
 
 export function SuperAdminSidebar() {
