@@ -1,19 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Syncopate:wght@400;700&display=swap');
 @import "tailwindcss";
 
-@theme inline {
-  --color-primary:   #1E293B;
-  --color-primary-l: #334155;
-  --color-accent:    #DC2626;
-  --color-accent-d:  #B91C1C;
-  --color-bg:        #F8FAFC;
-  --color-fg:        #0F172A;
-  --font-heading:    'Syncopate', sans-serif;
-  --font-body:       'Inter', system-ui, sans-serif;
+/* =====================================================================
+   AutoStand — Design tokens da PLATAFORMA
+   Fonte da verdade: Manual da Marca V1.2 · ver docs/Design System.md
+
+   Estes tokens vestem as superfícies AutoStand (Painel da Loja,
+   Console super-admin, autostand.com.br). NÃO confundir com as
+   variáveis --brand-* de tenant: aquelas são whitelabel e setadas em
+   runtime a partir do banco — ver app/(public)/layout.tsx.
+   ===================================================================== */
+@theme {
+  /* — Cores · primária — */
+  --color-ink:         #0B1F33;  /* institucional, texto primário, fundos escuros */
+  --color-ink-800:     #15324D;  /* superfície escura elevada (dark mode)         */
+  --color-signal:      #FF6A1A;  /* ação, CTAs, dados-destaque (máx. 15%)         */
+  --color-signal-dark: #D9521A;  /* hover/pressed do laranja                      */
+  --color-sand:        #F5F1EA;  /* fundo quente, substitui o branco puro         */
+
+  /* — Cores · neutros de interface (nº maior = mais escuro) — */
+  --color-n50:         #F6F7F8;  /* fundo de app       */
+  --color-n100:        #EAEDEF;  /* superfícies, cards */
+  --color-n200:        #D5DADF;  /* bordas, divisores  */
+  --color-n400:        #94A0AB;  /* texto desabilitado */
+  --color-n600:        #6B7A88;  /* texto secundário   */
+  --color-n900:        #0B1F33;  /* texto primário (alias de --color-ink) */
+
+  /* — Cores · sistema (feedback; nunca em peça de marca pura) — */
+  --color-success:     #2BB673;
+  --color-warning:     #F2B600;
+  --color-danger:      #C8102E;
+
+  /* — Tipografia · famílias — */
+  --font-display: 'Sora', system-ui, sans-serif;   /* títulos, números, impacto      */
+  --font-body:    'Inter', system-ui, sans-serif;  /* corpo, UI, microcopy           */
+  --font-heading: 'Syncopate', sans-serif;         /* legado · storefront whitelabel */
+
+  /* — Tipografia · escala (size / line-height / letter-spacing) — */
+  --text-display:                 3.5rem;   /* 56px */
+  --text-display--line-height:     1.05;
+  --text-display--letter-spacing:  -0.03em;
+  --text-h1:                       2.5rem;   /* 40px */
+  --text-h1--line-height:          1.10;
+  --text-h1--letter-spacing:       -0.02em;
+  --text-h2:                       1.875rem; /* 30px */
+  --text-h2--line-height:          1.15;
+  --text-h2--letter-spacing:       -0.01em;
+  --text-h3:                       1.375rem; /* 22px */
+  --text-h3--line-height:          1.25;
+  --text-h3--letter-spacing:       -0.01em;
+  --text-body-l:                   1.125rem; /* 18px */
+  --text-body-l--line-height:      1.55;
+  --text-body:                     1rem;     /* 16px */
+  --text-body--line-height:        1.55;
+  --text-body-s:                   0.875rem; /* 14px */
+  --text-body-s--line-height:      1.50;
+  --text-eyebrow:                  0.75rem;  /* 12px · usar com `uppercase` */
+  --text-eyebrow--line-height:     1.40;
+  --text-eyebrow--letter-spacing:  0.22em;
 }
 
 body {
   font-family: var(--font-body);
-  background: #F8FAFC;
-  color: #0F172A;
+  background: var(--color-n50);
+  color: var(--color-ink);
 }
