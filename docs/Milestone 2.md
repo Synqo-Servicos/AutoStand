@@ -11,7 +11,7 @@ aliases:
 # Milestone 2 — Self-service + Billing
 
 > [!info] Status: em andamento
-> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1 e 3–7 concluídas; falta a Fase 2 (pagamento) e as 8–9.**
+> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1 e 3–8 concluídas; falta a Fase 2 (pagamento) e a 9.**
 
 ## Decisões que orientam o milestone
 
@@ -46,8 +46,8 @@ Ver [[Decisões]] para o racional completo. Em resumo:
 > [!success] Fase 7 — Links de parceiro ✅ CONCLUÍDA
 > `/superadmin/parceiros` — CRUD de parceiros; código reutilizável `?parceiro=` com **limite de usos** e **validade** opcionais (`max_uses`/`expires_at`); link copiável; relatório de atribuição (concessionárias por parceiro). `getPartnerByCode` checa os limites no cadastro. O cupom no provedor de pagamento é seam da Fase 2.
 
-> [!todo] Fase 8 — Análises de IA (Premium)
-> IA analisa a customização e dá recomendações. Tratar como sub-projeto de IA com spec próprio.
+> [!success] Fase 8 — Análises de IA (Premium) ✅ CONCLUÍDA
+> `/admin/analise` — análise sob demanda da vitrine (marca, layout, catálogo) com recomendações estruturadas. Anthropic via Vercel AI SDK (`lib/ai.ts`); gated por Premium no servidor e na UI. Chave em `ANTHROPIC_API_KEY` (modelo via `AI_MODEL`).
 
 > [!todo] Fase 9 — Wildcard domain + deploy
 > Wildcard `*.autostand.com.br` na Vercel; `lib/tenant.ts` resolve `<slug>.autostand.com.br` por slug; envs do Stripe + webhook.

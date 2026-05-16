@@ -14,15 +14,18 @@
     "db:setup": "npm run db:migrate && npm run db:seed"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.78",
     "@libsql/client": "^0.17.3",
     "@vercel/blob": "^0.27.1",
+    "ai": "^6.0.184",
     "bcryptjs": "^2.4.3",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.8.0",
     "next": "16.2.4",
     "next-auth": "^5.0.0-beta.28",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

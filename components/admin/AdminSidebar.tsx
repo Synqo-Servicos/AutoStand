@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Car, ArrowLeftRight, Users, Palette, CreditCard, LogOut } from "lucide-react";
+import { LayoutDashboard, Car, ArrowLeftRight, Users, Palette, Sparkles, CreditCard, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin/transacoes",   label: "Transações",   icon: ArrowLeftRight },
   { href: "/admin/leads",        label: "Leads",        icon: Users },
   { href: "/admin/personalizar", label: "Personalizar", icon: Palette },
+  { href: "/admin/analise",      label: "Análise IA",   icon: Sparkles },
   { href: "/admin/assinatura",   label: "Assinatura",   icon: CreditCard },
 ];
 
