@@ -12,8 +12,8 @@ interface Props {
   vehicle?: VehicleWithPhotos;
 }
 
-const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow";
-const lbl = "block text-xs font-medium text-slate-500 mb-1";
+const inp = "w-full border border-n200 rounded-lg px-3 py-2 text-sm text-ink bg-white focus:outline-none focus:ring-2 focus:ring-signal focus:border-transparent transition-shadow";
+const lbl = "block text-xs font-medium text-n600 mb-1";
 
 export function VehicleForm({ vehicle }: Props) {
   const router = useRouter();
@@ -82,8 +82,8 @@ export function VehicleForm({ vehicle }: Props) {
 
       {/* Fotos — só no modo edição */}
       {isEdit && (
-        <div className="bg-white rounded-xl border border-slate-100 p-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">Fotos</h3>
+        <div className="bg-white rounded-xl border border-n100 p-6">
+          <h3 className="text-sm font-semibold text-ink mb-4">Fotos</h3>
           <PhotoUploader
             vehicleId={vehicle.id}
             initialPhotos={vehicle.photos.map(p => ({
@@ -95,8 +95,8 @@ export function VehicleForm({ vehicle }: Props) {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-100 p-6 space-y-5">
-        <h3 className="text-sm font-semibold text-slate-700">Dados do veículo</h3>
+      <div className="bg-white rounded-xl border border-n100 p-6 space-y-5">
+        <h3 className="text-sm font-semibold text-ink">Dados do veículo</h3>
 
         {/* Brand + Model */}
         <div className="grid grid-cols-2 gap-4">
@@ -182,7 +182,7 @@ export function VehicleForm({ vehicle }: Props) {
               className={inp} placeholder="Ex: 79.900"
             />
             {form.cost_price > 0 && form.sale_price > 0 && (
-              <p className={`text-xs mt-1 ${form.sale_price > form.cost_price ? "text-emerald-600" : "text-red-600"}`}>
+              <p className={`text-xs mt-1 ${form.sale_price > form.cost_price ? "text-ink" : "text-danger"}`}>
                 Margem: {formatBRL(form.sale_price - form.cost_price)}
               </p>
             )}
@@ -211,11 +211,11 @@ export function VehicleForm({ vehicle }: Props) {
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">{error}</div>
+        <div className="rounded-lg bg-danger/10 border border-danger/30 px-4 py-3 text-sm text-danger">{error}</div>
       )}
 
       {!isEdit && (
-        <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 text-sm text-blue-700">
+        <div className="rounded-xl bg-signal/10 border border-signal p-4 text-sm text-signal">
           Após salvar, você poderá adicionar as fotos do veículo.
         </div>
       )}
@@ -225,7 +225,7 @@ export function VehicleForm({ vehicle }: Props) {
           <button
             type="button"
             onClick={handleDelete}
-            className="text-sm text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors cursor-pointer"
+            className="text-sm text-danger hover:text-danger hover:bg-danger/10 px-3 py-2 rounded-lg transition-colors cursor-pointer"
           >
             Excluir veículo
           </button>
@@ -234,14 +234,14 @@ export function VehicleForm({ vehicle }: Props) {
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="px-4 py-2 text-sm border border-n200 rounded-lg text-n600 hover:bg-n50 transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-signal text-ink rounded-lg hover:bg-signal-dark disabled:opacity-50 transition-colors cursor-pointer"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {saving ? "Salvando..." : isEdit ? "Salvar alterações" : "Criar veículo"}

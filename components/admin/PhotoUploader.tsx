@@ -77,17 +77,17 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
         onClick={() => inputRef.current?.click()}
         onDragOver={e => e.preventDefault()}
         onDrop={e => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
-        className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors"
+        className="border-2 border-dashed border-n200 rounded-xl p-8 text-center cursor-pointer hover:border-signal hover:bg-signal/10 transition-colors"
       >
         {uploading ? (
-          <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto mb-2" />
+          <Loader2 className="w-6 h-6 animate-spin text-signal mx-auto mb-2" />
         ) : (
-          <Upload className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+          <Upload className="w-6 h-6 text-n400 mx-auto mb-2" />
         )}
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-n600">
           {uploading ? "Enviando..." : "Arraste fotos ou clique para selecionar"}
         </p>
-        <p className="text-xs text-slate-400 mt-1">JPG, PNG, WebP — múltiplos arquivos</p>
+        <p className="text-xs text-n400 mt-1">JPG, PNG, WebP — múltiplos arquivos</p>
         <input
           ref={inputRef}
           type="file"
@@ -99,16 +99,16 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{error}</p>
+        <p className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-lg px-4 py-2">{error}</p>
       )}
 
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {photos.map(photo => (
-            <div key={photo.url} className="relative group aspect-[4/3] rounded-lg overflow-hidden bg-slate-100">
+            <div key={photo.url} className="relative group aspect-[4/3] rounded-lg overflow-hidden bg-n100">
               <Image src={photo.url} alt="" fill className="object-cover" />
               {photo.isPrimary && (
-                <span className="absolute top-1.5 left-1.5 bg-amber-400 text-white text-xs font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                <span className="absolute top-1.5 left-1.5 bg-warning text-white text-xs font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
                   <Star className="w-2.5 h-2.5 fill-white" /> Principal
                 </span>
               )}
@@ -118,7 +118,7 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
                     type="button"
                     onClick={() => setPrimary(photo.url)}
                     title="Definir como principal"
-                    className="w-8 h-8 bg-amber-400 rounded-lg flex items-center justify-center text-white hover:bg-amber-500 transition-colors"
+                    className="w-8 h-8 bg-warning rounded-lg flex items-center justify-center text-white hover:bg-warning transition-colors"
                   >
                     <Star className="w-4 h-4" />
                   </button>
@@ -127,7 +127,7 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
                   type="button"
                   onClick={() => handleDelete(photo.url)}
                   title="Excluir foto"
-                  className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                  className="w-8 h-8 bg-danger rounded-lg flex items-center justify-center text-white hover:bg-danger transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

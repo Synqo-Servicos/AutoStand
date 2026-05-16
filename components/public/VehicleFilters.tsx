@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { COMMON_BRANDS, FUELS, FUEL_LABELS, TRANSMISSIONS, TRANSMISSION_LABELS } from "@/lib/constants";
 
-const sel = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#DC2626] focus:border-transparent appearance-none";
+const sel = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:border-transparent appearance-none";
 
 export function VehicleFilters() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export function VehicleFilters() {
   return (
     <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm space-y-4">
       <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <SlidersHorizontal className="w-4 h-4 text-[#DC2626]" />
+        <SlidersHorizontal className="w-4 h-4 text-[var(--brand-accent)]" />
         Filtros
       </div>
 
@@ -33,7 +33,7 @@ export function VehicleFilters() {
           defaultValue={sp.get("search") ?? ""}
           onChange={e => update("search", e.target.value)}
           placeholder="Buscar marca ou modelo..."
-          className="w-full pl-9 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#DC2626] focus:border-transparent"
+          className="w-full pl-9 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:border-transparent"
         />
       </div>
 

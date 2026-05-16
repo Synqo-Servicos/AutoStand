@@ -54,7 +54,7 @@ export function PhotoGallery({ photos, alt }: { photos: VehiclePhoto[]; alt: str
                 key={p.url}
                 onClick={() => setCurrent(i)}
                 className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors cursor-pointer ${
-                  i === current ? "border-[#DC2626]" : "border-transparent"
+                  i === current ? "border-[var(--brand-accent)]" : "border-transparent"
                 }`}
               >
                 <Image src={p.url} alt="" fill className="object-cover" />

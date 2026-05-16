@@ -1,10 +1,15 @@
+"use client";
+
 import { MessageCircle } from "lucide-react";
-import { WHATSAPP_NUMBER } from "@/lib/constants";
+import { useTenant } from "@/components/TenantContext";
 
 export function WhatsAppFAB() {
+  const tenant = useTenant();
+  if (!tenant.whatsapp_number) return null;
+
   return (
     <a
-      href={`https://wa.me/${WHATSAPP_NUMBER}`}
+      href={`https://wa.me/${tenant.whatsapp_number}`}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Falar no WhatsApp"

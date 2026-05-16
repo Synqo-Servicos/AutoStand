@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { listVehicles, createVehicle } from "@/lib/db";
-import type { VehicleFilters } from "@/lib/db";
+import { getApiTenantId } from "@/lib/auth";
+import { createVehicle, listVehicles, type VehicleFilters } from "@/lib/db";
+import { getCurrentTenant } from "@/lib/tenant";
 
 export async function GET(req: NextRequest) {
+  const tenant = await getCurrentTenant();
+  if (!tenant) {
+    return NextResponse.json({ error: "Tenant não encontrado" }, { status: 404 });
+  }
   const sp = req.nextUrl.searchParams;
   const filters: VehicleFilters = {
     status:       sp.get("status")       ?? undefined,
@@ -17,15 +21,17 @@ export async function GET(req: NextRequest) {
     price_max:    sp.get("price_max") ? Number(sp.get("price_max")) : undefined,
     search:       sp.get("search")       ?? undefined,
   };
-  return NextResponse.json(listVehicles(filters));
+  return NextResponse.json(await listVehicles(tenant.id, filters));
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const tenantId = await getApiTenantId();
+  if (tenantId === null) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await req.json();
-    const vehicle = createVehicle(body);
+    const vehicle = await createVehicle(tenantId, body);
     return NextResponse.json(vehicle, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });

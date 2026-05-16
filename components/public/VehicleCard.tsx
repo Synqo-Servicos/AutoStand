@@ -2,14 +2,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { Gauge, Calendar, Fuel, Settings } from "lucide-react";
 import { formatBRL } from "@/lib/money";
-import { FUEL_LABELS, TRANSMISSION_LABELS, WHATSAPP_NUMBER } from "@/lib/constants";
+import { FUEL_LABELS, TRANSMISSION_LABELS } from "@/lib/constants";
 import type { Vehicle } from "@/types/vehicle";
 
-export function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
+export function VehicleCard({
+  vehicle,
+  whatsapp,
+}: {
+  vehicle: Vehicle;
+  whatsapp?: string | null;
+}) {
   const msg = encodeURIComponent(
-    `Olá! Tenho interesse no ${vehicle.brand} ${vehicle.model} ${vehicle.year} anunciado no site.`
+    `Olá! Tenho interesse no ${vehicle.brand} ${vehicle.model} ${vehicle.year} anunciado no site.`,
   );
-  const waHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
+  const ctaHref = whatsapp ? `https://wa.me/${whatsapp}?text=${msg}` : `/veiculos/${vehicle.id}`;
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg border border-slate-100 transition-all duration-200 group flex flex-col">
@@ -30,7 +36,7 @@ export function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
           </div>
         )}
         <div className="absolute top-3 left-3">
-          <span className="bg-[#DC2626] text-white text-xs font-bold px-2 py-1 rounded">
+          <span className="bg-[var(--brand-accent)] text-white text-xs font-bold px-2 py-1 rounded">
             {vehicle.year}
           </span>
         </div>
@@ -39,7 +45,7 @@ export function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
       <div className="flex flex-col flex-1 p-4">
         <Link href={`/veiculos/${vehicle.id}`} className="group/link">
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{vehicle.brand}</p>
-          <h3 className="font-semibold text-slate-900 text-base leading-snug group-hover/link:text-[#DC2626] transition-colors mt-0.5">
+          <h3 className="font-semibold text-slate-900 text-base leading-snug group-hover/link:text-[var(--brand-accent)] transition-colors mt-0.5">
             {vehicle.model}
           </h3>
         </Link>
@@ -66,10 +72,9 @@ export function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
         <div className="mt-auto pt-4">
           <p className="text-xl font-bold text-slate-900">{formatBRL(vehicle.sale_price)}</p>
           <a
-            href={waHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 flex items-center justify-center w-full gap-2 bg-[#1E293B] hover:bg-[#334155] text-white text-sm font-medium py-2.5 rounded-xl transition-colors"
+            href={ctaHref}
+            {...(whatsapp ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+            className="mt-2 flex items-center justify-center w-full gap-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-l)] text-white text-sm font-medium py-2.5 rounded-xl transition-colors"
           >
             Tenho interesse
           </a>

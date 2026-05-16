@@ -2,8 +2,8 @@ import { STATUS_BADGE_COLORS, STATUS_DOT_COLORS, STATUS_LABELS, type VehicleStat
 
 export function StatusBadge({ status }: { status: string }) {
   const key = status as VehicleStatus;
-  const badge = STATUS_BADGE_COLORS[key] ?? "bg-slate-100 text-slate-500 ring-1 ring-slate-200";
-  const dot   = STATUS_DOT_COLORS[key]   ?? "bg-slate-400";
+  const badge = STATUS_BADGE_COLORS[key] ?? "bg-n100 text-n600 ring-1 ring-n200";
+  const dot   = STATUS_DOT_COLORS[key]   ?? "bg-n400";
   const label = STATUS_LABELS[key]       ?? status;
   return (
     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${badge}`}>

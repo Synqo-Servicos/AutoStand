@@ -11,8 +11,8 @@ interface Props {
   onSaved: () => void;
 }
 
-const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow";
-const lbl = "block text-xs font-medium text-slate-500 mb-1";
+const inp = "w-full border border-n200 rounded-lg px-3 py-2 text-sm text-ink bg-white focus:outline-none focus:ring-2 focus:ring-signal focus:border-transparent transition-shadow";
+const lbl = "block text-xs font-medium text-n600 mb-1";
 
 export function TransactionSlideOver({ vehicles, onClose, onSaved }: Props) {
   const today = new Date().toISOString().slice(0, 10);
@@ -60,11 +60,11 @@ export function TransactionSlideOver({ vehicles, onClose, onSaved }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 w-full max-w-md bg-white shadow-2xl flex flex-col h-full">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white">
-          <h2 className="text-base font-semibold text-slate-900">Nova transação</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 transition-colors cursor-pointer">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-n100 sticky top-0 bg-white">
+          <h2 className="text-base font-semibold text-ink">Nova transação</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-n400 hover:bg-n100 transition-colors cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -81,8 +81,8 @@ export function TransactionSlideOver({ vehicles, onClose, onSaved }: Props) {
                   onClick={() => setType(t)}
                   className={`py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer ${
                     type === t
-                      ? t === "entrada" ? "bg-blue-600 text-white border-blue-600" : "bg-emerald-600 text-white border-emerald-600"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      ? t === "entrada" ? "bg-signal text-ink border-signal" : "bg-success text-white border-success"
+                      : "border-n200 text-n600 hover:bg-n50"
                   }`}
                 >
                   {t === "entrada" ? "Entrada (compra)" : "Saída (venda)"}
@@ -118,7 +118,7 @@ export function TransactionSlideOver({ vehicles, onClose, onSaved }: Props) {
               className={inp} placeholder="Ex: 79.900"
             />
             {selectedVehicle && (
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-n400 mt-1">
                 Sugerido: {type === "saida"
                   ? `R$ ${centsToDisplay(selectedVehicle.sale_price)} (preço de venda)`
                   : `R$ ${centsToDisplay(selectedVehicle.cost_price)} (preço de custo)`}
@@ -152,17 +152,17 @@ export function TransactionSlideOver({ vehicles, onClose, onSaved }: Props) {
             <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className={`${inp} resize-none`} />
           </div>
 
-          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{error}</p>}
+          {error && <p className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-lg px-4 py-2">{error}</p>}
         </form>
 
-        <div className="sticky bottom-0 bg-white border-t border-slate-100 px-6 py-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
+        <div className="sticky bottom-0 bg-white border-t border-n100 px-6 py-4 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-n200 rounded-lg text-n600 hover:bg-n50 transition-colors cursor-pointer">
             Cancelar
           </button>
           <button
             onClick={handleSubmit as unknown as React.MouseEventHandler}
             disabled={saving}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-signal text-ink rounded-lg hover:bg-signal-dark disabled:opacity-50 transition-colors cursor-pointer"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {saving ? "Salvando..." : "Registrar"}
