@@ -1,12 +1,18 @@
 import { Suspense } from "react";
 import { listVehicles } from "@/lib/db";
 import { requireTenant } from "@/lib/tenant";
+import { resolveLayoutConfig } from "@/lib/layout";
+import { StorefrontHero } from "@/components/public/StorefrontHero";
 import { VehicleCard } from "@/components/public/VehicleCard";
 import { VehicleFilters } from "@/components/public/VehicleFilters";
 
-/** Vitrine pública de uma concessionária (renderizada em hosts de tenant). */
+/**
+ * Vitrine pública de uma concessionária (renderizada em hosts de tenant).
+ * Hero, estilo de card e cards por fila vêm de `tenant.layout_config` (Fase 4).
+ */
 export async function Storefront({ sp }: { sp: Record<string, string> }) {
   const tenant = await requireTenant();
+  const layout = resolveLayoutConfig(tenant.layout_config);
 
   const vehicles = await listVehicles(tenant.id, {
     status:       sp.status       ?? "disponivel",
@@ -22,55 +28,11 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
   });
 
   const waHref = tenant.whatsapp_number ? `https://wa.me/${tenant.whatsapp_number}` : "#contato";
-  const heroTitle = tenant.hero_title ?? "Seminovos com procedência";
-  const heroSubtitle =
-    tenant.hero_subtitle ??
-    "Carros revisados, documentação em dia e financiamento facilitado. Encontre o carro certo para você.";
+  const gridCols = layout.cardsPerRow === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3";
 
   return (
     <>
-      {/* Hero */}
-      <section className="relative bg-[var(--brand-primary)] text-white py-24 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary)] to-[var(--brand-primary-d)]" />
-        <div className="relative max-w-7xl mx-auto">
-          {tenant.city && (
-            <p className="text-[var(--brand-accent)] font-semibold text-sm uppercase tracking-widest mb-3">
-              {tenant.city}
-            </p>
-          )}
-          <h1 className="font-heading text-4xl md:text-6xl font-bold leading-tight mb-6 uppercase">
-            {heroTitle}
-          </h1>
-          <p className="text-slate-300 text-lg max-w-xl mb-8">{heroSubtitle}</p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <a
-              href="#estoque"
-              className="inline-flex items-center justify-center gap-2 bg-[var(--brand-accent)] hover:bg-[var(--brand-accent-d)] text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
-            >
-              Ver estoque
-            </a>
-            {tenant.whatsapp_number && (
-              <a
-                href={waHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
-              >
-                Falar no WhatsApp
-              </a>
-            )}
-          </div>
-
-          <div className="grid grid-cols-3 gap-8 mt-16 pt-8 border-t border-white/10 max-w-md">
-            {[["100%", "Revisados"], ["0", "Surpresas"], ["Direto", "Comigo"]].map(([val, desc]) => (
-              <div key={desc}>
-                <p className="text-2xl font-bold text-white">{val}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <StorefrontHero tenant={tenant} config={layout} />
 
       {/* Estoque */}
       <section id="estoque" className="py-16 px-4 bg-slate-50">
@@ -101,9 +63,14 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols} gap-5`}>
                 {vehicles.map((v) => (
-                  <VehicleCard key={v.id} vehicle={v} whatsapp={tenant.whatsapp_number} />
+                  <VehicleCard
+                    key={v.id}
+                    vehicle={v}
+                    whatsapp={tenant.whatsapp_number}
+                    cardStyle={layout.cardStyle}
+                  />
                 ))}
               </div>
             )}

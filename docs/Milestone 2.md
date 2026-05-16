@@ -11,7 +11,7 @@ aliases:
 # Milestone 2 — Self-service + Billing
 
 > [!info] Status: em andamento
-> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1 e 3 concluídas.**
+> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Stripe**, e tornar a customização do site um recurso escalonado por plano. **Fases 1, 3 e 4 concluídas.**
 
 ## Decisões que orientam o milestone
 
@@ -34,8 +34,8 @@ Ver [[Decisões]] para o racional completo. Em resumo:
 > [!success] Fase 3 — Landing page + cadastro ✅ CONCLUÍDA
 > Landing institucional em `autostand.com.br` + `/assinar` (escolhe plano + subdomínio + dados do admin → cria tenant `incomplete`/`suspended` + admin; lê `?parceiro=`) + `/assinar/sucesso`. `POST /api/assinar`, validação de slug (`lib/slug.ts`). O `(public)` ramifica por host (plataforma vs tenant). O Checkout é um **seam** (`lib/checkout.ts`) que a Fase 2 preenche.
 
-> [!todo] Fase 4 — Sistema de layouts/temas
-> O site público renderiza a partir de `layout_config`: variantes de hero, 4-5 estilos de card, cards por fila. **A fase mais pesada.**
+> [!success] Fase 4 — Sistema de layouts/temas ✅ CONCLUÍDA
+> O storefront renderiza a partir de `layout_config`: 3 estilos de hero (`StorefrontHero`), 5 estilos de card (`VehicleCard`), 3 ou 4 cards por fila. `resolveLayoutConfig` preenche os padrões. A concessionária demo recebeu um `layout_config` distinto no seed para servir de vitrine lado a lado.
 
 > [!todo] Fase 5 — Customização self-service
 > `/admin/personalizar` — editor com preview ao vivo; controles liberados/travados por `capabilities` do plano.

@@ -32,9 +32,12 @@ async function seedDealership(opts: {
   } else {
     console.log(`· Concessionária ${tenant.name} já existe`);
   }
-  // Garante o plano nas concessionárias demo (contas comp — sem assinatura Stripe).
-  if (opts.tenant.plan && tenant.plan !== opts.tenant.plan) {
-    tenant = (await updateTenant(tenant.id, { plan: opts.tenant.plan })) ?? tenant;
+  // Sincroniza plano e layout das concessionárias demo a cada seed.
+  const patch: Partial<NewTenant> = {};
+  if (opts.tenant.plan && tenant.plan !== opts.tenant.plan) patch.plan = opts.tenant.plan;
+  if (opts.tenant.layout_config !== undefined) patch.layout_config = opts.tenant.layout_config;
+  if (Object.keys(patch).length > 0) {
+    tenant = (await updateTenant(tenant.id, patch)) ?? tenant;
   }
   const tenantId = tenant.id;
 
@@ -186,6 +189,14 @@ async function main() {
       hero_title: "O seminovo certo, sem complicação",
       hero_subtitle:
         "Showroom completo, garantia real e financiamento aprovado na hora. Escolha seu próximo carro com total confiança.",
+      // Layout distinto — mostra a Fase 4 lado a lado com o storefront padrão.
+      layout_config: {
+        heroStyle: "image",
+        heroImageUrl:
+          "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1600&q=80",
+        cardStyle: "overlay",
+        cardsPerRow: 4,
+      },
     },
     admin: {
       name: "Equipe AutoPrime",
