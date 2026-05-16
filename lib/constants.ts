@@ -7,16 +7,18 @@ export const STATUS_LABELS: Record<VehicleStatus, string> = {
   vendido: "Vendido",
 };
 
+// Badge: fundo tonal + texto `ink` (legível) + anel/ponto colorido carregando
+// o sinal semântico. `success`/`warning` são claros demais para servir de texto.
 export const STATUS_BADGE_COLORS: Record<VehicleStatus, string> = {
-  disponivel: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-  reservado: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  vendido: "bg-slate-100 text-slate-500 ring-1 ring-slate-200",
+  disponivel: "bg-success/15 text-ink ring-1 ring-success/40",
+  reservado: "bg-warning/15 text-ink ring-1 ring-warning/40",
+  vendido: "bg-n100 text-n600 ring-1 ring-n200",
 };
 
 export const STATUS_DOT_COLORS: Record<VehicleStatus, string> = {
-  disponivel: "bg-emerald-500",
-  reservado: "bg-amber-500",
-  vendido: "bg-slate-400",
+  disponivel: "bg-success",
+  reservado: "bg-warning",
+  vendido: "bg-n400",
 };
 
 export const FUELS = ["flex", "gasolina", "etanol", "diesel", "eletrico", "hibrido"] as const;
@@ -67,7 +69,4 @@ export const TRANSACTION_LABELS: Record<TransactionType, string> = {
   saida: "Saída",
 };
 
-export const WHATSAPP_NUMBER = "5582998287879";
-export const DEALERSHIP_NAME = "Pedro Ivo Veículos";
-export const DEALERSHIP_INSTAGRAM = "https://www.instagram.com/pedroivo_veiculos/";
-export const BUSINESS_HOURS = "Seg–Sex: 8h às 18h";
+// Branding (nome, contatos, cores) vem do tenant — ver tabela `tenants` em lib/schema.ts.

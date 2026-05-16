@@ -1,0 +1,204 @@
+import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
+import {
+  client,
+  createTenant,
+  createUser,
+  db,
+  getTenantBySlug,
+  getUserByEmail,
+  updateTenant,
+} from "@/lib/db";
+import { MOCK_TRANSACTIONS, MOCK_VEHICLES } from "@/lib/mock-data";
+import type { NewTenant } from "@/lib/schema";
+import { leads, transactions, vehicle_photos, vehicles } from "@/lib/schema";
+
+/**
+ * Seeds the whitelabel platform:
+ *  - one super_admin (platform owner)
+ *  - the "Pedro Ivo Veículos" tenant (a real client)
+ *  - the "AutoPrime Seminovos" tenant (a demo/showcase used in sales pitches)
+ * Each dealership gets its own admin user, inventory, transactions and leads.
+ */
+
+async function seedDealership(opts: {
+  tenant: NewTenant;
+  admin: { name: string; email: string; password: string };
+}) {
+  let tenant = await getTenantBySlug(opts.tenant.slug);
+  if (!tenant) {
+    tenant = await createTenant(opts.tenant);
+    console.log(`✓ Concessionária: ${tenant.name} (${tenant.slug}.localhost:3000)`);
+  } else {
+    console.log(`· Concessionária ${tenant.name} já existe`);
+  }
+  // Garante o plano nas concessionárias demo (contas comp — sem assinatura Stripe).
+  if (opts.tenant.plan && tenant.plan !== opts.tenant.plan) {
+    tenant = (await updateTenant(tenant.id, { plan: opts.tenant.plan })) ?? tenant;
+  }
+  const tenantId = tenant.id;
+
+  if (!(await getUserByEmail(opts.admin.email))) {
+    await createUser({
+      email: opts.admin.email,
+      password: await bcrypt.hash(opts.admin.password, 12),
+      name: opts.admin.name,
+      role: "tenant_admin",
+      tenant_id: tenantId,
+    });
+    console.log(`  ✓ Admin: ${opts.admin.email}`);
+  }
+
+  // Fresh inventory (re-seedable).
+  await db.delete(transactions).where(eq(transactions.tenant_id, tenantId));
+  await db.delete(leads).where(eq(leads.tenant_id, tenantId));
+  await db.delete(vehicle_photos).where(eq(vehicle_photos.tenant_id, tenantId));
+  await db.delete(vehicles).where(eq(vehicles.tenant_id, tenantId));
+
+  const vehicleIds: number[] = [];
+  for (const v of MOCK_VEHICLES) {
+    const [row] = await db
+      .insert(vehicles)
+      .values({
+        tenant_id: tenantId,
+        brand: v.brand,
+        model: v.model,
+        year: v.year,
+        km: v.km,
+        cost_price: v.cost_price,
+        sale_price: v.sale_price,
+        transmission: v.transmission,
+        fuel: v.fuel,
+        color: v.color,
+        doors: v.doors,
+        description: v.description,
+        status: v.status,
+        primary_photo_url: v.photos[0] ?? null,
+      })
+      .returning();
+    vehicleIds.push(row.id);
+    for (let i = 0; i < v.photos.length; i++) {
+      await db.insert(vehicle_photos).values({
+        tenant_id: tenantId,
+        vehicle_id: row.id,
+        url: v.photos[i],
+        order_idx: i,
+      });
+    }
+  }
+
+  for (const tx of MOCK_TRANSACTIONS) {
+    await db.insert(transactions).values({
+      tenant_id: tenantId,
+      vehicle_id: vehicleIds[tx.vehicle_idx],
+      type: tx.type,
+      amount: tx.amount,
+      date: tx.date,
+      buyer_name: tx.buyer_name ?? null,
+      buyer_phone: tx.buyer_phone ?? null,
+      notes: tx.notes ?? null,
+    });
+  }
+
+  await db.insert(leads).values([
+    {
+      tenant_id: tenantId,
+      name: "Carla Mendes",
+      phone: "82991112233",
+      email: "carla.mendes@email.com",
+      vehicle_id: vehicleIds[0],
+      message: "Tenho interesse neste carro, ele aceita troca?",
+      source: "site",
+      status: "novo",
+    },
+    {
+      tenant_id: tenantId,
+      name: "João Pereira",
+      phone: "82994445566",
+      vehicle_id: vehicleIds[2],
+      message: "Qual o valor da entrada?",
+      source: "site",
+      status: "contatado",
+    },
+  ]);
+
+  console.log(
+    `  ✓ ${MOCK_VEHICLES.length} veículos · ${MOCK_TRANSACTIONS.length} transações · 2 leads`,
+  );
+}
+
+async function main() {
+  // --- Super admin (platform owner) ---
+  const superEmail = (process.env.SUPER_ADMIN_EMAIL ?? "super@plataforma.com").trim();
+  const superPass = (process.env.SUPER_ADMIN_PASSWORD ?? "super123").trim();
+  if (!(await getUserByEmail(superEmail))) {
+    await createUser({
+      email: superEmail,
+      password: await bcrypt.hash(superPass, 12),
+      name: "Super Admin",
+      role: "super_admin",
+      tenant_id: null,
+    });
+    console.log(`✓ Super admin: ${superEmail}`);
+  } else {
+    console.log(`· Super admin ${superEmail} já existe`);
+  }
+
+  // --- Real client: Pedro Ivo Veículos ---
+  await seedDealership({
+    tenant: {
+      slug: "pedro-ivo",
+      plan: "premium",
+      name: "Pedro Ivo Veículos",
+      custom_domain: "pedroivoveiculos.com.br",
+      whatsapp_number: "5582998287879",
+      instagram_url: "https://www.instagram.com/pedroivo_veiculos/",
+      business_hours: "Seg–Sex: 8h às 18h",
+      city: "Maceió, AL",
+      primary_color: "#1E293B",
+      accent_color: "#DC2626",
+      accent_dark_color: "#B91C1C",
+      hero_title: "Seminovos com procedência",
+      hero_subtitle:
+        "Carros revisados, documentação em dia e financiamento facilitado. Encontre o carro certo para você.",
+    },
+    admin: {
+      name: "Pedro Ivo",
+      email: (process.env.ADMIN_EMAIL ?? "admin@pedro-ivo.com.br").trim(),
+      password: (process.env.ADMIN_PASSWORD ?? "pedro123").trim(),
+    },
+  });
+
+  // --- Showcase / demo dealership (used to present the platform to prospects) ---
+  await seedDealership({
+    tenant: {
+      slug: "demo",
+      plan: "premium",
+      name: "AutoPrime Seminovos",
+      custom_domain: "autoprime.exemplo.com.br",
+      whatsapp_number: "5511999990000",
+      instagram_url: "https://instagram.com/autoprime",
+      business_hours: "Seg–Sáb: 9h às 19h",
+      city: "São Paulo, SP",
+      primary_color: "#0C4A6E",
+      accent_color: "#F97316",
+      accent_dark_color: "#EA580C",
+      hero_title: "O seminovo certo, sem complicação",
+      hero_subtitle:
+        "Showroom completo, garantia real e financiamento aprovado na hora. Escolha seu próximo carro com total confiança.",
+    },
+    admin: {
+      name: "Equipe AutoPrime",
+      email: "admin@autoprime.com",
+      password: "demo123",
+    },
+  });
+
+  console.log("\n✅ Seed concluído!");
+  client.close();
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -12,11 +12,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-        const user = getUserByEmail(credentials.email as string);
+        const user = await getUserByEmail(credentials.email as string);
         if (!user) return null;
         const valid = await bcrypt.compare(credentials.password as string, user.password);
         if (!valid) return null;
-        return { id: String(user.id), email: user.email, name: user.name };
+        return {
+          id: String(user.id),
+          email: user.email,
+          name: user.name,
+          tenantId: user.tenant_id ?? null,
+          role: user.role,
+        };
       },
     }),
   ],
@@ -26,12 +32,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   callbacks: {
     jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user) {
+        token.id = user.id;
+        token.tenantId = user.tenantId ?? null;
+        token.role = user.role;
+      }
       return token;
     },
     session({ session, token }) {
-      if (session.user) session.user.id = token.id as string;
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.tenantId = (token.tenantId as number | null) ?? null;
+        session.user.role = (token.role as string) ?? "tenant_admin";
+      }
       return session;
     },
   },
 });
+
+/**
+ * Resolves the acting tenant for an authenticated API route.
+ * Returns the tenant id, or null when there is no valid tenant session.
+ */
+export async function getApiTenantId(): Promise<number | null> {
+  const session = await auth();
+  return session?.user?.tenantId ?? null;
+}
+
+/** True when the current session belongs to a platform super-admin. */
+export async function isSuperAdmin(): Promise<boolean> {
+  const session = await auth();
+  return session?.user?.role === "super_admin";
+}
