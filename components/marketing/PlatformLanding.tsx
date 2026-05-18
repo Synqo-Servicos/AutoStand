@@ -117,6 +117,29 @@ export function PlatformLanding({ partnerCode }: { partnerCode?: string }) {
           </Link>
         </div>
       </section>
+
+      {/* Marketplace — entrada para o consumidor final */}
+      <section className="bg-sand px-5 py-12">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left">
+          <div>
+            <p className="text-eyebrow font-semibold uppercase text-signal">
+              Para quem vai comprar
+            </p>
+            <h2 className="mt-1 font-display text-h3 font-semibold text-ink">
+              Procurando um seminovo?
+            </h2>
+            <p className="mt-1 text-body-s text-n600">
+              Explore os carros das concessionárias da rede AutoStand.
+            </p>
+          </div>
+          <Link
+            href="/comprar"
+            className="shrink-0 rounded-lg bg-ink px-6 py-3 font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Explorar marketplace
+          </Link>
+        </div>
+      </section>
     </>
   );
 }

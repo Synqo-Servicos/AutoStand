@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { requirePlatformHost } from "@/lib/tenant";
 import {
   searchMarketplaceVehicles,
   marketplaceFilterOptions,
+  MARKETPLACE_PAGE_SIZE,
   type MarketplaceFilters,
+  type MarketplaceSort,
 } from "@/lib/marketplace";
 import { MarketplaceVehicleCard } from "@/components/marketplace/MarketplaceVehicleCard";
 import { MarketplaceFilters as Filters } from "@/components/marketplace/MarketplaceFilters";
+import { MarketplaceSort as SortControl } from "@/components/marketplace/MarketplaceSort";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +20,21 @@ export const metadata: Metadata = {
   description: "Seminovos de concessionárias multimarca selecionadas. Busque por marca, preço, cidade e mais.",
 };
 
+const SORTS: MarketplaceSort[] = ["recent", "price_asc", "price_desc", "km_asc"];
+
 function num(value: string | undefined): number | undefined {
   if (!value) return undefined;
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/** URL da busca para uma dada página, preservando filtros e ordenação. */
+function pageHref(sp: Record<string, string>, page: number): string {
+  const params = new URLSearchParams(sp);
+  if (page <= 1) params.delete("page");
+  else params.set("page", String(page));
+  const qs = params.toString();
+  return qs ? `/comprar?${qs}` : "/comprar";
 }
 
 export default async function ComprarPage({
@@ -30,6 +46,11 @@ export default async function ComprarPage({
   const sp = await searchParams;
 
   const reais = num(sp.price_max);
+  const sort = SORTS.includes(sp.sort as MarketplaceSort)
+    ? (sp.sort as MarketplaceSort)
+    : "recent";
+  const page = Math.max(1, num(sp.page) ?? 1);
+
   const filters: MarketplaceFilters = {
     search:       sp.search?.trim() || undefined,
     brand:        sp.brand?.trim() || undefined,
@@ -39,20 +60,26 @@ export default async function ComprarPage({
     body_type:    sp.body_type?.trim() || undefined,
     year_min:     num(sp.year_min),
     price_max:    reais ? reais * 100 : undefined,
+    sort,
+    page,
   };
 
-  const [vehicles, options] = await Promise.all([
+  const [{ vehicles, total }, options] = await Promise.all([
     searchMarketplaceVehicles(filters),
     marketplaceFilterOptions(),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / MARKETPLACE_PAGE_SIZE));
+  const from = total === 0 ? 0 : (page - 1) * MARKETPLACE_PAGE_SIZE + 1;
+  const to = (page - 1) * MARKETPLACE_PAGE_SIZE + vehicles.length;
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-ink">Comprar um carro</h1>
         <p className="mt-1 text-sm text-n600">
-          {vehicles.length}{" "}
-          {vehicles.length === 1 ? "veículo disponível" : "veículos disponíveis"} em
+          {total}{" "}
+          {total === 1 ? "veículo disponível" : "veículos disponíveis"} em
           concessionárias da rede AutoStand.
         </p>
       </header>
@@ -71,11 +98,56 @@ export default async function ComprarPage({
               </p>
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {vehicles.map((v) => (
-                <MarketplaceVehicleCard key={v.id} vehicle={v} />
-              ))}
-            </div>
+            <>
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <p className="text-xs text-n500">
+                  Mostrando {from}–{to} de {total}
+                </p>
+                <SortControl current={sp} />
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {vehicles.map((v) => (
+                  <MarketplaceVehicleCard key={v.id} vehicle={v} />
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <nav className="mt-8 flex items-center justify-center gap-2">
+                  {page > 1 ? (
+                    <Link
+                      href={pageHref(sp, page - 1)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-n200 bg-white px-3 py-2 text-sm text-ink hover:bg-n50 transition-colors"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Link>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-lg border border-n100 px-3 py-2 text-sm text-n300">
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </span>
+                  )}
+                  <span className="px-3 text-sm text-n600">
+                    Página {page} de {totalPages}
+                  </span>
+                  {page < totalPages ? (
+                    <Link
+                      href={pageHref(sp, page + 1)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-n200 bg-white px-3 py-2 text-sm text-ink hover:bg-n50 transition-colors"
+                    >
+                      Próxima
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-lg border border-n100 px-3 py-2 text-sm text-n300">
+                      Próxima
+                      <ChevronRight className="h-4 w-4" />
+                    </span>
+                  )}
+                </nav>
+              )}
+            </>
           )}
         </div>
       </div>

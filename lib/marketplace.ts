@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tenants, vehicles, vehicle_photos } from "@/lib/schema";
 
@@ -60,6 +60,8 @@ export interface MarketplaceLojaProfile extends MarketplaceLoja {
   vehicles: MarketplaceVehicle[];
 }
 
+export type MarketplaceSort = "recent" | "price_asc" | "price_desc" | "km_asc";
+
 export interface MarketplaceFilters {
   brand?: string;
   fuel?: string;
@@ -71,7 +73,19 @@ export interface MarketplaceFilters {
   price_max?: number;
   km_max?: number;
   search?: string;
+  sort?: MarketplaceSort;
+  /** Página 1-based. */
+  page?: number;
 }
+
+export interface MarketplaceSearchResult {
+  vehicles: MarketplaceVehicle[];
+  /** Total de veículos que casam com os filtros (antes da paginação). */
+  total: number;
+}
+
+/** Veículos por página na busca do marketplace. */
+export const MARKETPLACE_PAGE_SIZE = 24;
 
 // Colunas públicas — nunca incluir cost_price, fipe_code ou tenant_id aqui.
 const VEHICLE_PUBLIC = {
@@ -135,10 +149,20 @@ function eligible() {
   ];
 }
 
+/** Coluna de ordenação. `recent` é neutro — não favorece loja alguma. */
+function orderFor(sort: MarketplaceSort | undefined) {
+  switch (sort) {
+    case "price_asc": return asc(vehicles.sale_price);
+    case "price_desc": return desc(vehicles.sale_price);
+    case "km_asc": return asc(vehicles.km);
+    default: return desc(vehicles.updated_at);
+  }
+}
+
 /** Busca veículos em todas as lojas que aderiram ao marketplace. */
 export async function searchMarketplaceVehicles(
   filters: MarketplaceFilters = {},
-): Promise<MarketplaceVehicle[]> {
+): Promise<MarketplaceSearchResult> {
   const conditions = eligible();
 
   if (filters.brand) conditions.push(eq(vehicles.brand, filters.brand));
@@ -156,16 +180,25 @@ export async function searchMarketplaceVehicles(
       sql`(${vehicles.brand} LIKE ${q} OR ${vehicles.model} LIKE ${q} OR ${vehicles.version} LIKE ${q})`,
     );
   }
+  const where = and(...conditions);
 
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(vehicles)
+    .innerJoin(tenants, eq(vehicles.tenant_id, tenants.id))
+    .where(where);
+
+  const page = Math.max(1, filters.page ?? 1);
   const rows = await db
     .select({ ...VEHICLE_PUBLIC, ...LOJA_PUBLIC })
     .from(vehicles)
     .innerJoin(tenants, eq(vehicles.tenant_id, tenants.id))
-    .where(and(...conditions))
-    // Ordenação por recência da atualização — neutra, não favorece loja alguma.
-    .orderBy(desc(vehicles.updated_at));
+    .where(where)
+    .orderBy(orderFor(filters.sort))
+    .limit(MARKETPLACE_PAGE_SIZE)
+    .offset((page - 1) * MARKETPLACE_PAGE_SIZE);
 
-  return rows.map((r) => toMarketplaceVehicle(r as JoinedRow));
+  return { vehicles: rows.map((r) => toMarketplaceVehicle(r as JoinedRow)), total };
 }
 
 /** Um veículo do marketplace, com fotos. Null se não for elegível. */

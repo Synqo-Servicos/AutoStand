@@ -13,6 +13,12 @@ export function MarketingFooter() {
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-body-s">
+          <Link href="/comprar" className="text-n400 hover:text-white">
+            Comprar carros
+          </Link>
+          <Link href="/lojas" className="text-n400 hover:text-white">
+            Concessionárias
+          </Link>
           <a href="/#como-funciona" className="text-n400 hover:text-white">
             Como funciona
           </a>
