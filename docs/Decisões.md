@@ -36,6 +36,9 @@ aliases:
 > [!success] Links de parceiro: desconto + atribuição
 > Cada parceiro tem um cupom Stripe e um link `?parceiro=`. Registra-se de qual parceiro veio cada concessionária (relatório de atribuição).
 
+> [!success] Inteligência de demanda — eventos anônimos, Premium
+> O [[Milestone 5]] registra o comportamento de quem compra (buscas e visualizações) para virar dica de estoque. Decidiu-se registrar **só o comportamento** — filtros usados, atributos dos veículos vistos — **nunca dado pessoal**: não é audit-log de segurança, é analítico. O agregado do marketplace (a demanda da rede toda) é o dado que só a plataforma vê — daí ser recurso do **Premium**. Captura no servidor, fire-and-forget.
+
 > [!success] Marketplace é opt-in, em todos os planos
 > O marketplace AutoStand ([[Milestone 4]]) coloca lojas lado a lado — tensão com o whitelabel. Resolvido por **adesão opt-in**: a loja escolhe aparecer e o vê como canal de leads, não como vitrine do concorrente. Liberado em **todos os planos** — no início, densidade de inventário importa mais que usá-lo como gancho de upgrade. As páginas do marketplace **afunilam para o site whitelabel** da loja, para não canibalizá-lo. Sem ranking de reputação no v1 (faltam dados); marca AutoStand mantida.
 

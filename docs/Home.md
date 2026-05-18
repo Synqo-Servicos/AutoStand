@@ -18,6 +18,7 @@ aliases:
 > - [[Milestone 2]] — Self-service + Billing → 🔨 **em andamento** (Fases 1 e 3–9 concluídas; falta só o pagamento)
 > - [[Milestone 4]] — Distribuição & Marketplace → 🔨 **em andamento** (Fases 1–3 concluídas)
 > - [[Milestone 3]] — Automação → 🔨 **em andamento** (funil de leads + WhatsApp assistido concluídos)
+> - [[Milestone 5]] — Inteligência de Demanda → 🔨 **em andamento** (Fases 1–3 concluídas)
 
 ## 🗺️ Mapa da documentação
 
@@ -36,7 +37,8 @@ graph TD
     RM --> M2[Milestone 2]
     RM --> M3[Milestone 3]
     RM --> M4[Milestone 4]
-    class VG,AR,PP,RM,DEC,DEV,GL,MD,DS,M1,M2,M3,M4 internal-link;
+    RM --> M5[Milestone 5]
+    class VG,AR,PP,RM,DEC,DEV,GL,MD,DS,M1,M2,M3,M4,M5 internal-link;
 ```
 
 ## 🧭 Produto
@@ -52,7 +54,7 @@ graph TD
 
 ## 🛣️ Planejamento
 - [[Roadmap]] — visão geral dos milestones.
-- [[Milestone 1]] · [[Milestone 2]] · [[Milestone 3]] · [[Milestone 4]]
+- [[Milestone 1]] · [[Milestone 2]] · [[Milestone 3]] · [[Milestone 4]] · [[Milestone 5]]
 
 ## 📖 Referência
 - [[Glossário]] — termos do projeto.

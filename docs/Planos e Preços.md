@@ -26,6 +26,7 @@ aliases:
 | Customização de layout (hero, cards, seções) | — | ✓ | ✓ |
 | Gerador de post para Instagram | — | ✓ | ✓ |
 | Análises de IA | — | — | ✓ |
+| Inteligência de demanda | — | — | ✓ |
 
 ## Capabilities
 
@@ -38,6 +39,7 @@ aliases:
 | `customDomain` | — | ✓ | ✓ |
 | `instagramPost` | — | ✓ | ✓ |
 | `aiAnalysis` | — | — | ✓ |
+| `marketInsights` | — | — | ✓ |
 
 Helpers: `getPlan(slug)`, `capabilitiesFor(slug)`. Tenant sem `plan` definido cai nas capabilities do Básico.
 
@@ -49,10 +51,10 @@ Helpers: `getPlan(slug)`, `capabilitiesFor(slug)`. Tenant sem `plan` definido ca
 - A **leitura de cada plano:**
 	- **Básico** — "estar online de forma decente": site completo, com a cor da marca, no subdomínio.
 	- **Pro** — "parecer uma marca de verdade": domínio próprio, site customizado e gerador de post para Instagram.
-	- **Premium** — "o extra inteligente": IA hoje; ganha peso com a automação do [[Milestone 3]].
+	- **Premium** — "o extra inteligente": análise de IA da vitrine e **inteligência de demanda** — saber o que o mercado procura. Ganha mais peso com a automação do [[Milestone 3]].
 
-> [!warning] Premium hoje é o tier mais fraco
-> Apoia-se só na IA. Ganha justificativa real com o [[Milestone 3]] (automação WhatsApp + sindicância). Provável gancho para um 4º tier no futuro.
+> [!note] Premium ganhou peso
+> Antes se apoiava só na análise de IA. A **inteligência de demanda** ([[Milestone 5]]) deu ao tier um dado que nenhum concorrente entrega — o que o mercado procura. A automação do [[Milestone 3]] reforça ainda mais. Continua provável o gancho para um 4º tier no futuro.
 
 ## Cobrança
 

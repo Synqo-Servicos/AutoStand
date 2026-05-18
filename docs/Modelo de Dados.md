@@ -11,7 +11,7 @@ aliases:
 # Modelo de Dados
 
 > [!abstract] Resumo
-> 7 tabelas, definidas em `lib/schema.ts` (Drizzle). Migrations em `drizzle/`. Todas as tabelas de domínio carregam `tenant_id` — ver [[Arquitetura#Multi-tenancy]].
+> 8 tabelas, definidas em `lib/schema.ts` (Drizzle). Migrations em `drizzle/`. As tabelas de domínio carregam `tenant_id` — ver [[Arquitetura#Multi-tenancy]]; a exceção é `demand_events`, cujo `tenant_id` é opcional (null = evento do marketplace).
 
 > [!info] Convenções
 > - Nomes de propriedades em **snake_case** (casam com as colunas).
@@ -29,6 +29,7 @@ erDiagram
     vehicles ||--o{ transactions : gera
     vehicles ||--o{ leads : interessa
     partners ||--o{ tenants : indica
+    tenants ||--o{ demand_events : "origina (opcional)"
 ```
 
 ## `tenants` — concessionárias clientes
@@ -75,6 +76,15 @@ O `/admin/leads` exibe os leads como **funil** por `status` — ver [[Milestone 
 ## `partners` — links de desconto / atribuição
 
 `name`, `code` (do link `?parceiro=`), `stripe_coupon_id`, `discount_type` (`percent` | `amount`), `discount_value`, `status`, `signup_count`. Criada na Fase 1 do [[Milestone 2]]; consumida na Fase 7.
+
+## `demand_events` — inteligência de demanda
+
+Eventos **anônimos** de comportamento de quem compra — base do [[Milestone 5]]. Sem dado pessoal.
+
+`tenant_id` (null = busca no marketplace; preenchido = site da loja), `event_type` (`search` | `view`), `brand`, `model`, `body_type`, `fuel`, `transmission`, `city`, `price` (centavos — busca: teto filtrado; visualização: preço do veículo), `year_min`, `search_term`, `vehicle_id`.
+
+> [!note] Sem `tenant_id` obrigatório
+> Diferente das outras tabelas, `demand_events` não é dado privado de tenant — é telemetria agregada. `lib/demand.ts` registra (fire-and-forget) e agrega em snapshots.
 
 ## Camada de acesso
 
