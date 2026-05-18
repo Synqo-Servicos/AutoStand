@@ -10,6 +10,12 @@ export function MarketingHeader() {
           <Logo tone="dark" />
         </Link>
         <nav className="flex items-center gap-1 sm:gap-5">
+          <Link
+            href="/comprar"
+            className="px-2 text-body-s font-medium text-n600 hover:text-ink"
+          >
+            Comprar carros
+          </Link>
           <a
             href="/#como-funciona"
             className="hidden px-2 text-body-s font-medium text-n600 hover:text-ink sm:inline"

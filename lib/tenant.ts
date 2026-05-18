@@ -71,3 +71,12 @@ export async function getAdminTenant(): Promise<TenantRow> {
   if (!tenant) notFound();
   return tenant;
 }
+
+/**
+ * 404 quando a requisição NÃO está no host da plataforma. As páginas do
+ * marketplace só existem em autostand.com.br — não na vitrine de um tenant.
+ */
+export async function requirePlatformHost(): Promise<void> {
+  const host = await getRequestHost();
+  if (!isPlatformHost(host)) notFound();
+}
