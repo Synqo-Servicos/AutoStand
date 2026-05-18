@@ -1,4 +1,4 @@
-import { generateObject } from "ai";
+import { generateObject, generateText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 
@@ -69,4 +69,49 @@ export async function analisarVitrine(snapshot: VitrineSnapshot): Promise<Analis
       JSON.stringify(snapshot, null, 2),
   });
   return object;
+}
+
+/** Veículo + loja — a entrada da legenda do post de Instagram. */
+export interface PostInput {
+  veiculo: {
+    marca: string;
+    modelo: string;
+    versao: string | null;
+    ano: string;
+    km: number;
+    cambio: string;
+    combustivel: string;
+    cor: string;
+    precoFormatado: string;
+    condicao: string;
+    carroceria: string | null;
+    opcionais: string[];
+    blindado: boolean;
+    unicoDono: boolean;
+  };
+  loja: {
+    nome: string;
+    cidade: string | null;
+    whatsapp: string | null;
+  };
+}
+
+const SYSTEM_LEGENDA = `Você escreve legendas de Instagram para concessionárias
+de veículos seminovos no Brasil. Escreva em português do Brasil, com tom
+comercial e acolhedor, sem exageros nem promessas. Use no máximo 4 emojis, bem
+colocados. Estruture a legenda assim: a primeira linha com o veículo (marca,
+modelo, versão e ano); 1 a 2 linhas com os destaques; o preço; uma chamada para
+ação com o WhatsApp da loja (quando houver); e de 3 a 5 hashtags relevantes ao
+final. Não invente nenhuma informação que não tenha sido fornecida.`;
+
+/** Gera a legenda do post de Instagram para um veículo. */
+export async function gerarLegendaPost(input: PostInput): Promise<string> {
+  const { text } = await generateText({
+    model: anthropic(MODEL),
+    system: SYSTEM_LEGENDA,
+    prompt:
+      "Gere a legenda do post para este veículo:\n\n" +
+      JSON.stringify(input, null, 2),
+  });
+  return text.trim();
 }

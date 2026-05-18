@@ -15,6 +15,8 @@ export interface PlanCapabilities {
   layoutConfig: boolean;
   /** Conectar um domínio próprio (além do subdomínio padrão). */
   customDomain: boolean;
+  /** Gerar post de Instagram (imagem + legenda) a partir de um veículo. */
+  instagramPost: boolean;
   /** Análises de IA sobre a customização do site. */
   aiAnalysis: boolean;
 }
@@ -39,6 +41,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
       customColors: true,
       layoutConfig: false,
       customDomain: false,
+      instagramPost: false,
       aiAnalysis: false,
     },
   },
@@ -51,6 +54,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
       customColors: true,
       layoutConfig: true,
       customDomain: true,
+      instagramPost: true,
       aiAnalysis: false,
     },
   },
@@ -63,6 +67,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
       customColors: true,
       layoutConfig: true,
       customDomain: true,
+      instagramPost: true,
       aiAnalysis: true,
     },
   },

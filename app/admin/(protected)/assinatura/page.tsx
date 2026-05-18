@@ -9,6 +9,7 @@ const CAP_LABELS: Record<keyof PlanCapabilities, string> = {
   customColors: "Cores da marca personalizáveis",
   layoutConfig: "Customização de layout — hero e estilos de card",
   customDomain: "Domínio próprio",
+  instagramPost: "Gerador de post para Instagram",
   aiAnalysis: "Análises de IA da vitrine",
 };
 
