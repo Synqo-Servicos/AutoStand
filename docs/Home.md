@@ -17,7 +17,7 @@ aliases:
 > - [[Milestone 1]] — Multi-tenancy → ✅ **concluído**
 > - [[Milestone 2]] — Self-service + Billing → 🔨 **em andamento** (Fases 1 e 3–9 concluídas; falta só o pagamento)
 > - [[Milestone 4]] — Distribuição & Marketplace → 🔨 **em andamento** (Fases 1–3 concluídas)
-> - [[Milestone 3]] — Automação → 🗺️ planejado
+> - [[Milestone 3]] — Automação → 🔨 **em andamento** (funil de leads + WhatsApp assistido concluídos)
 
 ## 🗺️ Mapa da documentação
 

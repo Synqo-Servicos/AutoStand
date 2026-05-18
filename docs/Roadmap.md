@@ -9,7 +9,7 @@ aliases:
 # Roadmap
 
 > [!abstract] Resumo
-> Quatro milestones. O [[Milestone 1]] está concluído; o [[Milestone 2]] e o [[Milestone 4]] em andamento; o [[Milestone 3]] planejado.
+> Quatro milestones. O [[Milestone 1]] está concluído; o [[Milestone 2]], o [[Milestone 3]] e o [[Milestone 4]] em andamento.
 
 ## Posicionamento
 
@@ -31,7 +31,7 @@ Referência de modelo: o **Anota.ai** (SaaS de delivery) não vende "cardápio d
 graph LR
     M1[Milestone 1<br/>Multi-tenancy<br/>✅ concluído] --> M2[Milestone 2<br/>Self-service + Billing<br/>🔨 em andamento]
     M2 --> M4[Milestone 4<br/>Distribuição + Marketplace<br/>🔨 em andamento]
-    M4 --> M3[Milestone 3<br/>Automação<br/>🗺️ planejado]
+    M4 --> M3[Milestone 3<br/>Automação<br/>🔨 em andamento]
     class M1,M2,M3,M4 internal-link;
 ```
 
@@ -40,7 +40,7 @@ graph LR
 - [[Milestone 1]] — **Multi-tenancy** ✅ — transformou o site single-tenant num SaaS whitelabel multi-tenant.
 - [[Milestone 2]] — **Self-service + Billing** 🔨 — cadastro automático, Stripe, customização escalonada por plano. Falta só o pagamento.
 - [[Milestone 4]] — **Distribuição & Marketplace** 🔨 — post de Instagram, marketplace multimarca AutoStand, feeds para portais. Fases 1–3 concluídas.
-- [[Milestone 3]] — **Automação** 🗺️ — o motor de retenção: leads no WhatsApp, CRM ativo.
+- [[Milestone 3]] — **Automação** 🔨 — o motor de retenção: funil de leads e WhatsApp assistido concluídos; automação via Cloud API e histórico de contato pendentes.
 
 ## Backlog (futuro)
 

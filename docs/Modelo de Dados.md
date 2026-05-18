@@ -68,7 +68,9 @@ Desde o [[Milestone 4]] Fase 1, campos estruturados para anúncios e feeds de po
 
 ## `leads` — CRM leve
 
-`tenant_id`, `name`, `phone`, `email`, `vehicle_id` (set null), `message`, `source` (`site` | `whatsapp` | `manual` | `marketplace`), `status` (`novo` | `contatado` | `convertido` | `perdido`).
+`tenant_id`, `name`, `phone`, `email`, `vehicle_id` (set null), `message`, `source` (`site` | `whatsapp` | `manual` | `marketplace`), `status` (`novo` | `contatado` | `negociando` | `convertido` | `perdido`).
+
+O `/admin/leads` exibe os leads como **funil** por `status` — ver [[Milestone 3]] Eixo C.
 
 ## `partners` — links de desconto / atribuição
 

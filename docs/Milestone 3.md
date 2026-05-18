@@ -3,32 +3,34 @@ title: Milestone 3 — Automação
 tags:
   - planejamento
   - milestone
-status: planejado
+status: em-andamento
 aliases:
   - M3
 ---
 
 # Milestone 3 — Automação
 
-> [!info] Status: planejado
-> O **motor de retenção**. Depois que o cliente tem site + assinatura ([[Milestone 1|M1]]–[[Milestone 2|M2]]), o que o faz **não cancelar** é a plataforma operar a venda para ele. É o que diferencia o produto de "só mais um site" — ver [[Roadmap#Posicionamento]].
+> [!info] Status: em andamento
+> O **motor de retenção**. Depois que o cliente tem site + assinatura ([[Milestone 1|M1]]–[[Milestone 2|M2]]), o que o faz **não cancelar** é a plataforma operar a venda para ele. É o que diferencia o produto de "só mais um site" — ver [[Roadmap#Posicionamento]]. O v1 (funil de leads + WhatsApp assistido) está concluído.
 
-## Eixo A — Automação de leads no WhatsApp
+## Eixo A — WhatsApp de leads
 
-- Resposta automática a novos [[Glossário#Lead|leads]] (capturados pelo site) no WhatsApp.
-- Qualificação do lead no funil; lembretes de follow-up para o vendedor.
-- Agendamento de test-drive.
-- Disparo de campanhas (email + WhatsApp) para a base de leads.
+> [!success] WhatsApp assistido ✅ CONCLUÍDO
+> Cada lead no funil tem **WhatsApp em 1 clique**: abre o `wa.me` do contato com uma mensagem-modelo pronta (saudação, follow-up, agendar test-drive). Enviar avança o lead de `novo` para `contatado`. Sem API, sem custo — o lojista mantém o WhatsApp dele.
 
-> [!warning] Custo a considerar
-> A WhatsApp Business API (Meta) cobra por conversa.
+> [!todo] Automação real (WhatsApp Business API)
+> Resposta automática pelo servidor e disparo de campanhas dependem da **WhatsApp Business API (Meta)** — conta Meta Business, número dedicado que sai do app comum, e cobrança por conversa. Fase posterior, quando houver escala que justifique o custo.
 
 > [!info] Eixo B migrou para o [[Milestone 4]]
 > A sindicância de estoque em marketplaces (publicar o veículo nos portais externos — OLX, Webmotors, iCarros) virou a **Fase 4 do [[Milestone 4]]**, junto com o marketplace próprio da AutoStand. Distribuição ficou concentrada num milestone só.
 
 ## Eixo C — CRM ativo
 
-- Evoluir o `/admin/leads` de lista simples para **funil** — histórico de contato, estágios e métricas de conversão.
+> [!success] Funil de leads ✅ CONCLUÍDO
+> `/admin/leads` deixou de ser lista plana e virou **quadro por estágio** (`novo` → `contatado` → `negociando` → `convertido` / `perdido`), com métrica de conversão e lembrete de leads novos parados sem contato. Ver [[Modelo de Dados#`leads` — CRM leve]].
+
+> [!todo] Histórico de contato
+> Registrar interação a interação por lead (linha do tempo de contatos) — ainda não implementado.
 
 ## Posição no roadmap
 
