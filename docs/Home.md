@@ -64,4 +64,4 @@ graph TD
 ---
 
 > [!note] Sobre este vault
-> Documentação em formato Obsidian — abra a pasta `docs/` como um vault. O nome do repositório (`pedro-ivo-veiculos`) é legado do primeiro cliente e não reflete mais o escopo.
+> Documentação em formato Obsidian — abra a pasta `docs/` como um vault.
