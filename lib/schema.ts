@@ -164,7 +164,7 @@ export const leads = sqliteTable("leads", {
   message: text("message"),
   /** 'site' | 'whatsapp' | 'manual' */
   source: text("source").notNull().default("site"),
-  /** 'novo' | 'contatado' | 'convertido' | 'perdido' */
+  /** 'novo' | 'contatado' | 'negociando' | 'convertido' | 'perdido' */
   status: text("status").notNull().default("novo"),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

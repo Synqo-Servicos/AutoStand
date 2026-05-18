@@ -1,28 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Trash2, Phone, Mail } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import type { LeadRow } from "@/lib/schema";
 import type { Vehicle } from "@/types/vehicle";
+import { LeadCard, LEAD_STAGES } from "@/components/admin/LeadCard";
 
-const STATUSES = ["novo", "contatado", "convertido", "perdido"] as const;
-const STATUS_LABEL: Record<string, string> = {
-  novo: "Novo",
-  contatado: "Contatado",
-  convertido: "Convertido",
-  perdido: "Perdido",
-};
-const STATUS_COLOR: Record<string, string> = {
-  novo: "bg-signal/10 text-signal ring-1 ring-signal",
-  contatado: "bg-warning/12 text-ink ring-1 ring-warning/30",
-  convertido: "bg-success/12 text-ink ring-1 ring-success/30",
-  perdido: "bg-n100 text-n600 ring-1 ring-n200",
-};
-const SOURCE_LABEL: Record<string, string> = {
-  site: "Site",
-  whatsapp: "WhatsApp",
-  manual: "Manual",
-};
+const STALE_DAYS = 2;
+
+/** True quando um lead `novo` está há mais de STALE_DAYS sem contato. */
+function isStale(lead: LeadRow): boolean {
+  if (lead.status !== "novo") return false;
+  const created = new Date(lead.created_at.replace(" ", "T")).getTime();
+  if (Number.isNaN(created)) return false;
+  return Date.now() - created > STALE_DAYS * 86_400_000;
+}
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<LeadRow[]>([]);
@@ -46,9 +38,9 @@ export default function LeadsPage() {
     load();
   }, [load]);
 
-  async function changeStatus(id: number, status: string) {
+  function changeStatus(id: number, status: string) {
     setLeads((ls) => ls.map((l) => (l.id === id ? { ...l, status } : l)));
-    await fetch(`/api/leads/${id}`, {
+    fetch(`/api/leads/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -57,121 +49,97 @@ export default function LeadsPage() {
 
   async function remove(id: number) {
     if (!confirm("Excluir este lead?")) return;
-    await fetch(`/api/leads/${id}`, { method: "DELETE" });
     setLeads((ls) => ls.filter((l) => l.id !== id));
+    await fetch(`/api/leads/${id}`, { method: "DELETE" });
   }
 
-  const counts = STATUSES.map((s) => ({
-    status: s,
-    count: leads.filter((l) => l.status === s).length,
-  }));
+  const total = leads.length;
+  const convertidos = leads.filter((l) => l.status === "convertido").length;
+  const emAberto = leads.filter((l) => ["novo", "contatado", "negociando"].includes(l.status)).length;
+  const fechados = leads.filter((l) => ["convertido", "perdido"].includes(l.status)).length;
+  const taxa = fechados > 0 ? Math.round((convertidos / fechados) * 100) : null;
+  const staleCount = leads.filter(isStale).length;
+
+  const metrics = [
+    { label: "Total de leads", value: String(total) },
+    { label: "Em aberto", value: String(emAberto) },
+    { label: "Convertidos", value: String(convertidos) },
+    { label: "Taxa de conversão", value: taxa === null ? "—" : `${taxa}%` },
+  ];
 
   return (
-    <div className="p-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-ink">Leads</h1>
+    <div className="p-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-ink">Funil de leads</h1>
         <p className="text-sm text-n600 mt-1">
-          Contatos capturados pelo site — base para campanhas de email e WhatsApp.
+          Acompanhe cada contato por estágio e dê retorno pelo WhatsApp em um clique.
         </p>
       </div>
 
-      {/* Status summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {counts.map(({ status, count }) => (
-          <div key={status} className="bg-white rounded-xl border border-n100 p-4">
-            <p className="text-2xl font-bold text-ink">{count}</p>
-            <p className="text-xs text-n600 mt-0.5">{STATUS_LABEL[status]}</p>
+      {/* Métricas */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {metrics.map((m) => (
+          <div key={m.label} className="bg-white rounded-xl border border-n100 p-4">
+            <p className="text-2xl font-bold text-ink">{m.value}</p>
+            <p className="text-xs text-n600 mt-0.5">{m.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-n100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-n100">
-          <h2 className="text-sm font-semibold text-ink">Todos os leads</h2>
+      {/* Lembrete de follow-up */}
+      {staleCount > 0 && (
+        <div className="mb-6 flex items-center gap-2 rounded-lg bg-warning/15 border border-warning/40 px-4 py-3 text-sm text-ink">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>
+            {staleCount}{" "}
+            {staleCount === 1 ? "lead novo está" : "leads novos estão"} há mais de{" "}
+            {STALE_DAYS} dias sem contato — vale dar um retorno.
+          </span>
         </div>
-        {loading ? (
-          <div className="py-16 text-center text-n400 text-sm">Carregando...</div>
-        ) : (
-          <table className="min-w-full divide-y divide-n100 text-sm">
-            <thead>
-              <tr className="bg-n50">
-                {["Contato", "Veículo de interesse", "Origem", "Data", "Status", ""].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-xs font-semibold text-n600 uppercase tracking-wider"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-n100">
-              {leads.map((lead) => {
-                const vehicle = lead.vehicle_id ? vehicles[lead.vehicle_id] : undefined;
-                return (
-                  <tr key={lead.id} className="hover:bg-n50 transition-colors align-top">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-ink">{lead.name}</p>
-                      <div className="flex flex-col gap-0.5 mt-1 text-xs text-n400">
-                        <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-1 hover:text-n600">
-                          <Phone className="w-3 h-3" />
-                          {lead.phone}
-                        </a>
-                        {lead.email && (
-                          <a href={`mailto:${lead.email}`} className="inline-flex items-center gap-1 hover:text-n600">
-                            <Mail className="w-3 h-3" />
-                            {lead.email}
-                          </a>
-                        )}
-                      </div>
-                      {lead.message && (
-                        <p className="text-xs text-n400 mt-1 max-w-[260px]">{lead.message}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-n600 whitespace-nowrap">
-                      {vehicle ? `${vehicle.brand} ${vehicle.model} ${vehicle.year}` : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-n600">{SOURCE_LABEL[lead.source] ?? lead.source}</td>
-                    <td className="px-4 py-3 text-n400 whitespace-nowrap">
-                      {lead.created_at.slice(0, 10)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={lead.status}
-                        onChange={(e) => changeStatus(lead.id, e.target.value)}
-                        className={`text-xs font-medium rounded-full px-2.5 py-1 border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-signal ${STATUS_COLOR[lead.status]}`}
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {STATUS_LABEL[s]}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => remove(lead.id)}
-                        className="text-n400 hover:text-danger transition-colors cursor-pointer"
-                        aria-label="Excluir lead"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {leads.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-16 text-center text-n400 text-sm">
-                    Nenhum lead capturado ainda. Eles aparecem aqui quando alguém preenche
-                    o formulário &quot;Tenho interesse&quot; no site.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
+      )}
+
+      {loading ? (
+        <div className="py-16 text-center text-n400 text-sm">Carregando...</div>
+      ) : total === 0 ? (
+        <div className="rounded-xl border border-n100 bg-white py-16 text-center text-n400 text-sm">
+          Nenhum lead capturado ainda. Eles aparecem aqui quando alguém preenche o
+          formulário &quot;Tenho interesse&quot; no site ou no marketplace.
+        </div>
+      ) : (
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {LEAD_STAGES.map((stage) => {
+            const stageLeads = leads.filter((l) => l.status === stage.key);
+            return (
+              <div key={stage.key} className="w-72 shrink-0">
+                <div className="mb-3 flex items-center justify-between px-1">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${stage.color}`}>
+                    {stage.label}
+                  </span>
+                  <span className="text-xs font-medium text-n400">{stageLeads.length}</span>
+                </div>
+                <div className="space-y-3">
+                  {stageLeads.map((lead) => (
+                    <LeadCard
+                      key={lead.id}
+                      lead={lead}
+                      vehicle={lead.vehicle_id ? vehicles[lead.vehicle_id] : undefined}
+                      stale={isStale(lead)}
+                      onStatusChange={changeStatus}
+                      onContacted={(id) => changeStatus(id, "contatado")}
+                      onDelete={remove}
+                    />
+                  ))}
+                  {stageLeads.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-n200 py-8 text-center text-xs text-n400">
+                      Nenhum lead aqui
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
