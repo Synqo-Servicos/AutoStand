@@ -193,6 +193,31 @@ export const partners = sqliteTable("partners", {
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+// --- Demand events (inteligência de demanda — eventos anônimos) ---
+
+export const demand_events = sqliteTable("demand_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  /** Loja onde o evento ocorreu. Null = busca no marketplace AutoStand. */
+  tenant_id: integer("tenant_id").references(() => tenants.id, { onDelete: "set null" }),
+  /** 'search' | 'view' */
+  event_type: text("event_type").notNull(),
+  brand: text("brand"),
+  model: text("model"),
+  body_type: text("body_type"),
+  fuel: text("fuel"),
+  transmission: text("transmission"),
+  city: text("city"),
+  /** Centavos. Busca: teto de preço filtrado. Visualização: preço do veículo. */
+  price: integer("price"),
+  /** Busca: ano mínimo filtrado. */
+  year_min: integer("year_min"),
+  /** Busca: termo de texto digitado. */
+  search_term: text("search_term"),
+  /** Visualização: id do veículo visto. */
+  vehicle_id: integer("vehicle_id"),
+  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type TenantRow = typeof tenants.$inferSelect;
 export type NewTenant = typeof tenants.$inferInsert;
 export type UserRow = typeof users.$inferSelect;
@@ -204,3 +229,5 @@ export type LeadRow = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
 export type PartnerRow = typeof partners.$inferSelect;
 export type NewPartner = typeof partners.$inferInsert;
+export type DemandEventRow = typeof demand_events.$inferSelect;
+export type NewDemandEvent = typeof demand_events.$inferInsert;

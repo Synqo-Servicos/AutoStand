@@ -1,6 +1,7 @@
 import { generateObject, generateText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
+import type { DemandSnapshot } from "@/lib/demand";
 
 /**
  * Camada de IA — análise da vitrine de um tenant (Fase 8, plano Premium).
@@ -114,4 +115,44 @@ export async function gerarLegendaPost(input: PostInput): Promise<string> {
       JSON.stringify(input, null, 2),
   });
   return text.trim();
+}
+
+export const dicasDemandaSchema = z.object({
+  resumo: z.string().describe("Uma frase resumindo o que a demanda mostra."),
+  dicas: z
+    .array(
+      z.object({
+        titulo: z.string().describe("Título curto e direto da dica."),
+        texto: z.string().describe("A recomendação — concreta e acionável."),
+        oportunidade: z.enum(["alta", "media", "baixa"]),
+      }),
+    )
+    .min(2)
+    .max(5),
+});
+
+export type DicasDemanda = z.infer<typeof dicasDemandaSchema>;
+
+const SYSTEM_DICAS = `Você é um consultor de demanda para concessionárias de
+veículos seminovos no Brasil. Recebe os sinais anônimos de busca e visualização
+do marketplace e do site de uma loja, e sugere ações concretas de estoque e de
+anúncio. Escreva em português do Brasil, direto e prático. Baseie-se apenas nos
+dados fornecidos — se um sinal for fraco (poucos eventos), diga isso em vez de
+inventar tendência.`;
+
+/** Gera dicas de demanda a partir dos snapshots do marketplace e da loja. */
+export async function gerarDicasDemanda(input: {
+  marketplace: DemandSnapshot;
+  loja: DemandSnapshot;
+}): Promise<DicasDemanda> {
+  const { object } = await generateObject({
+    model: anthropic(MODEL),
+    schema: dicasDemandaSchema,
+    system: SYSTEM_DICAS,
+    prompt:
+      "Analise estes sinais de demanda e gere de 2 a 5 dicas priorizadas " +
+      "(oportunidade 'alta' = maior potencial de venda):\n\n" +
+      JSON.stringify(input, null, 2),
+  });
+  return object;
 }

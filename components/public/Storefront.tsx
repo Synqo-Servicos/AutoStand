@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { listVehicles } from "@/lib/db";
+import { recordSearch } from "@/lib/demand";
 import { getCurrentTenant } from "@/lib/tenant";
 import { resolveLayoutConfig } from "@/lib/layout";
 import { StorefrontHero } from "@/components/public/StorefrontHero";
@@ -27,6 +28,17 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
     price_min:    sp.price_min ? Number(sp.price_min) : undefined,
     price_max:    sp.price_max ? Number(sp.price_max) : undefined,
     search:       sp.search       || undefined,
+  });
+
+  // Registra a busca no site da loja como sinal de demanda (anônimo).
+  await recordSearch({
+    tenantId: tenant.id,
+    brand:        sp.brand        || undefined,
+    fuel:         sp.fuel         || undefined,
+    transmission: sp.transmission || undefined,
+    price:        sp.price_max ? Number(sp.price_max) : undefined,
+    yearMin:      sp.year_min  ? Number(sp.year_min)  : undefined,
+    searchTerm:   sp.search       || undefined,
   });
 
   const waHref = tenant.whatsapp_number ? `https://wa.me/${tenant.whatsapp_number}` : "#contato";

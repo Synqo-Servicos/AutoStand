@@ -10,8 +10,87 @@ import {
   updateTenant,
 } from "@/lib/db";
 import { MOCK_TRANSACTIONS, MOCK_VEHICLES } from "@/lib/mock-data";
-import type { NewTenant } from "@/lib/schema";
-import { leads, transactions, vehicle_photos, vehicles } from "@/lib/schema";
+import type { NewDemandEvent, NewTenant } from "@/lib/schema";
+import { demand_events, leads, transactions, vehicle_photos, vehicles } from "@/lib/schema";
+
+/** Escolha aleatória ponderada. */
+function pick<T>(weighted: [T, number][]): T {
+  const total = weighted.reduce((s, [, w]) => s + w, 0);
+  let r = Math.random() * total;
+  for (const [v, w] of weighted) {
+    r -= w;
+    if (r <= 0) return v;
+  }
+  return weighted[0][0];
+}
+
+/**
+ * Semeia eventos de demanda sintéticos para a demo não nascer vazia.
+ * Skew proposital: hatch/SUV baratos puxam a procura — dá insight visível.
+ */
+async function seedDemand(tenantIds: number[]) {
+  await db.delete(demand_events);
+
+  const brand = (): string | null =>
+    pick<string | null>([
+      ["Volkswagen", 5], ["Chevrolet", 4], ["Hyundai", 4],
+      ["Toyota", 3], ["Honda", 3], ["Jeep", 2], [null, 6],
+    ]);
+  const body = (): string | null =>
+    pick<string | null>([["hatch", 6], ["suv", 5], ["sedan", 3], ["picape", 1], [null, 8]]);
+  const city = (): string | null =>
+    pick<string | null>([
+      ["Maceió, AL", 4], ["São Paulo, SP", 3], ["Recife, PE", 2], [null, 7],
+    ]);
+  const priceCents = (): number | null => {
+    const b = pick<string | null>([["lo", 6], ["mid", 4], ["hi", 2], ["top", 1], [null, 7]]);
+    if (b === "lo") return 3_000_000 + Math.floor(Math.random() * 2_000_000);
+    if (b === "mid") return 5_000_000 + Math.floor(Math.random() * 3_000_000);
+    if (b === "hi") return 8_000_000 + Math.floor(Math.random() * 4_000_000);
+    if (b === "top") return 12_000_000 + Math.floor(Math.random() * 8_000_000);
+    return null;
+  };
+
+  const events: NewDemandEvent[] = [];
+  const addSearches = (tenantId: number | null, n: number) => {
+    for (let i = 0; i < n; i++) {
+      events.push({
+        tenant_id: tenantId,
+        event_type: "search",
+        brand: brand(),
+        body_type: body(),
+        city: tenantId === null ? city() : null,
+        fuel: pick<string | null>([["flex", 4], [null, 9], ["diesel", 1]]),
+        price: priceCents(),
+      });
+    }
+  };
+  const addViews = (tenantId: number | null, n: number) => {
+    for (let i = 0; i < n; i++) {
+      const v = MOCK_VEHICLES[Math.floor(Math.random() * MOCK_VEHICLES.length)];
+      events.push({
+        tenant_id: tenantId,
+        event_type: "view",
+        brand: v.brand,
+        model: v.model,
+        body_type: v.body_type ?? null,
+        price: v.sale_price,
+      });
+    }
+  };
+
+  addSearches(null, 140);
+  addViews(null, 90);
+  for (const id of tenantIds) {
+    addSearches(id, 45);
+    addViews(id, 35);
+  }
+
+  for (let i = 0; i < events.length; i += 200) {
+    await db.insert(demand_events).values(events.slice(i, i + 200));
+  }
+  console.log(`  ✓ ${events.length} eventos de demanda`);
+}
 
 /**
  * Seeds the whitelabel platform:
@@ -217,6 +296,12 @@ async function main() {
       password: "demo123",
     },
   });
+
+  const demoTenants = await Promise.all([
+    getTenantBySlug("pedro-ivo"),
+    getTenantBySlug("demo"),
+  ]);
+  await seedDemand(demoTenants.filter((t) => t !== null).map((t) => t!.id));
 
   console.log("\n✅ Seed concluído!");
   client.close();

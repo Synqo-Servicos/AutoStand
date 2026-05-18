@@ -19,6 +19,8 @@ export interface PlanCapabilities {
   instagramPost: boolean;
   /** Análises de IA sobre a customização do site. */
   aiAnalysis: boolean;
+  /** Inteligência de demanda — o que o mercado está procurando. */
+  marketInsights: boolean;
 }
 
 export interface Plan {
@@ -43,6 +45,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
       customDomain: false,
       instagramPost: false,
       aiAnalysis: false,
+      marketInsights: false,
     },
   },
   pro: {
@@ -56,6 +59,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
       customDomain: true,
       instagramPost: true,
       aiAnalysis: false,
+      marketInsights: false,
     },
   },
   premium: {
@@ -69,6 +73,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
       customDomain: true,
       instagramPost: true,
       aiAnalysis: true,
+      marketInsights: true,
     },
   },
 };

@@ -11,6 +11,7 @@ const CAP_LABELS: Record<keyof PlanCapabilities, string> = {
   customDomain: "Domínio próprio",
   instagramPost: "Gerador de post para Instagram",
   aiAnalysis: "Análises de IA da vitrine",
+  marketInsights: "Inteligência de demanda",
 };
 
 function formatBRL(cents: number): string {

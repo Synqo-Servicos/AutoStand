@@ -9,6 +9,7 @@ import {
   type MarketplaceFilters,
   type MarketplaceSort,
 } from "@/lib/marketplace";
+import { recordSearch } from "@/lib/demand";
 import { MarketplaceVehicleCard } from "@/components/marketplace/MarketplaceVehicleCard";
 import { MarketplaceFilters as Filters } from "@/components/marketplace/MarketplaceFilters";
 import { MarketplaceSort as SortControl } from "@/components/marketplace/MarketplaceSort";
@@ -67,6 +68,21 @@ export default async function ComprarPage({
   const [{ vehicles, total }, options] = await Promise.all([
     searchMarketplaceVehicles(filters),
     marketplaceFilterOptions(),
+    // Registra a busca como sinal de demanda (anônimo). Só na 1ª página,
+    // para a paginação não contar a mesma busca várias vezes.
+    page === 1
+      ? recordSearch({
+          tenantId: null,
+          brand: filters.brand,
+          bodyType: filters.body_type,
+          fuel: filters.fuel,
+          transmission: filters.transmission,
+          city: filters.city,
+          price: filters.price_max,
+          yearMin: filters.year_min,
+          searchTerm: filters.search,
+        })
+      : Promise.resolve(),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / MARKETPLACE_PAGE_SIZE));

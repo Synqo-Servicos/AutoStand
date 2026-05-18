@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { requirePlatformHost } from "@/lib/tenant";
 import { getMarketplaceVehicle } from "@/lib/marketplace";
+import { recordView } from "@/lib/demand";
 import { formatBRL } from "@/lib/money";
 import {
   FUEL_LABELS, TRANSMISSION_LABELS, BODY_TYPE_LABELS, CONDITION_LABELS,
@@ -34,6 +35,15 @@ export default async function ComprarDetalhePage({ params }: Params) {
   const { id } = await params;
   const v = await getMarketplaceVehicle(Number(id));
   if (!v) notFound();
+
+  await recordView({
+    tenantId: null,
+    vehicleId: v.id,
+    brand: v.brand,
+    model: v.model,
+    bodyType: v.body_type,
+    price: v.sale_price,
+  });
 
   const anos =
     v.year_manufacture && v.year_manufacture !== v.year

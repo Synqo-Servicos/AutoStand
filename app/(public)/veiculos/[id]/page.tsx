@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Gauge, Calendar, Fuel, Settings, MapPin } from "lucide-react";
 import { getVehicleWithPhotos } from "@/lib/db";
+import { recordView } from "@/lib/demand";
 import { getCurrentTenant } from "@/lib/tenant";
 import { PhotoGallery } from "@/components/public/PhotoGallery";
 import { LeadForm } from "@/components/public/LeadForm";
@@ -31,6 +32,15 @@ export default async function VehiclePage({ params }: Params) {
   if (!tenant || tenant.status !== "active") return null;
   const vehicle = await getVehicleWithPhotos(tenant.id, Number(id));
   if (!vehicle) notFound();
+
+  await recordView({
+    tenantId: tenant.id,
+    vehicleId: vehicle.id,
+    brand: vehicle.brand,
+    model: vehicle.model,
+    bodyType: vehicle.body_type,
+    price: vehicle.sale_price,
+  });
 
   const label = `${vehicle.brand} ${vehicle.model} ${vehicle.year}`;
   const waHref = tenant.whatsapp_number
