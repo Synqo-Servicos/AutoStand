@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentTenant, getRequestHost, isPlatformHost } from "@/lib/tenant";
-import { PlatformLanding } from "@/components/marketing/PlatformLanding";
+import { MarketplaceLanding } from "@/components/marketing/MarketplaceLanding";
 import { Storefront } from "@/components/public/Storefront";
 
 export const dynamic = "force-dynamic";
@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   if (isPlatformHost(await getRequestHost())) {
     return {
-      title: "AutoStand — o sistema operacional da revenda multimarca",
+      title: "AutoStand — encontre seu próximo carro",
       description:
-        "Site, estoque, CRM e financeiro para concessionárias multimarca. Mensalidade fixa, sem comissão por venda.",
+        "Seminovos de concessionárias multimarca selecionadas, num só lugar. Busque por marca, preço e cidade.",
     };
   }
   const tenant = await getCurrentTenant();
@@ -38,8 +38,7 @@ export default async function HomePage({
   const sp = await searchParams;
 
   if (isPlatformHost(host)) {
-    const partnerCode = typeof sp.parceiro === "string" ? sp.parceiro.trim() : "";
-    return <PlatformLanding partnerCode={partnerCode || undefined} />;
+    return <MarketplaceLanding />;
   }
 
   return <Storefront sp={sp} />;

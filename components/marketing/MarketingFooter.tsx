@@ -9,7 +9,7 @@ export function MarketingFooter() {
         <div>
           <Logo tone="light" />
           <p className="mt-3 max-w-xs text-body-s text-n400">
-            O sistema operacional da revenda multimarca no Brasil.
+            Seminovos de concessionárias multimarca selecionadas, num só lugar.
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-body-s">
@@ -19,14 +19,8 @@ export function MarketingFooter() {
           <Link href="/lojas" className="text-n400 hover:text-white">
             Concessionárias
           </Link>
-          <a href="/#como-funciona" className="text-n400 hover:text-white">
-            Como funciona
-          </a>
-          <a href="/#planos" className="text-n400 hover:text-white">
-            Planos
-          </a>
-          <Link href="/assinar" className="text-n400 hover:text-white">
-            Assinar
+          <Link href="/anuncie" className="text-n400 hover:text-white">
+            Anuncie sua loja
           </Link>
         </nav>
       </div>
