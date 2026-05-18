@@ -20,10 +20,12 @@ import type { TransactionInput, TransactionWithVehicle } from "@/types/transacti
 import type { VehicleInput, VehicleWithPhotos } from "@/types/vehicle";
 
 // --- Connection ---
+// Aceita os nomes do nosso .env (DATABASE_*) e os que a integração Turso da
+// Vercel injeta (TURSO_*). Sem nenhum, cai no arquivo local de desenvolvimento.
 
 const client = createClient({
-  url: process.env.DATABASE_URL ?? "file:local.db",
-  authToken: process.env.DATABASE_AUTH_TOKEN,
+  url: process.env.DATABASE_URL ?? process.env.TURSO_DATABASE_URL ?? "file:local.db",
+  authToken: process.env.DATABASE_AUTH_TOKEN ?? process.env.TURSO_AUTH_TOKEN,
 });
 
 export const db = drizzle(client, { schema });
