@@ -41,6 +41,31 @@ export const TRANSMISSION_LABELS: Record<Transmission, string> = {
   manual: "Manual",
 };
 
+export const BODY_TYPES = [
+  "hatch", "sedan", "suv", "picape", "minivan", "cupe", "conversivel", "perua",
+] as const;
+export type BodyType = (typeof BODY_TYPES)[number];
+
+export const BODY_TYPE_LABELS: Record<BodyType, string> = {
+  hatch: "Hatch",
+  sedan: "Sedã",
+  suv: "SUV",
+  picape: "Picape",
+  minivan: "Minivan",
+  cupe: "Cupê",
+  conversivel: "Conversível",
+  perua: "Perua / SW",
+};
+
+export const CONDITIONS = ["novo", "seminovo", "usado"] as const;
+export type Condition = (typeof CONDITIONS)[number];
+
+export const CONDITION_LABELS: Record<Condition, string> = {
+  novo: "Novo",
+  seminovo: "Seminovo",
+  usado: "Usado",
+};
+
 export const COMMON_BRANDS = [
   "Chevrolet",
   "Fiat",

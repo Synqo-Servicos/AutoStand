@@ -13,10 +13,13 @@ const PHOTOS = {
 };
 
 export interface VehicleSeed {
-  brand: string; model: string; year: number; km: number;
+  brand: string; model: string; version?: string;
+  year: number; year_manufacture?: number; km: number;
   cost_price: number; sale_price: number; transmission: string;
-  fuel: string; color: string; doors: number; description: string;
-  status: string; photos: string[];
+  fuel: string; color: string; doors: number;
+  body_type?: string; condition?: string; optionals?: string[];
+  armored?: boolean; single_owner?: boolean; fipe_code?: string;
+  description: string; status: string; photos: string[];
 }
 
 export interface TransactionSeed {
@@ -27,58 +30,82 @@ export interface TransactionSeed {
 
 export const MOCK_VEHICLES: VehicleSeed[] = [
   {
-    brand: "Hyundai", model: "HB20 S Premium", year: 2022, km: 32_500,
+    brand: "Hyundai", model: "HB20S", version: "1.0 Turbo Premium",
+    year: 2022, year_manufacture: 2021, km: 32_500,
     cost_price: 5_800_000, sale_price: 7_290_000,
     transmission: "manual", fuel: "flex", color: "Vermelho", doors: 4,
+    body_type: "sedan", condition: "seminovo", single_owner: true,
+    optionals: ["Multimídia", "Câmera de ré", "Sensores de estacionamento", "Ar-condicionado digital"],
     description: "Único dono, revisões em dia, chave reserva. Completo: multimídia, câmera de ré, sensor de estacionamento, ar digital.",
     status: "disponivel", photos: [PHOTOS.hb20_red, PHOTOS.polo_teal],
   },
   {
-    brand: "Volkswagen", model: "Polo Highline 200 TSI", year: 2023, km: 14_200,
+    brand: "Volkswagen", model: "Polo", version: "1.0 200 TSI Highline",
+    year: 2023, year_manufacture: 2022, km: 14_200,
     cost_price: 8_100_000, sale_price: 9_990_000,
     transmission: "automatico", fuel: "flex", color: "Azul", doors: 4,
+    body_type: "hatch", condition: "seminovo",
+    optionals: ["Bancos de couro", "Apple CarPlay", "Android Auto", "Piloto automático"],
     description: "Praticamente zero, ainda na garantia de fábrica. Motor turbo 1.0, bancos de couro, Apple CarPlay, Android Auto.",
     status: "disponivel", photos: [PHOTOS.bmw_blue, PHOTOS.polo_teal],
   },
   {
-    brand: "Jeep", model: "Compass Limited 4x2", year: 2022, km: 28_000,
+    brand: "Jeep", model: "Compass", version: "2.0 Limited 4x2 Flex",
+    year: 2022, year_manufacture: 2022, km: 28_000,
     cost_price: 11_500_000, sale_price: 14_190_000,
     transmission: "automatico", fuel: "flex", color: "Branco", doors: 4,
+    body_type: "suv", condition: "seminovo",
+    optionals: ["Teto solar", "Bancos de couro", "Multimídia 8.4\"", "Câmera 360°", "Rodas de liga 18\""],
     description: "Full top de linha. Teto solar, couro, multimídia 8.4\", câmera 360°, Jeep Shield, rodas 18\".",
     status: "disponivel", photos: [PHOTOS.suv_white, PHOTOS.camaro_white],
   },
   {
-    brand: "Toyota", model: "Corolla XEI 2.0", year: 2021, km: 55_000,
+    brand: "Toyota", model: "Corolla", version: "2.0 XEI",
+    year: 2021, year_manufacture: 2020, km: 55_000,
     cost_price: 8_800_000, sale_price: 10_890_000,
     transmission: "automatico", fuel: "flex", color: "Prata", doors: 4,
+    body_type: "sedan", condition: "seminovo", single_owner: true,
+    optionals: ["Toyota Safety Sense", "Multimídia 9\"", "Câmera de ré"],
     description: "Prata metálico. Toyota Safety Sense, multimídia 9\", câmera de ré. Histórico de revisões completo na concessionária.",
     status: "disponivel", photos: [PHOTOS.audi_gray, PHOTOS.porsche_black],
   },
   {
-    brand: "Honda", model: "Civic EXL 1.5 Turbo", year: 2022, km: 22_800,
+    brand: "Honda", model: "Civic", version: "1.5 Turbo EXL",
+    year: 2022, year_manufacture: 2021, km: 22_800,
     cost_price: 9_600_000, sale_price: 11_990_000,
     transmission: "automatico", fuel: "gasolina", color: "Preto", doors: 4,
+    body_type: "sedan", condition: "seminovo",
+    optionals: ["Teto solar", "Couro bicolor", "Multimídia 7\"", "Câmbio CVT"],
     description: "Motor 1.5 turbo 173 cv, câmbio CVT, teto solar, couro bicolor, multimídia 7\". Em excelente estado.",
     status: "reservado", photos: [PHOTOS.porsche_black, PHOTOS.mustang_black],
   },
   {
-    brand: "Chevrolet", model: "Onix Plus Premier 1.0T", year: 2022, km: 18_400,
+    brand: "Chevrolet", model: "Onix Plus", version: "1.0 Turbo Premier",
+    year: 2022, year_manufacture: 2022, km: 18_400,
     cost_price: 6_800_000, sale_price: 8_490_000,
     transmission: "automatico", fuel: "flex", color: "Branco", doors: 4,
+    body_type: "sedan", condition: "seminovo", single_owner: true,
+    optionals: ["Multimídia MyLink 8\"", "Câmera de ré", "Controle de cruzeiro adaptativo", "Alerta de ponto cego"],
     description: "Onix Plus Premier automático. Multimídia Mylink 8\", câmera de ré, controle de cruzeiro adaptativo, sensor de ponto cego.",
     status: "disponivel", photos: [PHOTOS.polo_teal, PHOTOS.hb20_red],
   },
   {
-    brand: "Volkswagen", model: "T-Cross Comfortline 200 TSI", year: 2021, km: 61_000,
+    brand: "Volkswagen", model: "T-Cross", version: "1.0 200 TSI Comfortline",
+    year: 2021, year_manufacture: 2020, km: 61_000,
     cost_price: 8_400_000, sale_price: 10_400_000,
     transmission: "automatico", fuel: "flex", color: "Cinza", doors: 4,
+    body_type: "suv", condition: "seminovo",
+    optionals: ["Multimídia 9.2\"", "Câmera de ré", "Câmbio automático 6 marchas"],
     description: "Vendido. Cinza Platinum. Motor turbo 1.0, câmbio automático 6 vel., multimídia 9.2\", câmera de ré.",
     status: "vendido", photos: [PHOTOS.mustang_black, PHOTOS.audi_gray],
   },
   {
-    brand: "Toyota", model: "Hilux SR 4x4 Diesel", year: 2020, km: 78_500,
+    brand: "Toyota", model: "Hilux", version: "2.8 SR 4x4 Diesel",
+    year: 2020, year_manufacture: 2020, km: 78_500,
     cost_price: 17_500_000, sale_price: 21_500_000,
     transmission: "automatico", fuel: "diesel", color: "Prata", doors: 4,
+    body_type: "picape", condition: "seminovo",
+    optionals: ["Cabine dupla", "Tração 4x4", "Rodas de liga 17\"", "Controle de tração", "Câmera de ré"],
     description: "Vendida. Hilux SR 2.8 diesel 177 cv. Cabine dupla, 4x4. Rodas 17\", controle de tração, câmera de ré.",
     status: "vendido", photos: [PHOTOS.camaro_white, PHOTOS.suv_white],
   },

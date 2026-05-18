@@ -2,7 +2,12 @@ export interface Vehicle {
   id: number;
   brand: string;
   model: string;
+  /** Versão/trim — ex.: "1.0 Turbo Premium". */
+  version: string | null;
+  /** Ano modelo. */
   year: number;
+  /** Ano de fabricação. */
+  year_manufacture: number | null;
   km: number;
   cost_price: number;
   sale_price: number;
@@ -10,6 +15,15 @@ export interface Vehicle {
   fuel: string;
   color: string;
   doors: number;
+  /** Carroceria — 'hatch' | 'sedan' | 'suv' | ... */
+  body_type: string | null;
+  /** 'novo' | 'seminovo' | 'usado' */
+  condition: string;
+  /** Opcionais — lista de strings. */
+  optionals: string[] | null;
+  armored: boolean;
+  single_owner: boolean;
+  fipe_code: string | null;
   description: string | null;
   status: string;
   primary_photo_url: string | null;

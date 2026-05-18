@@ -50,6 +50,11 @@ export const tenants = sqliteTable("tenants", {
   /** Customização de layout (Fase 4). JSON; null = usar DEFAULT_LAYOUT_CONFIG. */
   layout_config: text("layout_config", { mode: "json" }).$type<LayoutConfig>(),
 
+  /** Concessionária optou por aparecer no marketplace AutoStand. */
+  marketplace_opt_in: integer("marketplace_opt_in", { mode: "boolean" })
+    .notNull()
+    .default(false),
+
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updated_at: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
@@ -77,7 +82,12 @@ export const vehicles = sqliteTable("vehicles", {
     .references(() => tenants.id, { onDelete: "cascade" }),
   brand: text("brand").notNull(),
   model: text("model").notNull(),
+  /** Versão/trim — ex.: "1.0 Turbo GT". Necessário para feed de portal e post. */
+  version: text("version"),
+  /** Ano modelo. */
   year: integer("year").notNull(),
+  /** Ano de fabricação. Brasil anuncia fab/modelo; null = igual ao ano modelo. */
+  year_manufacture: integer("year_manufacture"),
   km: integer("km").notNull(),
   cost_price: integer("cost_price").notNull(),
   sale_price: integer("sale_price").notNull(),
@@ -85,6 +95,18 @@ export const vehicles = sqliteTable("vehicles", {
   fuel: text("fuel").notNull().default("flex"),
   color: text("color").notNull(),
   doors: integer("doors").notNull().default(4),
+  /** Carroceria — 'hatch' | 'sedan' | 'suv' | 'picape' | 'minivan' | ... */
+  body_type: text("body_type"),
+  /** 'novo' | 'seminovo' | 'usado' */
+  condition: text("condition").notNull().default("seminovo"),
+  /** Opcionais — JSON array de strings (ar-condicionado, multimídia, ...). */
+  optionals: text("optionals", { mode: "json" }).$type<string[]>(),
+  /** Blindado. */
+  armored: integer("armored", { mode: "boolean" }).notNull().default(false),
+  /** Único dono — argumento de venda exibido no post. */
+  single_owner: integer("single_owner", { mode: "boolean" }).notNull().default(false),
+  /** Código FIPE — ajuda a casar com a taxonomia dos portais. */
+  fipe_code: text("fipe_code"),
   description: text("description"),
   status: text("status").notNull().default("disponivel"),
   primary_photo_url: text("primary_photo_url"),

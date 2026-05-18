@@ -36,6 +36,9 @@ async function seedDealership(opts: {
   const patch: Partial<NewTenant> = {};
   if (opts.tenant.plan && tenant.plan !== opts.tenant.plan) patch.plan = opts.tenant.plan;
   if (opts.tenant.layout_config !== undefined) patch.layout_config = opts.tenant.layout_config;
+  if (opts.tenant.marketplace_opt_in !== undefined) {
+    patch.marketplace_opt_in = opts.tenant.marketplace_opt_in;
+  }
   if (Object.keys(patch).length > 0) {
     tenant = (await updateTenant(tenant.id, patch)) ?? tenant;
   }
@@ -66,7 +69,9 @@ async function seedDealership(opts: {
         tenant_id: tenantId,
         brand: v.brand,
         model: v.model,
+        version: v.version ?? null,
         year: v.year,
+        year_manufacture: v.year_manufacture ?? v.year,
         km: v.km,
         cost_price: v.cost_price,
         sale_price: v.sale_price,
@@ -74,6 +79,12 @@ async function seedDealership(opts: {
         fuel: v.fuel,
         color: v.color,
         doors: v.doors,
+        body_type: v.body_type ?? null,
+        condition: v.condition ?? "seminovo",
+        optionals: v.optionals ?? null,
+        armored: v.armored ?? false,
+        single_owner: v.single_owner ?? false,
+        fipe_code: v.fipe_code ?? null,
         description: v.description,
         status: v.status,
         primary_photo_url: v.photos[0] ?? null,
@@ -152,6 +163,7 @@ async function main() {
     tenant: {
       slug: "pedro-ivo",
       plan: "premium",
+      marketplace_opt_in: true,
       name: "Pedro Ivo Veículos",
       custom_domain: "pedroivoveiculos.com.br",
       whatsapp_number: "5582998287879",
@@ -177,6 +189,7 @@ async function main() {
     tenant: {
       slug: "demo",
       plan: "premium",
+      marketplace_opt_in: true,
       name: "AutoPrime Seminovos",
       custom_domain: "autoprime.exemplo.com.br",
       whatsapp_number: "5511999990000",

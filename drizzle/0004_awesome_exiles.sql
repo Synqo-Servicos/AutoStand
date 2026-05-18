@@ -1,0 +1,1 @@
+ALTER TABLE `tenants` ADD `marketplace_opt_in` integer DEFAULT false NOT NULL;
