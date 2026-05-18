@@ -2,7 +2,7 @@ const U = (id: string) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=80`;
 
 const PHOTOS = {
-  hb20_red:      U("1550355291-bbee04a92027"),
+  hb20_red:      U("1571561944842-542037875b50"),
   polo_teal:     U("1541899481282-d53bffe3c35d"),
   bmw_blue:      U("1502877338535-766e1452684a"),
   suv_white:     U("1533473359331-0135ef1b58bf"),
@@ -10,6 +10,7 @@ const PHOTOS = {
   porsche_black: U("1503376780353-7e6692767b70"),
   mustang_black: U("1611016186353-9af58c69a533"),
   camaro_white:  U("1492144534655-ae79c964c9d7"),
+  hilux_pickup:  U("1559416523-140ddc3d238c"),
 };
 
 export interface VehicleSeed {
@@ -47,7 +48,7 @@ export const MOCK_VEHICLES: VehicleSeed[] = [
     body_type: "hatch", condition: "seminovo",
     optionals: ["Bancos de couro", "Apple CarPlay", "Android Auto", "Piloto automático"],
     description: "Praticamente zero, ainda na garantia de fábrica. Motor turbo 1.0, bancos de couro, Apple CarPlay, Android Auto.",
-    status: "disponivel", photos: [PHOTOS.bmw_blue, PHOTOS.polo_teal],
+    status: "disponivel", photos: [PHOTOS.polo_teal, PHOTOS.bmw_blue],
   },
   {
     brand: "Jeep", model: "Compass", version: "2.0 Limited 4x2 Flex",
@@ -57,7 +58,7 @@ export const MOCK_VEHICLES: VehicleSeed[] = [
     body_type: "suv", condition: "seminovo",
     optionals: ["Teto solar", "Bancos de couro", "Multimídia 8.4\"", "Câmera 360°", "Rodas de liga 18\""],
     description: "Full top de linha. Teto solar, couro, multimídia 8.4\", câmera 360°, Jeep Shield, rodas 18\".",
-    status: "disponivel", photos: [PHOTOS.suv_white, PHOTOS.camaro_white],
+    status: "disponivel", photos: [PHOTOS.suv_white, PHOTOS.mustang_black],
   },
   {
     brand: "Toyota", model: "Corolla", version: "2.0 XEI",
@@ -87,7 +88,7 @@ export const MOCK_VEHICLES: VehicleSeed[] = [
     body_type: "sedan", condition: "seminovo", single_owner: true,
     optionals: ["Multimídia MyLink 8\"", "Câmera de ré", "Controle de cruzeiro adaptativo", "Alerta de ponto cego"],
     description: "Onix Plus Premier automático. Multimídia Mylink 8\", câmera de ré, controle de cruzeiro adaptativo, sensor de ponto cego.",
-    status: "disponivel", photos: [PHOTOS.polo_teal, PHOTOS.hb20_red],
+    status: "disponivel", photos: [PHOTOS.bmw_blue, PHOTOS.audi_gray],
   },
   {
     brand: "Volkswagen", model: "T-Cross", version: "1.0 200 TSI Comfortline",
@@ -97,7 +98,7 @@ export const MOCK_VEHICLES: VehicleSeed[] = [
     body_type: "suv", condition: "seminovo",
     optionals: ["Multimídia 9.2\"", "Câmera de ré", "Câmbio automático 6 marchas"],
     description: "Vendido. Cinza Platinum. Motor turbo 1.0, câmbio automático 6 vel., multimídia 9.2\", câmera de ré.",
-    status: "vendido", photos: [PHOTOS.mustang_black, PHOTOS.audi_gray],
+    status: "vendido", photos: [PHOTOS.suv_white, PHOTOS.camaro_white],
   },
   {
     brand: "Toyota", model: "Hilux", version: "2.8 SR 4x4 Diesel",
@@ -107,7 +108,7 @@ export const MOCK_VEHICLES: VehicleSeed[] = [
     body_type: "picape", condition: "seminovo",
     optionals: ["Cabine dupla", "Tração 4x4", "Rodas de liga 17\"", "Controle de tração", "Câmera de ré"],
     description: "Vendida. Hilux SR 2.8 diesel 177 cv. Cabine dupla, 4x4. Rodas 17\", controle de tração, câmera de ré.",
-    status: "vendido", photos: [PHOTOS.camaro_white, PHOTOS.suv_white],
+    status: "vendido", photos: [PHOTOS.hilux_pickup, PHOTOS.suv_white],
   },
 ];
 
