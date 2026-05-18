@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
 import type { TenantRow } from "@/lib/schema";
+import { PLAN_SLUGS, PLANS } from "@/lib/plans";
 
 interface Props {
   tenant?: TenantRow;
@@ -12,6 +13,7 @@ interface Props {
 const OPTIONAL_FIELDS = [
   "custom_domain", "logo_url", "hero_title", "hero_subtitle",
   "city", "whatsapp_number", "instagram_url", "business_hours", "contact_email",
+  "plan",
 ] as const;
 
 function slugify(value: string): string {
@@ -31,6 +33,7 @@ export function TenantForm({ tenant }: Props) {
     name: tenant?.name ?? "",
     slug: tenant?.slug ?? "",
     custom_domain: tenant?.custom_domain ?? "",
+    plan: tenant?.plan ?? "",
     status: tenant?.status ?? "active",
     primary_color: tenant?.primary_color ?? "#1E293B",
     accent_color: tenant?.accent_color ?? "#DC2626",
@@ -146,18 +149,34 @@ export function TenantForm({ tenant }: Props) {
             />
           </Field>
         </div>
-        {isEdit && (
-          <Field label="Status">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Plano" hint="Define as capabilities. Vazio = capabilities do Básico.">
             <select
-              value={form.status}
-              onChange={(e) => set("status", e.target.value)}
+              value={form.plan}
+              onChange={(e) => set("plan", e.target.value)}
               className={inputClass}
             >
-              <option value="active">Ativa</option>
-              <option value="suspended">Suspensa</option>
+              <option value="">Sem plano definido</option>
+              {PLAN_SLUGS.map((slug) => (
+                <option key={slug} value={slug}>
+                  {PLANS[slug].name}
+                </option>
+              ))}
             </select>
           </Field>
-        )}
+          {isEdit && (
+            <Field label="Status">
+              <select
+                value={form.status}
+                onChange={(e) => set("status", e.target.value)}
+                className={inputClass}
+              >
+                <option value="active">Ativa</option>
+                <option value="suspended">Suspensa</option>
+              </select>
+            </Field>
+          )}
+        </div>
       </Section>
 
       {/* Branding */}
