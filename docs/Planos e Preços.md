@@ -24,6 +24,7 @@ aliases:
 | Subdomínio `loja.autostand.com.br` | ✓ | ✓ | ✓ |
 | Domínio próprio | — | ✓ | ✓ |
 | Customização de layout (hero, cards, seções) | — | ✓ | ✓ |
+| Gerador de post para Instagram | — | ✓ | ✓ |
 | Análises de IA | — | — | ✓ |
 
 ## Capabilities
@@ -35,6 +36,7 @@ aliases:
 | `customColors` | ✓ | ✓ | ✓ |
 | `layoutConfig` | — | ✓ | ✓ |
 | `customDomain` | — | ✓ | ✓ |
+| `instagramPost` | — | ✓ | ✓ |
 | `aiAnalysis` | — | — | ✓ |
 
 Helpers: `getPlan(slug)`, `capabilitiesFor(slug)`. Tenant sem `plan` definido cai nas capabilities do Básico.
@@ -46,7 +48,7 @@ Helpers: `getPlan(slug)`, `capabilitiesFor(slug)`. Tenant sem `plan` definido ca
 
 - A **leitura de cada plano:**
 	- **Básico** — "estar online de forma decente": site completo, com a cor da marca, no subdomínio.
-	- **Pro** — "parecer uma marca de verdade": domínio próprio + site customizado.
+	- **Pro** — "parecer uma marca de verdade": domínio próprio, site customizado e gerador de post para Instagram.
 	- **Premium** — "o extra inteligente": IA hoje; ganha peso com a automação do [[Milestone 3]].
 
 > [!warning] Premium hoje é o tier mais fraco

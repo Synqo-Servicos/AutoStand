@@ -16,7 +16,8 @@ aliases:
 > [!info] Estado atual
 > - [[Milestone 1]] — Multi-tenancy → ✅ **concluído**
 > - [[Milestone 2]] — Self-service + Billing → 🔨 **em andamento** (Fases 1 e 3–9 concluídas; falta só o pagamento)
-> - [[Milestone 3]] — Automação & Distribuição → 🗺️ planejado
+> - [[Milestone 4]] — Distribuição & Marketplace → 🔨 **em andamento** (Fases 1–3 concluídas)
+> - [[Milestone 3]] — Automação → 🗺️ planejado
 
 ## 🗺️ Mapa da documentação
 
@@ -34,7 +35,8 @@ graph TD
     RM --> M1[Milestone 1]
     RM --> M2[Milestone 2]
     RM --> M3[Milestone 3]
-    class VG,AR,PP,RM,DEC,DEV,GL,MD,DS,M1,M2,M3 internal-link;
+    RM --> M4[Milestone 4]
+    class VG,AR,PP,RM,DEC,DEV,GL,MD,DS,M1,M2,M3,M4 internal-link;
 ```
 
 ## 🧭 Produto
@@ -50,7 +52,7 @@ graph TD
 
 ## 🛣️ Planejamento
 - [[Roadmap]] — visão geral dos milestones.
-- [[Milestone 1]] · [[Milestone 2]] · [[Milestone 3]]
+- [[Milestone 1]] · [[Milestone 2]] · [[Milestone 3]] · [[Milestone 4]]
 
 ## 📖 Referência
 - [[Glossário]] — termos do projeto.

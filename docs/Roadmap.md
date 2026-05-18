@@ -9,14 +9,14 @@ aliases:
 # Roadmap
 
 > [!abstract] Resumo
-> Três milestones. O [[Milestone 1]] está concluído; o [[Milestone 2]] em andamento; o [[Milestone 3]] planejado.
+> Quatro milestones. O [[Milestone 1]] está concluído; o [[Milestone 2]] e o [[Milestone 4]] em andamento; o [[Milestone 3]] planejado.
 
 ## Posicionamento
 
 > [!quote] Não vendemos "um site"
 > **Não somos uma plataforma de sites para concessionárias — somos a operação de venda digital da concessionária.**
 
-O site é commodity: um cliente que compra só "um site" cancela quando ele fica pronto. O que gera **recorrência** é a automação operacional — leads no WhatsApp, distribuição em marketplaces, CRM ativo ([[Milestone 3]]).
+O site é commodity: um cliente que compra só "um site" cancela quando ele fica pronto. O que gera **recorrência** é a operação de venda — distribuição em marketplaces ([[Milestone 4]]), leads no WhatsApp e CRM ativo ([[Milestone 3]]).
 
 Referência de modelo: o **Anota.ai** (SaaS de delivery) não vende "cardápio digital" — vende o robô de WhatsApp que opera o delivery. O site whitelabel é a porta de entrada (Milestones [[Milestone 1|1]]–[[Milestone 2|2]]); a automação é o motor de retenção.
 
@@ -30,15 +30,17 @@ Referência de modelo: o **Anota.ai** (SaaS de delivery) não vende "cardápio d
 ```mermaid
 graph LR
     M1[Milestone 1<br/>Multi-tenancy<br/>✅ concluído] --> M2[Milestone 2<br/>Self-service + Billing<br/>🔨 em andamento]
-    M2 --> M3[Milestone 3<br/>Automação<br/>🗺️ planejado]
-    class M1,M2,M3 internal-link;
+    M2 --> M4[Milestone 4<br/>Distribuição + Marketplace<br/>🔨 em andamento]
+    M4 --> M3[Milestone 3<br/>Automação<br/>🗺️ planejado]
+    class M1,M2,M3,M4 internal-link;
 ```
 
 ## Milestones
 
 - [[Milestone 1]] — **Multi-tenancy** ✅ — transformou o site single-tenant num SaaS whitelabel multi-tenant.
-- [[Milestone 2]] — **Self-service + Billing** 🔨 — cadastro automático, Stripe, customização escalonada por plano. Fase 1 concluída.
-- [[Milestone 3]] — **Automação & Distribuição** 🗺️ — o motor de retenção: WhatsApp, marketplaces, CRM ativo.
+- [[Milestone 2]] — **Self-service + Billing** 🔨 — cadastro automático, Stripe, customização escalonada por plano. Falta só o pagamento.
+- [[Milestone 4]] — **Distribuição & Marketplace** 🔨 — post de Instagram, marketplace multimarca AutoStand, feeds para portais. Fases 1–3 concluídas.
+- [[Milestone 3]] — **Automação** 🗺️ — o motor de retenção: leads no WhatsApp, CRM ativo.
 
 ## Backlog (futuro)
 

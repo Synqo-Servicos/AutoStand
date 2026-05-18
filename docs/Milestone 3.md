@@ -1,5 +1,5 @@
 ---
-title: Milestone 3 — Automação & Distribuição
+title: Milestone 3 — Automação
 tags:
   - planejamento
   - milestone
@@ -8,7 +8,7 @@ aliases:
   - M3
 ---
 
-# Milestone 3 — Automação & Distribuição
+# Milestone 3 — Automação
 
 > [!info] Status: planejado
 > O **motor de retenção**. Depois que o cliente tem site + assinatura ([[Milestone 1|M1]]–[[Milestone 2|M2]]), o que o faz **não cancelar** é a plataforma operar a venda para ele. É o que diferencia o produto de "só mais um site" — ver [[Roadmap#Posicionamento]].
@@ -23,14 +23,8 @@ aliases:
 > [!warning] Custo a considerar
 > A WhatsApp Business API (Meta) cobra por conversa.
 
-## Eixo B — Sindicância de estoque em marketplaces
-
-- A concessionária cadastra o veículo **uma vez** e ele é publicado automaticamente nos portais (Webmotors, OLX, Mercado Livre, iCarros).
-- Elimina o retrabalho de recadastrar o mesmo carro em 4 sites na mão — dor real e cara do setor.
-- Sincroniza disponibilidade: vendeu na plataforma → sai dos portais.
-
-> [!note]
-> Depende da API/integração disponível em cada portal — a investigar por portal.
+> [!info] Eixo B migrou para o [[Milestone 4]]
+> A sindicância de estoque em marketplaces (publicar o veículo nos portais externos — OLX, Webmotors, iCarros) virou a **Fase 4 do [[Milestone 4]]**, junto com o marketplace próprio da AutoStand. Distribuição ficou concentrada num milestone só.
 
 ## Eixo C — CRM ativo
 
