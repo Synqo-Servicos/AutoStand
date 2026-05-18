@@ -57,6 +57,7 @@ graph TD
 - [[Milestone 1]] · [[Milestone 2]] · [[Milestone 3]] · [[Milestone 4]] · [[Milestone 5]]
 
 ## 📖 Referência
+- [[Onboarding]] — playbook de campo para visitar e fechar concessionárias.
 - [[Glossário]] — termos do projeto.
 - [[Ideias]] — backlog de ideias ainda não priorizadas.
 
