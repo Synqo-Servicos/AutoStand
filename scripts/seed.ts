@@ -237,32 +237,6 @@ async function main() {
     console.log(`· Super admin ${superEmail} já existe`);
   }
 
-  // --- Real client: Pedro Ivo Veículos ---
-  await seedDealership({
-    tenant: {
-      slug: "pedro-ivo",
-      plan: "premium",
-      marketplace_opt_in: true,
-      name: "Pedro Ivo Veículos",
-      custom_domain: "pedroivoveiculos.com.br",
-      whatsapp_number: "5582998287879",
-      instagram_url: "https://www.instagram.com/pedroivo_veiculos/",
-      business_hours: "Seg–Sex: 8h às 18h",
-      city: "Maceió, AL",
-      primary_color: "#1E293B",
-      accent_color: "#DC2626",
-      accent_dark_color: "#B91C1C",
-      hero_title: "Seminovos com procedência",
-      hero_subtitle:
-        "Carros revisados, documentação em dia e financiamento facilitado. Encontre o carro certo para você.",
-    },
-    admin: {
-      name: "Pedro Ivo",
-      email: (process.env.ADMIN_EMAIL ?? "admin@pedro-ivo.com.br").trim(),
-      password: (process.env.ADMIN_PASSWORD ?? "pedro123").trim(),
-    },
-  });
-
   // --- Showcase / demo dealership (used to present the platform to prospects) ---
   await seedDealership({
     tenant: {
@@ -297,11 +271,8 @@ async function main() {
     },
   });
 
-  const demoTenants = await Promise.all([
-    getTenantBySlug("pedro-ivo"),
-    getTenantBySlug("demo"),
-  ]);
-  await seedDemand(demoTenants.filter((t) => t !== null).map((t) => t!.id));
+  const demo = await getTenantBySlug("demo");
+  await seedDemand(demo ? [demo.id] : []);
 
   console.log("\n✅ Seed concluído!");
   client.close();

@@ -14,7 +14,7 @@ import type {
   VehicleRow,
   VehiclePhotoRow,
 } from "@/lib/schema";
-import { leads, partners, tenants, transactions, users, vehicle_photos, vehicles } from "@/lib/schema";
+import { demand_events, leads, partners, tenants, transactions, users, vehicle_photos, vehicles } from "@/lib/schema";
 import type { DashboardStats, MonthlyData, StockByStatus } from "@/types/dashboard";
 import type { TransactionInput, TransactionWithVehicle } from "@/types/transaction";
 import type { VehicleInput, VehicleWithPhotos } from "@/types/vehicle";
@@ -78,6 +78,14 @@ export async function updateTenant(
 }
 
 export async function deleteTenant(id: number): Promise<void> {
+  // Remove explicitamente os dados dependentes — não dependemos do cascade
+  // do SQLite (a checagem de foreign key pode estar desligada na conexão).
+  await db.delete(leads).where(eq(leads.tenant_id, id));
+  await db.delete(transactions).where(eq(transactions.tenant_id, id));
+  await db.delete(vehicle_photos).where(eq(vehicle_photos.tenant_id, id));
+  await db.delete(vehicles).where(eq(vehicles.tenant_id, id));
+  await db.delete(demand_events).where(eq(demand_events.tenant_id, id));
+  await db.delete(users).where(eq(users.tenant_id, id));
   await db.delete(tenants).where(eq(tenants.id, id));
 }
 
