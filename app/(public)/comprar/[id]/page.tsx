@@ -24,9 +24,16 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const v = await getMarketplaceVehicle(Number(id));
   if (!v) return { title: "Veículo não encontrado — AutoStand" };
+  const titulo = `${v.brand} ${v.model} ${v.year} — AutoStand`;
+  const descricao = `${v.brand} ${v.model}${v.version ? ` ${v.version}` : ""} à venda na ${v.loja.name}.`;
   return {
-    title: `${v.brand} ${v.model} ${v.year} — AutoStand`,
-    description: `${v.brand} ${v.model}${v.version ? ` ${v.version}` : ""} à venda na ${v.loja.name}.`,
+    title: titulo,
+    description: descricao,
+    openGraph: {
+      title: titulo,
+      description: descricao,
+      images: v.primary_photo_url ? [v.primary_photo_url] : undefined,
+    },
   };
 }
 
