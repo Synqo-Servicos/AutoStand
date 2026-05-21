@@ -166,16 +166,52 @@ export const transactions = sqliteTable("transactions", {
   tenant_id: integer("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
-  vehicle_id: integer("vehicle_id")
-    .notNull()
-    .references(() => vehicles.id, { onDelete: "cascade" }),
-  /** 'entrada' | 'saida' */
+  /**
+   * Veículo associado. Obrigatório para 'entrada' (compra) e 'saida' (venda).
+   * NULL para despesas operacionais não-atreladas (aluguel, energia, etc.).
+   */
+  vehicle_id: integer("vehicle_id").references(() => vehicles.id, { onDelete: "cascade" }),
+  /**
+   * 'entrada'         — compra de veículo p/ estoque (exige vehicle_id)
+   * 'saida'           — venda de veículo (exige vehicle_id)
+   * 'despesa_direta'  — custo atrelado a um veículo (preparação, laudo, NF de peça)
+   * 'despesa_fixa'    — custo recorrente da loja (aluguel, salário, etc.)
+   * 'despesa_var'     — custo eventual da loja (marketing, manutenção)
+   * 'comissao'        — comissão de vendedor sobre uma venda
+   */
   type: text("type").notNull(),
   amount: integer("amount").notNull(),
   date: text("date").notNull(),
+  /** Subcategoria livre (Aluguel, Energia, Polimento, Despachante…). */
+  category: text("category"),
+  /** Vendedor responsável — preenchido em 'saida' e 'comissao'. */
+  seller_id: integer("seller_id").references(() => sellers.id, { onDelete: "set null" }),
   buyer_name: text("buyer_name"),
   buyer_phone: text("buyer_phone"),
   notes: text("notes"),
+  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- Sellers (vendedores da concessionária) ---
+
+export const sellers = sqliteTable("sellers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  tenant_id: integer("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  phone: text("phone"),
+  email: text("email"),
+  /** CPF (sem máscara). */
+  document: text("document"),
+  /** Foto opcional pra cards do dashboard. */
+  photo_url: text("photo_url"),
+  /** Comissão percentual sobre o valor da venda (ex.: 3.0 = 3%). */
+  commission_pct: integer("commission_pct"),
+  /** Comissão fixa em centavos (alternativa ao %). */
+  commission_fixed_cents: integer("commission_fixed_cents"),
+  /** 'ativo' | 'desligado' */
+  status: text("status").notNull().default("ativo"),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -257,6 +293,9 @@ export type VehiclePhotoRow = typeof vehicle_photos.$inferSelect;
 export type VehicleDocumentRow = typeof vehicle_documents.$inferSelect;
 export type NewVehicleDocument = typeof vehicle_documents.$inferInsert;
 export type TransactionRow = typeof transactions.$inferSelect;
+export type NewTransaction = typeof transactions.$inferInsert;
+export type SellerRow = typeof sellers.$inferSelect;
+export type NewSeller = typeof sellers.$inferInsert;
 export type LeadRow = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
 export type PartnerRow = typeof partners.$inferSelect;

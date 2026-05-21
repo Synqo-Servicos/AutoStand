@@ -327,8 +327,16 @@ export async function getDocumentsByVehicle(
 export interface TransactionFilters {
   vehicle_id?: number;
   type?: string;
+  /** Lista de tipos aceitos (OR). Use no lugar de `type` quando filtrar várias. */
+  types?: string[];
+  /** YYYY-MM */
   month?: string;
+  /** YYYY */
   year?: string;
+  category?: string;
+  seller_id?: number;
+  /** Se true, retorna apenas transações sem veículo (despesas operacionais). */
+  no_vehicle?: boolean;
 }
 
 export async function listTransactions(
@@ -339,9 +347,16 @@ export async function listTransactions(
 
   if (filters.vehicle_id) conditions.push(eq(transactions.vehicle_id, filters.vehicle_id));
   if (filters.type) conditions.push(eq(transactions.type, filters.type));
+  if (filters.types && filters.types.length > 0) {
+    conditions.push(sql`${transactions.type} IN ${filters.types}`);
+  }
   if (filters.year) conditions.push(like(transactions.date, `${filters.year}%`));
   if (filters.month) conditions.push(like(transactions.date, `${filters.month}%`));
+  if (filters.category) conditions.push(eq(transactions.category, filters.category));
+  if (filters.seller_id) conditions.push(eq(transactions.seller_id, filters.seller_id));
+  if (filters.no_vehicle) conditions.push(sql`${transactions.vehicle_id} IS NULL`);
 
+  // LEFT JOIN para incluir despesas operacionais (sem veículo).
   const rows = await db
     .select({
       ...getTableColumns(transactions),
@@ -350,7 +365,7 @@ export async function listTransactions(
       vehicle_year: vehicles.year,
     })
     .from(transactions)
-    .innerJoin(vehicles, eq(vehicles.id, transactions.vehicle_id))
+    .leftJoin(vehicles, eq(vehicles.id, transactions.vehicle_id))
     .where(and(...conditions))
     .orderBy(desc(transactions.date), desc(transactions.created_at));
 
@@ -382,13 +397,16 @@ export async function createTransaction(
         type: input.type,
         amount: input.amount,
         date: input.date,
+        category: input.category ?? null,
+        seller_id: input.seller_id ?? null,
         buyer_name: input.buyer_name,
         buyer_phone: input.buyer_phone,
         notes: input.notes,
       })
       .returning();
 
-    if (input.type === "saida" || input.type === "entrada") {
+    // 'entrada' (compra) e 'saida' (venda) também atualizam o status do veículo.
+    if ((input.type === "saida" || input.type === "entrada") && input.vehicle_id) {
       const newStatus = input.type === "saida" ? "vendido" : "disponivel";
       await tx
         .update(vehicles)
@@ -400,7 +418,9 @@ export async function createTransaction(
   });
 }
 
-const TRANSACTION_UPDATE_FIELDS = ["amount", "date", "buyer_name", "buyer_phone", "notes"] as const;
+const TRANSACTION_UPDATE_FIELDS = [
+  "amount", "date", "buyer_name", "buyer_phone", "notes", "category", "seller_id",
+] as const;
 
 export async function updateTransaction(
   tenantId: number,

@@ -9,10 +9,21 @@ import type { TransactionWithVehicle } from "@/types/transaction";
 import type { Vehicle } from "@/types/vehicle";
 import type { MonthlyData } from "@/types/dashboard";
 
-const TYPE_LABEL = { entrada: "Entrada", saida: "Saída" };
-const TYPE_COLOR = {
+const TYPE_LABEL: Record<string, string> = {
+  entrada: "Entrada",
+  saida: "Saída",
+  despesa_direta: "Custo direto",
+  despesa_fixa: "Despesa fixa",
+  despesa_var: "Despesa variável",
+  comissao: "Comissão",
+};
+const TYPE_COLOR: Record<string, string> = {
   entrada: "bg-signal/10 text-signal ring-1 ring-signal",
   saida:   "bg-success/12 text-ink ring-1 ring-success/30",
+  despesa_direta: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+  despesa_fixa: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
+  despesa_var: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
+  comissao: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
 };
 
 export default function TransacoesPage() {

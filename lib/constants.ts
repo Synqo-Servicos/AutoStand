@@ -86,12 +86,40 @@ export const COMMON_BRANDS = [
   "Citroën",
 ] as const;
 
-export const TRANSACTION_TYPES = ["entrada", "saida"] as const;
+export const TRANSACTION_TYPES = [
+  "entrada", "saida", "despesa_direta", "despesa_fixa", "despesa_var", "comissao",
+] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
 export const TRANSACTION_LABELS: Record<TransactionType, string> = {
-  entrada: "Entrada",
-  saida: "Saída",
+  entrada: "Entrada (compra)",
+  saida: "Saída (venda)",
+  despesa_direta: "Custo direto do veículo",
+  despesa_fixa: "Despesa fixa",
+  despesa_var: "Despesa variável",
+  comissao: "Comissão",
 };
+
+/** Categorias-padrão para despesas operacionais. */
+export const EXPENSE_CATEGORIES = {
+  estrutura: ["Aluguel", "Energia", "Água", "Internet", "Telefone", "IPTU", "Condomínio"],
+  pessoal:   ["Salários", "Pró-labore", "Vale-transporte", "Vale-refeição", "Treinamento"],
+  operacao:  ["Marketing", "Combustível", "Limpeza", "Material de escritório", "Software"],
+  veiculo:   ["Polimento", "Reparo mecânico", "NF de peça", "Detran", "Despachante", "Laudo cautelar", "IPVA proporcional", "Documentação"],
+  impostos:  ["DAS", "INSS", "ISS", "ICMS", "Contador"],
+} as const;
+
+export type ExpenseGroup = keyof typeof EXPENSE_CATEGORIES;
+
+export const EXPENSE_GROUP_LABELS: Record<ExpenseGroup, string> = {
+  estrutura: "Estrutura",
+  pessoal:   "Pessoal",
+  operacao:  "Operação",
+  veiculo:   "Veículo (avulso)",
+  impostos:  "Impostos",
+};
+
+/** Lista chapada de todas as categorias para uso em selects simples. */
+export const ALL_EXPENSE_CATEGORIES: string[] = Object.values(EXPENSE_CATEGORIES).flat();
 
 // Branding (nome, contatos, cores) vem do tenant — ver tabela `tenants` em lib/schema.ts.
