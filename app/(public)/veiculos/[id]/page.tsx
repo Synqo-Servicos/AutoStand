@@ -3,6 +3,7 @@ import { Gauge, Calendar, Fuel, Settings, MapPin } from "lucide-react";
 import { getVehicleWithPhotos } from "@/lib/db";
 import { recordView } from "@/lib/demand";
 import { getCurrentTenant } from "@/lib/tenant";
+import { PartnerBanks } from "@/components/public/PartnerBanks";
 import { PhotoGallery } from "@/components/public/PhotoGallery";
 import { LeadForm } from "@/components/public/LeadForm";
 import { formatBRL } from "@/lib/money";
@@ -102,6 +103,8 @@ export default async function VehiclePage({ params }: Params) {
               Falar no WhatsApp
             </a>
           )}
+
+          <PartnerBanks slugs={tenant.partner_banks} variant="compact" className="mt-3" />
 
           <LeadForm vehicleId={vehicle.id} vehicleLabel={label} />
 

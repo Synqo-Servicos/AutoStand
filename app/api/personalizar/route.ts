@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getApiTenantId } from "@/lib/auth";
+import { BANKS_BY_SLUG } from "@/lib/banks";
 import { getTenantById, updateTenant } from "@/lib/db";
 import { capabilitiesFor } from "@/lib/plans";
 import { sanitizeLayoutConfig } from "@/lib/layout";
@@ -50,6 +51,20 @@ export async function PATCH(req: NextRequest) {
     // Layout — só planos com a capability (gating no servidor, nunca no cliente).
     if (body.layout_config !== undefined && capabilitiesFor(tenant.plan).layoutConfig) {
       patch.layout_config = sanitizeLayoutConfig(body.layout_config);
+    }
+
+    // Bancos parceiros — todos os planos. Filtra contra o catálogo mestre,
+    // preserva ordem do envio, descarta slug desconhecido e duplicado.
+    if (Array.isArray(body.partner_banks)) {
+      const seen = new Set<string>();
+      const sanitized: string[] = [];
+      for (const slug of body.partner_banks) {
+        if (typeof slug !== "string") continue;
+        if (!BANKS_BY_SLUG[slug] || seen.has(slug)) continue;
+        seen.add(slug);
+        sanitized.push(slug);
+      }
+      patch.partner_banks = sanitized;
     }
 
     if (Object.keys(patch).length === 0) {

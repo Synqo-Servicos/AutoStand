@@ -55,6 +55,9 @@ export const tenants = sqliteTable("tenants", {
     .notNull()
     .default(false),
 
+  /** Bancos parceiros — slugs de `lib/banks.ts`. Logos aparecem no site público. */
+  partner_banks: text("partner_banks", { mode: "json" }).$type<string[]>().default([]),
+
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updated_at: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Lock } from "lucide-react";
+import { BANKS } from "@/lib/banks";
 import { StorefrontHero } from "@/components/public/StorefrontHero";
 import { VehicleCard } from "@/components/public/VehicleCard";
 import { CARD_STYLES, HERO_STYLES, resolveLayoutConfig } from "@/lib/layout";
@@ -75,6 +77,13 @@ export function PersonalizarEditor({
   const [heroImageUrl, setHeroImageUrl] = useState(layout0.heroImageUrl ?? "");
   const [cardStyle, setCardStyle] = useState<LayoutConfig["cardStyle"]>(layout0.cardStyle);
   const [cardsPerRow, setCardsPerRow] = useState<LayoutConfig["cardsPerRow"]>(layout0.cardsPerRow);
+  const [bankSlugs, setBankSlugs] = useState<string[]>(tenant.partner_banks ?? []);
+
+  function toggleBank(slug: string) {
+    setBankSlugs((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
+  }
 
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -119,6 +128,7 @@ export function PersonalizarEditor({
           hero_title: heroTitle,
           hero_subtitle: heroSubtitle,
           layout_config: previewConfig,
+          partner_banks: bankSlugs,
         }),
       });
       const data = await res.json();
@@ -178,6 +188,51 @@ export function PersonalizarEditor({
               />
             </div>
           </div>
+        </section>
+
+        {/* Bancos parceiros — todos os planos */}
+        <section className={cardClass}>
+          <h2 className="font-display text-h3 font-semibold text-ink">Bancos parceiros</h2>
+          <p className="mt-0.5 text-body-s text-n600">
+            Selecione os bancos com que sua loja trabalha. As logos aparecem no
+            rodapé do seu site e em destaque na página de cada veículo.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {BANKS.map((bank) => {
+              const selected = bankSlugs.includes(bank.slug);
+              return (
+                <button
+                  type="button"
+                  key={bank.slug}
+                  onClick={() => toggleBank(bank.slug)}
+                  aria-pressed={selected}
+                  className={`flex items-center gap-2.5 rounded-lg border-2 px-2.5 py-2 text-left transition-all ${
+                    selected
+                      ? "border-signal bg-signal/5 shadow-sm"
+                      : "border-n200 bg-white opacity-70 hover:border-n400 hover:opacity-100"
+                  }`}
+                >
+                  <span className="relative h-7 w-16 shrink-0 overflow-hidden rounded">
+                    <Image
+                      src={bank.logo}
+                      alt=""
+                      fill
+                      sizes="64px"
+                      className="object-contain"
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-body-s font-medium text-ink">
+                    {bank.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-body-s text-n500">
+            {bankSlugs.length === 0
+              ? "Nenhum banco selecionado — a seção não aparece no site."
+              : `${bankSlugs.length} banco${bankSlugs.length > 1 ? "s" : ""} selecionado${bankSlugs.length > 1 ? "s" : ""}.`}
+          </p>
         </section>
 
         {/* Layout — gated */}

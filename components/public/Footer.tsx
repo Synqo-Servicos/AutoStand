@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PartnerBanks } from "@/components/public/PartnerBanks";
 import { useTenant, tenantInitials } from "@/components/TenantContext";
 
 export function Footer() {
@@ -58,6 +59,11 @@ export function Footer() {
           </div>
         </div>
       </div>
+      {tenant.partner_banks && tenant.partner_banks.length > 0 && (
+        <div className="max-w-7xl mx-auto mt-10 pt-8 border-t border-white/10">
+          <PartnerBanks slugs={tenant.partner_banks} variant="footer" />
+        </div>
+      )}
       <div className="max-w-7xl mx-auto mt-8 pt-8 border-t border-white/10 flex items-center justify-between text-xs">
         <span>© {year} {tenant.name}</span>
         <Link href="/admin" className="hover:text-white transition-colors">Admin</Link>
