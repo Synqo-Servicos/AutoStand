@@ -12,9 +12,10 @@ import type {
   TransactionRow,
   UserRow,
   VehicleRow,
+  VehicleDocumentRow,
   VehiclePhotoRow,
 } from "@/lib/schema";
-import { demand_events, leads, partners, tenants, transactions, users, vehicle_photos, vehicles } from "@/lib/schema";
+import { demand_events, leads, partners, tenants, transactions, users, vehicle_documents, vehicle_photos, vehicles } from "@/lib/schema";
 import type { DashboardStats, MonthlyData, StockByStatus } from "@/types/dashboard";
 import type { TransactionInput, TransactionWithVehicle } from "@/types/transaction";
 import type { VehicleInput, VehicleWithPhotos } from "@/types/vehicle";
@@ -261,6 +262,64 @@ export async function getPhotosByVehicle(
       and(eq(vehicle_photos.tenant_id, tenantId), eq(vehicle_photos.vehicle_id, vehicleId)),
     )
     .orderBy(vehicle_photos.order_idx);
+}
+
+// --- Documents (anexos internos do veículo) ---
+
+export async function addVehicleDocument(input: {
+  tenantId: number;
+  vehicleId: number;
+  name: string;
+  category: string;
+  url: string;
+  size?: number | null;
+  mimeType?: string | null;
+  uploadedBy?: number | null;
+}): Promise<VehicleDocumentRow> {
+  const [row] = await db
+    .insert(vehicle_documents)
+    .values({
+      tenant_id: input.tenantId,
+      vehicle_id: input.vehicleId,
+      name: input.name,
+      category: input.category,
+      url: input.url,
+      size: input.size ?? null,
+      mime_type: input.mimeType ?? null,
+      uploaded_by: input.uploadedBy ?? null,
+    })
+    .returning();
+  return row;
+}
+
+export async function deleteVehicleDocument(
+  tenantId: number,
+  documentId: number,
+): Promise<VehicleDocumentRow | null> {
+  const [row] = await db
+    .select()
+    .from(vehicle_documents)
+    .where(and(eq(vehicle_documents.tenant_id, tenantId), eq(vehicle_documents.id, documentId)))
+    .limit(1);
+  if (!row) return null;
+  await db.delete(vehicle_documents).where(eq(vehicle_documents.id, documentId));
+  return row;
+}
+
+export async function getDocumentsByVehicle(
+  tenantId: number,
+  vehicleId: number,
+): Promise<VehicleDocumentRow[]> {
+  return db
+    .select()
+    .from(vehicle_documents)
+    .where(
+      and(
+        eq(vehicle_documents.tenant_id, tenantId),
+        eq(vehicle_documents.vehicle_id, vehicleId),
+      ),
+    )
+    .orderBy(desc(vehicle_documents.created_at));
 }
 
 // --- Transactions (tenant-scoped) ---

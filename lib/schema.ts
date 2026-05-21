@@ -129,6 +129,31 @@ export const vehicle_photos = sqliteTable("vehicle_photos", {
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+// --- Vehicle documents (anexos do estoque — controle interno) ---
+
+export const vehicle_documents = sqliteTable("vehicle_documents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  tenant_id: integer("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  vehicle_id: integer("vehicle_id")
+    .notNull()
+    .references(() => vehicles.id, { onDelete: "cascade" }),
+  /** Nome de exibição (ex.: "CRLV 2026", "Laudo Cautelar Sertec"). */
+  name: text("name").notNull(),
+  /** 'crlv' | 'laudo' | 'dut' | 'nf_peca' | 'os' | 'contrato' | 'historico' | 'outros' */
+  category: text("category").notNull().default("outros"),
+  /** URL no Vercel Blob (público mas não-indexado — hash não adivinhável). */
+  url: text("url").notNull(),
+  /** Tamanho em bytes — exibido na UI. */
+  size: integer("size"),
+  /** Mime type — define o ícone. */
+  mime_type: text("mime_type"),
+  /** Usuário que fez o upload. */
+  uploaded_by: integer("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 // --- Transactions ---
 
 export const transactions = sqliteTable("transactions", {
@@ -224,6 +249,8 @@ export type UserRow = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type VehicleRow = typeof vehicles.$inferSelect;
 export type VehiclePhotoRow = typeof vehicle_photos.$inferSelect;
+export type VehicleDocumentRow = typeof vehicle_documents.$inferSelect;
+export type NewVehicleDocument = typeof vehicle_documents.$inferInsert;
 export type TransactionRow = typeof transactions.$inferSelect;
 export type LeadRow = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;

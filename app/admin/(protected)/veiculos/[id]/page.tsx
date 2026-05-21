@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import { getVehicleWithPhotos } from "@/lib/db";
+import { getDocumentsByVehicle, getVehicleWithPhotos } from "@/lib/db";
 import { getAdminTenant } from "@/lib/tenant";
 import { capabilitiesFor } from "@/lib/plans";
 import { VehicleForm } from "@/components/admin/VehicleForm";
 import { PostInstagramButton } from "@/components/admin/PostInstagramButton";
+import { VehicleDocumentsManager } from "@/components/admin/VehicleDocumentsManager";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +13,16 @@ type Params = { params: Promise<{ id: string }> };
 export default async function EditVeiculoPage({ params }: Params) {
   const { id } = await params;
   const tenant = await getAdminTenant();
-  const vehicle = await getVehicleWithPhotos(tenant.id, Number(id));
+  const vehicleId = Number(id);
+  const [vehicle, documents] = await Promise.all([
+    getVehicleWithPhotos(tenant.id, vehicleId),
+    getDocumentsByVehicle(tenant.id, vehicleId),
+  ]);
   if (!vehicle) notFound();
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="mb-8 flex items-start justify-between gap-4">
+    <div className="p-4 sm:p-8 max-w-4xl space-y-8">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-ink">{vehicle.brand} {vehicle.model}</h1>
           <p className="text-sm text-n600 mt-1">{vehicle.year} · {vehicle.km.toLocaleString("pt-BR")} km</p>
@@ -29,6 +34,7 @@ export default async function EditVeiculoPage({ params }: Params) {
         />
       </div>
       <VehicleForm vehicle={vehicle} />
+      <VehicleDocumentsManager vehicleId={vehicle.id} initialDocuments={documents} />
     </div>
   );
 }

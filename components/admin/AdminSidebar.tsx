@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  ArrowLeftRight, Car, CreditCard, LayoutDashboard, LogOut, Menu, Palette,
+  ArrowLeftRight, Car, CreditCard, FileText, LayoutDashboard, LogOut, Menu, Palette,
   Sparkles, Store, TrendingUp, Users, X,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/admin/veiculos",     label: "Veículos",     icon: Car },
   { href: "/admin/transacoes",   label: "Transações",   icon: ArrowLeftRight },
   { href: "/admin/leads",        label: "Leads",        icon: Users },
+  { href: "/admin/documentos",   label: "Documentos",   icon: FileText },
   { href: "/admin/personalizar", label: "Personalizar", icon: Palette },
   { href: "/admin/analise",      label: "Análise IA",   icon: Sparkles },
   { href: "/admin/inteligencia", label: "Inteligência", icon: TrendingUp },
