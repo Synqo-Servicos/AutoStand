@@ -37,3 +37,7 @@ next-env.d.ts
 *.db
 *.db-shm
 *.db-wal
+*.db.backup-*
+
+# Playwright MCP browser artifacts (snapshots, console logs)
+.playwright-mcp/
