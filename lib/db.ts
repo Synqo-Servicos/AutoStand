@@ -203,7 +203,7 @@ const VEHICLE_UPDATE_FIELDS = [
   "brand", "model", "version", "year", "year_manufacture", "km",
   "cost_price", "sale_price", "transmission", "fuel", "color", "doors",
   "body_type", "condition", "optionals", "armored", "single_owner",
-  "fipe_code", "description", "status", "primary_photo_url",
+  "fipe_code", "plate", "description", "status", "primary_photo_url",
 ] as const;
 
 export async function updateVehicle(

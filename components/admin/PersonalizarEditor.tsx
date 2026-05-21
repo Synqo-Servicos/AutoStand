@@ -28,7 +28,7 @@ const MOCK_VEHICLES: Vehicle[] = [
     year: 2023, year_manufacture: 2022, km: 28000,
     cost_price: 0, sale_price: 11900000, transmission: "automatico", fuel: "flex",
     color: "Prata", doors: 4, body_type: "sedan", condition: "seminovo",
-    optionals: null, armored: false, single_owner: false, fipe_code: null,
+    optionals: null, armored: false, single_owner: false, fipe_code: null, plate: null,
     description: null, status: "disponivel",
     primary_photo_url:
       "https://images.unsplash.com/photo-1606152421802-db97b9c7a11b?auto=format&fit=crop&w=800&q=80",
@@ -39,7 +39,7 @@ const MOCK_VEHICLES: Vehicle[] = [
     year: 2022, year_manufacture: 2021, km: 41000,
     cost_price: 0, sale_price: 14500000, transmission: "automatico", fuel: "diesel",
     color: "Branco", doors: 4, body_type: "suv", condition: "seminovo",
-    optionals: null, armored: false, single_owner: false, fipe_code: null,
+    optionals: null, armored: false, single_owner: false, fipe_code: null, plate: null,
     description: null, status: "disponivel",
     primary_photo_url:
       "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",

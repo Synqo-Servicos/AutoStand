@@ -105,6 +105,8 @@ export const vehicles = sqliteTable("vehicles", {
   armored: integer("armored", { mode: "boolean" }).notNull().default(false),
   /** Único dono — argumento de venda exibido no post. */
   single_owner: integer("single_owner", { mode: "boolean" }).notNull().default(false),
+  /** Placa Mercosul/antiga. Permite consulta automática de dados. */
+  plate: text("plate"),
   /** Código FIPE — ajuda a casar com a taxonomia dos portais. */
   fipe_code: text("fipe_code"),
   description: text("description"),

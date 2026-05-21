@@ -10,6 +10,8 @@ import {
 } from "@/lib/constants";
 import { formatBRL, displayToCents, centsToDisplay } from "@/lib/money";
 import { PhotoUploader } from "./PhotoUploader";
+import { PlateLookup } from "./PlateLookup";
+import type { VehicleLookupResult } from "@/lib/placa";
 import type { VehicleWithPhotos } from "@/types/vehicle";
 
 interface Props {
@@ -42,6 +44,7 @@ export function VehicleForm({ vehicle }: Props) {
     armored:          vehicle?.armored          ?? false,
     single_owner:     vehicle?.single_owner     ?? false,
     fipe_code:        vehicle?.fipe_code        ?? "",
+    plate:            (vehicle as VehicleWithPhotos & { plate?: string | null })?.plate ?? "",
     description:      vehicle?.description      ?? "",
     status:           vehicle?.status           ?? "disponivel",
     primary_photo_url: vehicle?.primary_photo_url ?? null as string | null,
@@ -76,6 +79,7 @@ export function VehicleForm({ vehicle }: Props) {
         version:   form.version.trim()   || null,
         body_type: form.body_type        || null,
         fipe_code: form.fipe_code.trim()  || null,
+        plate:     form.plate.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || null,
         optionals: optionals.length ? optionals : null,
       };
       const url    = isEdit ? `/api/vehicles/${vehicle.id}` : "/api/vehicles";
@@ -97,6 +101,27 @@ export function VehicleForm({ vehicle }: Props) {
       setError((err as Error).message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  function applyLookup(data: VehicleLookupResult) {
+    setForm((f) => ({
+      ...f,
+      brand:            data.brand            ?? f.brand,
+      model:            data.model            ?? f.model,
+      version:          data.version          ?? f.version,
+      year:             data.year             ?? f.year,
+      year_manufacture: data.year_manufacture ?? f.year_manufacture,
+      color:            data.color            ?? f.color,
+      fuel:             data.fuel             ?? f.fuel,
+      fipe_code:        data.fipe_code        ?? f.fipe_code,
+      // Sugere preço de venda baseado na FIPE — só se o admin ainda não informou.
+      sale_price:       f.sale_price === 0 && data.fipe_value_cents
+        ? data.fipe_value_cents
+        : f.sale_price,
+    }));
+    if (data.fipe_value_cents && !salePriceDisp) {
+      setSalePriceDisp(centsToDisplay(data.fipe_value_cents));
     }
   }
 
@@ -126,6 +151,13 @@ export function VehicleForm({ vehicle }: Props) {
 
       <div className="bg-white rounded-xl border border-n100 p-6 space-y-5">
         <h3 className="text-sm font-semibold text-ink">Dados do veículo</h3>
+
+        {/* Lookup automático por placa */}
+        <PlateLookup
+          value={form.plate}
+          onChange={(plate) => set("plate", plate)}
+          onLookup={applyLookup}
+        />
 
         {/* Brand + Model */}
         <div className="grid grid-cols-2 gap-4">

@@ -24,6 +24,8 @@ export interface Vehicle {
   armored: boolean;
   single_owner: boolean;
   fipe_code: string | null;
+  /** Placa Mercosul ou antiga (sem traço). */
+  plate: string | null;
   description: string | null;
   status: string;
   primary_photo_url: string | null;
