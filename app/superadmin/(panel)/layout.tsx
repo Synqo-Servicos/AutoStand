@@ -20,9 +20,9 @@ export default async function SuperAdminPanelLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-n100">
+    <div className="min-h-screen bg-n100 lg:flex">
       <SuperAdminSidebar />
-      <div className="flex-1 min-w-0 overflow-auto">{children}</div>
+      <div className="flex-1 min-w-0 lg:overflow-auto">{children}</div>
     </div>
   );
 }
