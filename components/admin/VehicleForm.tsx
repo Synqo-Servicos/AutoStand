@@ -10,8 +10,6 @@ import {
 } from "@/lib/constants";
 import { formatBRL, displayToCents, centsToDisplay } from "@/lib/money";
 import { PhotoUploader } from "./PhotoUploader";
-import { PlateLookup } from "./PlateLookup";
-import type { VehicleLookupResult } from "@/lib/placa";
 import type { VehicleWithPhotos } from "@/types/vehicle";
 
 interface Props {
@@ -104,27 +102,6 @@ export function VehicleForm({ vehicle }: Props) {
     }
   }
 
-  function applyLookup(data: VehicleLookupResult) {
-    setForm((f) => ({
-      ...f,
-      brand:            data.brand            ?? f.brand,
-      model:            data.model            ?? f.model,
-      version:          data.version          ?? f.version,
-      year:             data.year             ?? f.year,
-      year_manufacture: data.year_manufacture ?? f.year_manufacture,
-      color:            data.color            ?? f.color,
-      fuel:             data.fuel             ?? f.fuel,
-      fipe_code:        data.fipe_code        ?? f.fipe_code,
-      // Sugere preço de venda baseado na FIPE — só se o admin ainda não informou.
-      sale_price:       f.sale_price === 0 && data.fipe_value_cents
-        ? data.fipe_value_cents
-        : f.sale_price,
-    }));
-    if (data.fipe_value_cents && !salePriceDisp) {
-      setSalePriceDisp(centsToDisplay(data.fipe_value_cents));
-    }
-  }
-
   async function handleDelete() {
     if (!vehicle || !confirm(`Excluir ${vehicle.brand} ${vehicle.model}?`)) return;
     await fetch(`/api/vehicles/${vehicle.id}`, { method: "DELETE" });
@@ -152,12 +129,20 @@ export function VehicleForm({ vehicle }: Props) {
       <div className="bg-white rounded-xl border border-n100 p-6 space-y-5">
         <h3 className="text-sm font-semibold text-ink">Dados do veículo</h3>
 
-        {/* Lookup automático por placa */}
-        <PlateLookup
-          value={form.plate}
-          onChange={(plate) => set("plate", plate)}
-          onLookup={applyLookup}
-        />
+        {/* Placa — controle interno (sem lookup automático por enquanto) */}
+        <div>
+          <label className={lbl}>Placa <span className="font-normal text-n400">— opcional</span></label>
+          <input
+            type="text"
+            value={form.plate}
+            onChange={e => set("plate", e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 8))}
+            className={`${inp} uppercase tracking-wider`}
+            placeholder="ABC-1D23"
+          />
+          <p className="text-xs text-n500 mt-1">
+            Usada para controle interno da loja. Não aparece no anúncio público.
+          </p>
+        </div>
 
         {/* Brand + Model */}
         <div className="grid grid-cols-2 gap-4">
