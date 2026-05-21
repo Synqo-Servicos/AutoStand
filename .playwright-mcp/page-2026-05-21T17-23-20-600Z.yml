@@ -1,0 +1,340 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e5]:
+      - link "G0 GARAGEM 082" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: G0
+        - generic [ref=e8]: GARAGEM 082
+      - navigation [ref=e9]:
+        - link "Estoque" [ref=e10] [cursor=pointer]:
+          - /url: "#estoque"
+        - link "Sobre" [ref=e11] [cursor=pointer]:
+          - /url: "#sobre"
+        - link "Contato" [ref=e12] [cursor=pointer]:
+          - /url: "#contato"
+      - link "Falar agora" [ref=e14] [cursor=pointer]:
+        - /url: https://wa.me/5582991234567
+        - img [ref=e15]
+        - text: Falar agora
+  - main [ref=e17]:
+    - generic [ref=e19]:
+      - paragraph [ref=e20]: Maceió, AL
+      - heading "Seminovos com a cara de Maceió" [level=1] [ref=e21]
+      - paragraph [ref=e22]: Carros revisados, documentação em dia e atendimento humano. Há 12 anos no Tabuleiro do Martins — agora também com financiamento online.
+      - generic [ref=e23]:
+        - link "Ver estoque" [ref=e24] [cursor=pointer]:
+          - /url: "#estoque"
+        - link "Falar no WhatsApp" [ref=e25] [cursor=pointer]:
+          - /url: https://wa.me/5582991234567
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - paragraph [ref=e28]: 100%
+          - paragraph [ref=e29]: Revisados
+        - generic [ref=e30]:
+          - paragraph [ref=e31]: "0"
+          - paragraph [ref=e32]: Surpresas
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: Direto
+          - paragraph [ref=e35]: Comigo
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - paragraph [ref=e39]: Estoque
+        - heading "Veículos disponíveis" [level=2] [ref=e40]
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - link "Hyundai HB20S 2022" [ref=e44] [cursor=pointer]:
+            - /url: /veiculos/9
+            - img "Hyundai HB20S" [ref=e45]
+            - generic [ref=e46]: "2022"
+          - generic [ref=e47]:
+            - link "Hyundai HB20S" [ref=e48] [cursor=pointer]:
+              - /url: /veiculos/9
+              - paragraph [ref=e49]: Hyundai
+              - heading "HB20S" [level=3] [ref=e50]
+            - generic [ref=e51]:
+              - generic [ref=e52]:
+                - img [ref=e53]
+                - text: 32.500 km
+              - generic [ref=e56]:
+                - img [ref=e57]
+                - text: "2022"
+              - generic [ref=e59]:
+                - img [ref=e60]
+                - text: Flex
+              - generic [ref=e63]:
+                - img [ref=e64]
+                - text: Automático
+            - generic [ref=e67]:
+              - paragraph [ref=e68]: R$ 73.900
+              - link "Tenho interesse" [ref=e69] [cursor=pointer]:
+                - /url: https://wa.me/5582991234567?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Hyundai%20HB20S%202022%20anunciado%20no%20site.
+        - generic [ref=e70]:
+          - link "Volkswagen Polo 2023" [ref=e71] [cursor=pointer]:
+            - /url: /veiculos/10
+            - img "Volkswagen Polo" [ref=e72]
+            - generic [ref=e73]: "2023"
+          - generic [ref=e74]:
+            - link "Volkswagen Polo" [ref=e75] [cursor=pointer]:
+              - /url: /veiculos/10
+              - paragraph [ref=e76]: Volkswagen
+              - heading "Polo" [level=3] [ref=e77]
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - img [ref=e80]
+                - text: 14.200 km
+              - generic [ref=e83]:
+                - img [ref=e84]
+                - text: "2023"
+              - generic [ref=e86]:
+                - img [ref=e87]
+                - text: Flex
+              - generic [ref=e90]:
+                - img [ref=e91]
+                - text: Automático
+            - generic [ref=e94]:
+              - paragraph [ref=e95]: R$ 97.900
+              - link "Tenho interesse" [ref=e96] [cursor=pointer]:
+                - /url: https://wa.me/5582991234567?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Volkswagen%20Polo%202023%20anunciado%20no%20site.
+        - generic [ref=e97]:
+          - link "Chevrolet Onix Plus 2022" [ref=e98] [cursor=pointer]:
+            - /url: /veiculos/11
+            - img "Chevrolet Onix Plus" [ref=e99]
+            - generic [ref=e100]: "2022"
+          - generic [ref=e101]:
+            - link "Chevrolet Onix Plus" [ref=e102] [cursor=pointer]:
+              - /url: /veiculos/11
+              - paragraph [ref=e103]: Chevrolet
+              - heading "Onix Plus" [level=3] [ref=e104]
+            - generic [ref=e105]:
+              - generic [ref=e106]:
+                - img [ref=e107]
+                - text: 21.400 km
+              - generic [ref=e110]:
+                - img [ref=e111]
+                - text: "2022"
+              - generic [ref=e113]:
+                - img [ref=e114]
+                - text: Flex
+              - generic [ref=e117]:
+                - img [ref=e118]
+                - text: Automático
+            - generic [ref=e121]:
+              - paragraph [ref=e122]: R$ 79.900
+              - link "Tenho interesse" [ref=e123] [cursor=pointer]:
+                - /url: https://wa.me/5582991234567?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Chevrolet%20Onix%20Plus%202022%20anunciado%20no%20site.
+        - generic [ref=e124]:
+          - link "Volkswagen T-Cross 2022" [ref=e125] [cursor=pointer]:
+            - /url: /veiculos/12
+            - img "Volkswagen T-Cross" [ref=e126]
+            - generic [ref=e127]: "2022"
+          - generic [ref=e128]:
+            - link "Volkswagen T-Cross" [ref=e129] [cursor=pointer]:
+              - /url: /veiculos/12
+              - paragraph [ref=e130]: Volkswagen
+              - heading "T-Cross" [level=3] [ref=e131]
+            - generic [ref=e132]:
+              - generic [ref=e133]:
+                - img [ref=e134]
+                - text: 41.000 km
+              - generic [ref=e137]:
+                - img [ref=e138]
+                - text: "2022"
+              - generic [ref=e140]:
+                - img [ref=e141]
+                - text: Flex
+              - generic [ref=e144]:
+                - img [ref=e145]
+                - text: Automático
+            - generic [ref=e148]:
+              - paragraph [ref=e149]: R$ 99.900
+              - link "Tenho interesse" [ref=e150] [cursor=pointer]:
+                - /url: https://wa.me/5582991234567?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Volkswagen%20T-Cross%202022%20anunciado%20no%20site.
+        - generic [ref=e151]:
+          - link "Hyundai HB20 2022" [ref=e152] [cursor=pointer]:
+            - /url: /veiculos/13
+            - img "Hyundai HB20" [ref=e153]
+            - generic [ref=e154]: "2022"
+          - generic [ref=e155]:
+            - link "Hyundai HB20" [ref=e156] [cursor=pointer]:
+              - /url: /veiculos/13
+              - paragraph [ref=e157]: Hyundai
+              - heading "HB20" [level=3] [ref=e158]
+            - generic [ref=e159]:
+              - generic [ref=e160]:
+                - img [ref=e161]
+                - text: 38.900 km
+              - generic [ref=e164]:
+                - img [ref=e165]
+                - text: "2022"
+              - generic [ref=e167]:
+                - img [ref=e168]
+                - text: Flex
+              - generic [ref=e171]:
+                - img [ref=e172]
+                - text: Manual
+            - generic [ref=e175]:
+              - paragraph [ref=e176]: R$ 62.900
+              - link "Tenho interesse" [ref=e177] [cursor=pointer]:
+                - /url: https://wa.me/5582991234567?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Hyundai%20HB20%202022%20anunciado%20no%20site.
+        - generic [ref=e178]:
+          - link "Fiat Argo 2022" [ref=e179] [cursor=pointer]:
+            - /url: /veiculos/14
+            - img "Fiat Argo" [ref=e180]
+            - generic [ref=e181]: "2022"
+          - generic [ref=e182]:
+            - link "Fiat Argo" [ref=e183] [cursor=pointer]:
+              - /url: /veiculos/14
+              - paragraph [ref=e184]: Fiat
+              - heading "Argo" [level=3] [ref=e185]
+            - generic [ref=e186]:
+              - generic [ref=e187]:
+                - img [ref=e188]
+                - text: 35.200 km
+              - generic [ref=e191]:
+                - img [ref=e192]
+                - text: "2022"
+              - generic [ref=e194]:
+                - img [ref=e195]
+                - text: Flex
+              - generic [ref=e198]:
+                - img [ref=e199]
+                - text: Automático
+            - generic [ref=e202]:
+              - paragraph [ref=e203]: R$ 65.900
+              - link "Tenho interesse" [ref=e204] [cursor=pointer]:
+                - /url: https://wa.me/5582991234567?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Fiat%20Argo%202022%20anunciado%20no%20site.
+        - generic [ref=e205]:
+          - link "Chevrolet Tracker 2022" [ref=e206] [cursor=pointer]:
+            - /url: /veiculos/15
+            - img "Chevrolet Tracker" [ref=e207]
+            - generic [ref=e208]: "2022"
+          - generic [ref=e209]:
+            - link "Chevrolet Tracker" [ref=e210] [cursor=pointer]:
+              - /url: /veiculos/15
+              - paragraph [ref=e211]: Chevrolet
+              - heading "Tracker" [level=3] [ref=e212]
+            - generic [ref=e213]:
+              - generic [ref=e214]:
+                - img [ref=e215]
+                - text: 29.800 km
+              - generic [ref=e218]:
+                - img [ref=e219]
+                - text: "2022"
+              - generic [ref=e221]:
+                - img [ref=e222]
+                - text: Flex
+              - generic [ref=e225]:
+                - img [ref=e226]
+                - text: Automático
+            - generic [ref=e229]:
+              - paragraph [ref=e230]: R$ 112.900
+              - link "Tenho interesse" [ref=e231] [cursor=pointer]:
+                - /url: https://wa.me/5582991234567?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Chevrolet%20Tracker%202022%20anunciado%20no%20site.
+        - generic [ref=e232]:
+          - link "Renault Kwid 2023" [ref=e233] [cursor=pointer]:
+            - /url: /veiculos/16
+            - img "Renault Kwid" [ref=e234]
+            - generic [ref=e235]: "2023"
+          - generic [ref=e236]:
+            - link "Renault Kwid" [ref=e237] [cursor=pointer]:
+              - /url: /veiculos/16
+              - paragraph [ref=e238]: Renault
+              - heading "Kwid" [level=3] [ref=e239]
+            - generic [ref=e240]:
+              - generic [ref=e241]:
+                - img [ref=e242]
+                - text: 18.400 km
+              - generic [ref=e245]:
+                - img [ref=e246]
+                - text: "2023"
+              - generic [ref=e248]:
+                - img [ref=e249]
+                - text: Flex
+              - generic [ref=e252]:
+                - img [ref=e253]
+                - text: Manual
+            - generic [ref=e256]:
+              - paragraph [ref=e257]: R$ 61.900
+              - link "Tenho interesse" [ref=e258] [cursor=pointer]:
+                - /url: https://wa.me/5582991234567?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Renault%20Kwid%202023%20anunciado%20no%20site.
+        - generic [ref=e259]:
+          - link "Fiat Pulse 2023" [ref=e260] [cursor=pointer]:
+            - /url: /veiculos/17
+            - img "Fiat Pulse" [ref=e261]
+            - generic [ref=e262]: "2023"
+          - generic [ref=e263]:
+            - link "Fiat Pulse" [ref=e264] [cursor=pointer]:
+              - /url: /veiculos/17
+              - paragraph [ref=e265]: Fiat
+              - heading "Pulse" [level=3] [ref=e266]
+            - generic [ref=e267]:
+              - generic [ref=e268]:
+                - img [ref=e269]
+                - text: 22.100 km
+              - generic [ref=e272]:
+                - img [ref=e273]
+                - text: "2023"
+              - generic [ref=e275]:
+                - img [ref=e276]
+                - text: Flex
+              - generic [ref=e279]:
+                - img [ref=e280]
+                - text: Automático
+            - generic [ref=e283]:
+              - paragraph [ref=e284]: R$ 91.900
+              - link "Tenho interesse" [ref=e285] [cursor=pointer]:
+                - /url: https://wa.me/5582991234567?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Fiat%20Pulse%202023%20anunciado%20no%20site.
+    - generic [ref=e287]:
+      - paragraph [ref=e288]: Sobre
+      - heading "POR QUE GARAGEM 082?" [level=2] [ref=e289]
+      - generic [ref=e290]:
+        - generic [ref=e291]:
+          - generic [ref=e292]: ✓
+          - heading "Procedência garantida" [level=3] [ref=e293]
+          - paragraph [ref=e294]: Cada veículo com histórico e revisão documentada.
+        - generic [ref=e295]:
+          - generic [ref=e296]: ✓
+          - heading "Sem taxa de intermediário" [level=3] [ref=e297]
+          - paragraph [ref=e298]: Você negocia direto, sem surpresas no final.
+        - generic [ref=e299]:
+          - generic [ref=e300]: ✓
+          - heading "Financiamento facilitado" [level=3] [ref=e301]
+          - paragraph [ref=e302]: Condições especiais, mesmo para negativados.
+        - generic [ref=e303]:
+          - generic [ref=e304]: ✓
+          - heading "Atendimento humano" [level=3] [ref=e305]
+          - paragraph [ref=e306]: "Seg–Sex: 8h às 18h · Sáb: 8h às 13h, sempre disponível."
+    - generic [ref=e308]:
+      - paragraph [ref=e309]: Contato
+      - heading "Pronto para comprar?" [level=2] [ref=e310]
+      - paragraph [ref=e311]: Entre em contato agora e encontre o carro ideal.
+      - generic [ref=e312]:
+        - link "WhatsApp" [ref=e313] [cursor=pointer]:
+          - /url: https://wa.me/5582991234567
+        - link "Instagram" [ref=e314] [cursor=pointer]:
+          - /url: https://instagram.com/garagem082
+      - paragraph [ref=e315]: "Seg–Sex: 8h às 18h · Sáb: 8h às 13h"
+  - contentinfo [ref=e316]:
+    - generic [ref=e317]:
+      - generic [ref=e318]:
+        - generic [ref=e319]:
+          - generic [ref=e320]: G0
+          - generic [ref=e321]: GARAGEM 082
+        - paragraph [ref=e322]: Seminovos com procedência em Maceió, AL.
+      - generic [ref=e323]:
+        - paragraph [ref=e324]: Horário
+        - paragraph [ref=e325]: "Seg–Sex: 8h às 18h · Sáb: 8h às 13h"
+      - generic [ref=e326]:
+        - paragraph [ref=e327]: Contato
+        - generic [ref=e328]:
+          - link "WhatsApp" [ref=e329] [cursor=pointer]:
+            - /url: https://wa.me/5582991234567
+          - link "Instagram" [ref=e330] [cursor=pointer]:
+            - /url: https://instagram.com/garagem082
+    - generic [ref=e331]:
+      - generic [ref=e332]: © 2026 Garagem 082
+      - link "Admin" [ref=e333] [cursor=pointer]:
+        - /url: /admin
+  - link "Falar no WhatsApp" [ref=e334] [cursor=pointer]:
+    - /url: https://wa.me/5582991234567
+    - img [ref=e335]

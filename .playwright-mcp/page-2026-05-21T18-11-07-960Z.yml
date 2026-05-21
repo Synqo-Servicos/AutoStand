@@ -1,0 +1,46 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "AutoStand — início" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e6]:
+            - img [ref=e7]
+            - generic [ref=e10]: AutoStand
+        - navigation [ref=e11]:
+          - link "Comprar carros" [ref=e12] [cursor=pointer]:
+            - /url: /comprar
+          - link "Concessionárias" [ref=e13] [cursor=pointer]:
+            - /url: /lojas
+          - link "Anuncie sua loja" [ref=e14] [cursor=pointer]:
+            - /url: /anuncie
+    - main [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - heading "Concessionárias" [level=1] [ref=e18]
+          - paragraph [ref=e19]: 1 loja parceira na rede AutoStand.
+        - link "AutoPrime Seminovos São Paulo, SP 5 veículos" [ref=e21] [cursor=pointer]:
+          - /url: /loja/demo
+          - img [ref=e23]
+          - generic [ref=e27]:
+            - generic [ref=e28]: AutoPrime Seminovos
+            - generic [ref=e29]:
+              - img [ref=e30]
+              - text: São Paulo, SP
+            - generic [ref=e33]: 5 veículos
+    - contentinfo [ref=e34]:
+      - generic [ref=e35]:
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - img [ref=e38]
+            - generic [ref=e41]: AutoStand
+          - paragraph [ref=e42]: Seminovos de concessionárias multimarca selecionadas, num só lugar.
+        - navigation [ref=e43]:
+          - link "Comprar carros" [ref=e44] [cursor=pointer]:
+            - /url: /comprar
+          - link "Concessionárias" [ref=e45] [cursor=pointer]:
+            - /url: /lojas
+          - link "Anuncie sua loja" [ref=e46] [cursor=pointer]:
+            - /url: /anuncie
+      - paragraph [ref=e48]: © 2026 AutoStand · autostand.com.br
+  - alert [ref=e49]

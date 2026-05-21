@@ -1,0 +1,209 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "AutoStand — início" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e6]:
+            - img [ref=e7]
+            - generic [ref=e10]: AutoStand
+        - navigation [ref=e11]:
+          - link "Comprar carros" [ref=e12] [cursor=pointer]:
+            - /url: /comprar
+          - link "Concessionárias" [ref=e13] [cursor=pointer]:
+            - /url: /lojas
+          - link "Anuncie sua loja" [ref=e14] [cursor=pointer]:
+            - /url: /anuncie
+    - main [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - heading "Comprar um carro" [level=1] [ref=e18]
+          - paragraph [ref=e19]: 5 veículos disponíveis em concessionárias da rede AutoStand.
+        - generic [ref=e20]:
+          - complementary [ref=e21]:
+            - generic [ref=e23]:
+              - generic [ref=e24]:
+                - generic [ref=e25]: Busca
+                - generic [ref=e26]:
+                  - img [ref=e27]
+                  - textbox "Marca, modelo ou versão" [ref=e30]
+              - generic [ref=e31]:
+                - generic [ref=e32]: Marca
+                - combobox [ref=e33]:
+                  - option "Todas" [selected]
+                  - option "Chevrolet"
+                  - option "Hyundai"
+                  - option "Jeep"
+                  - option "Toyota"
+                  - option "Volkswagen"
+              - generic [ref=e34]:
+                - generic [ref=e35]: Cidade
+                - combobox [ref=e36]:
+                  - option "Todas" [selected]
+                  - option "São Paulo, SP"
+              - generic [ref=e37]:
+                - generic [ref=e38]:
+                  - generic [ref=e39]: Combustível
+                  - combobox [ref=e40]:
+                    - option "Todos" [selected]
+                    - option "Flex"
+                    - option "Gasolina"
+                    - option "Etanol"
+                    - option "Diesel"
+                    - option "Elétrico"
+                    - option "Híbrido"
+                - generic [ref=e41]:
+                  - generic [ref=e42]: Câmbio
+                  - combobox [ref=e43]:
+                    - option "Todos" [selected]
+                    - option "Automático"
+                    - option "Manual"
+              - generic [ref=e44]:
+                - generic [ref=e45]: Carroceria
+                - combobox [ref=e46]:
+                  - option "Todas" [selected]
+                  - option "Hatch"
+                  - option "Sedã"
+                  - option "SUV"
+                  - option "Picape"
+                  - option "Minivan"
+                  - option "Cupê"
+                  - option "Conversível"
+                  - option "Perua / SW"
+              - generic [ref=e47]:
+                - generic [ref=e48]:
+                  - generic [ref=e49]: Preço até (R$)
+                  - spinbutton [ref=e50]
+                - generic [ref=e51]:
+                  - generic [ref=e52]: Ano a partir de
+                  - spinbutton [ref=e53]
+              - button "Aplicar filtros" [ref=e54] [cursor=pointer]
+          - generic [ref=e55]:
+            - generic [ref=e56]:
+              - paragraph [ref=e57]: Mostrando 1–5 de 5
+              - generic [ref=e58]:
+                - img [ref=e59]
+                - generic [ref=e62]: Ordenar por
+                - combobox "Ordenar por" [ref=e63] [cursor=pointer]:
+                  - option "Mais recentes" [selected]
+                  - option "Menor preço"
+                  - option "Maior preço"
+                  - option "Menor quilometragem"
+            - generic [ref=e64]:
+              - link "Chevrolet Onix Plus Único dono Chevrolet Onix Plus 1.0 Turbo Premier 2022 18.400 km R$ 84.900 AutoPrime Seminovos · São Paulo, SP" [ref=e65] [cursor=pointer]:
+                - /url: /comprar/14
+                - generic [ref=e66]:
+                  - img "Chevrolet Onix Plus" [ref=e67]
+                  - generic [ref=e68]: Único dono
+                - generic [ref=e69]:
+                  - paragraph [ref=e70]: Chevrolet
+                  - heading "Onix Plus" [level=3] [ref=e71]
+                  - paragraph [ref=e72]: 1.0 Turbo Premier
+                  - generic [ref=e73]:
+                    - generic [ref=e74]:
+                      - img [ref=e75]
+                      - text: "2022"
+                    - generic [ref=e77]:
+                      - img [ref=e78]
+                      - text: 18.400 km
+                  - generic [ref=e81]:
+                    - paragraph [ref=e82]: R$ 84.900
+                    - paragraph [ref=e83]:
+                      - img [ref=e84]
+                      - text: AutoPrime Seminovos · São Paulo, SP
+              - link "Volkswagen Polo Volkswagen Polo 1.0 200 TSI Highline 2022/2023 14.200 km R$ 99.900 AutoPrime Seminovos · São Paulo, SP" [ref=e87] [cursor=pointer]:
+                - /url: /comprar/10
+                - img "Volkswagen Polo" [ref=e89]
+                - generic [ref=e90]:
+                  - paragraph [ref=e91]: Volkswagen
+                  - heading "Polo" [level=3] [ref=e92]
+                  - paragraph [ref=e93]: 1.0 200 TSI Highline
+                  - generic [ref=e94]:
+                    - generic [ref=e95]:
+                      - img [ref=e96]
+                      - text: 2022/2023
+                    - generic [ref=e98]:
+                      - img [ref=e99]
+                      - text: 14.200 km
+                  - generic [ref=e102]:
+                    - paragraph [ref=e103]: R$ 99.900
+                    - paragraph [ref=e104]:
+                      - img [ref=e105]
+                      - text: AutoPrime Seminovos · São Paulo, SP
+              - link "Jeep Compass Jeep Compass 2.0 Limited 4x2 Flex 2022 28.000 km R$ 141.900 AutoPrime Seminovos · São Paulo, SP" [ref=e108] [cursor=pointer]:
+                - /url: /comprar/11
+                - img "Jeep Compass" [ref=e110]
+                - generic [ref=e111]:
+                  - paragraph [ref=e112]: Jeep
+                  - heading "Compass" [level=3] [ref=e113]
+                  - paragraph [ref=e114]: 2.0 Limited 4x2 Flex
+                  - generic [ref=e115]:
+                    - generic [ref=e116]:
+                      - img [ref=e117]
+                      - text: "2022"
+                    - generic [ref=e119]:
+                      - img [ref=e120]
+                      - text: 28.000 km
+                  - generic [ref=e123]:
+                    - paragraph [ref=e124]: R$ 141.900
+                    - paragraph [ref=e125]:
+                      - img [ref=e126]
+                      - text: AutoPrime Seminovos · São Paulo, SP
+              - link "Toyota Corolla Único dono Toyota Corolla 2.0 XEI 2020/2021 55.000 km R$ 108.900 AutoPrime Seminovos · São Paulo, SP" [ref=e129] [cursor=pointer]:
+                - /url: /comprar/12
+                - generic [ref=e130]:
+                  - img "Toyota Corolla" [ref=e131]
+                  - generic [ref=e132]: Único dono
+                - generic [ref=e133]:
+                  - paragraph [ref=e134]: Toyota
+                  - heading "Corolla" [level=3] [ref=e135]
+                  - paragraph [ref=e136]: 2.0 XEI
+                  - generic [ref=e137]:
+                    - generic [ref=e138]:
+                      - img [ref=e139]
+                      - text: 2020/2021
+                    - generic [ref=e141]:
+                      - img [ref=e142]
+                      - text: 55.000 km
+                  - generic [ref=e145]:
+                    - paragraph [ref=e146]: R$ 108.900
+                    - paragraph [ref=e147]:
+                      - img [ref=e148]
+                      - text: AutoPrime Seminovos · São Paulo, SP
+              - link "Hyundai HB20S Único dono Hyundai HB20S 1.0 Turbo Premium 2021/2022 32.500 km R$ 72.900 AutoPrime Seminovos · São Paulo, SP" [ref=e151] [cursor=pointer]:
+                - /url: /comprar/9
+                - generic [ref=e152]:
+                  - img "Hyundai HB20S" [ref=e153]
+                  - generic [ref=e154]: Único dono
+                - generic [ref=e155]:
+                  - paragraph [ref=e156]: Hyundai
+                  - heading "HB20S" [level=3] [ref=e157]
+                  - paragraph [ref=e158]: 1.0 Turbo Premium
+                  - generic [ref=e159]:
+                    - generic [ref=e160]:
+                      - img [ref=e161]
+                      - text: 2021/2022
+                    - generic [ref=e163]:
+                      - img [ref=e164]
+                      - text: 32.500 km
+                  - generic [ref=e167]:
+                    - paragraph [ref=e168]: R$ 72.900
+                    - paragraph [ref=e169]:
+                      - img [ref=e170]
+                      - text: AutoPrime Seminovos · São Paulo, SP
+    - contentinfo [ref=e173]:
+      - generic [ref=e174]:
+        - generic [ref=e175]:
+          - generic [ref=e176]:
+            - img [ref=e177]
+            - generic [ref=e180]: AutoStand
+          - paragraph [ref=e181]: Seminovos de concessionárias multimarca selecionadas, num só lugar.
+        - navigation [ref=e182]:
+          - link "Comprar carros" [ref=e183] [cursor=pointer]:
+            - /url: /comprar
+          - link "Concessionárias" [ref=e184] [cursor=pointer]:
+            - /url: /lojas
+          - link "Anuncie sua loja" [ref=e185] [cursor=pointer]:
+            - /url: /anuncie
+      - paragraph [ref=e187]: © 2026 AutoStand · autostand.com.br
+  - alert [ref=e188]
