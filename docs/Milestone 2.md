@@ -60,4 +60,4 @@ Ver [[Decisões]] para o racional completo. Em resumo:
 ## Pendências de negócio
 
 - Conta Stripe + chaves de API (modo teste serve para desenvolver).
-- Validar os preços (R$197 / R$397 / R$697) com prospects reais.
+- Validar os preços (R$149 / R$349 / R$599) com prospects reais.

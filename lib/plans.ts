@@ -37,7 +37,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
   basico: {
     slug: "basico",
     name: "Básico",
-    priceMonthly: 19700,
+    priceMonthly: 14900,
     stripePriceId: process.env.STRIPE_PRICE_BASICO,
     capabilities: {
       customColors: true,
@@ -51,7 +51,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
   pro: {
     slug: "pro",
     name: "Pro",
-    priceMonthly: 39700,
+    priceMonthly: 34900,
     stripePriceId: process.env.STRIPE_PRICE_PRO,
     capabilities: {
       customColors: true,
@@ -65,7 +65,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
   premium: {
     slug: "premium",
     name: "Premium",
-    priceMonthly: 69700,
+    priceMonthly: 59900,
     stripePriceId: process.env.STRIPE_PRICE_PREMIUM,
     capabilities: {
       customColors: true,

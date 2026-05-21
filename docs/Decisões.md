@@ -44,7 +44,7 @@ aliases:
 
 ## Precificação
 
-Tiers a **R$197 / R$397 / R$697** (a validar com prospects). Racional:
+Tiers a **R$149 / R$349 / R$599** (revisado mai/2026 — agressivo p/ destravar entrada e bater AutoConf no Pro; a validar com prospects). Racional:
 
 - Precificar **pelo valor**, não pelo custo — uma concessionária que vende 1 carro a mais por causa do site já pagou o ano.
 - Custo marginal de infra por tenant é baixo (~R$10–30/mês); o custo real que escala é o **tempo de suporte** — daí a importância da customização self-service.
