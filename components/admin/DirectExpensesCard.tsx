@@ -135,7 +135,7 @@ export function DirectExpensesCard({
                 <button
                   type="button"
                   onClick={() => handleDelete(e.id)}
-                  className="w-7 h-7 flex items-center justify-center rounded text-n400 hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
+                  className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded text-n400 hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer shrink-0"
                   aria-label="Excluir"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

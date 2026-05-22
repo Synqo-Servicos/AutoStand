@@ -91,7 +91,7 @@ export function VendedoresList({ initialSellers }: Props) {
                     <button
                       type="button"
                       onClick={() => setEditing(s)}
-                      className="inline-flex items-center justify-center w-7 h-7 rounded text-n400 hover:text-ink hover:bg-n100 transition-colors cursor-pointer"
+                      className="inline-flex items-center justify-center w-9 h-9 sm:w-7 sm:h-7 rounded text-n400 hover:text-ink hover:bg-n100 transition-colors cursor-pointer"
                       aria-label="Editar"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -99,7 +99,7 @@ export function VendedoresList({ initialSellers }: Props) {
                     <button
                       type="button"
                       onClick={() => handleDelete(s)}
-                      className="inline-flex items-center justify-center w-7 h-7 rounded text-n400 hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
+                      className="inline-flex items-center justify-center w-9 h-9 sm:w-7 sm:h-7 rounded text-n400 hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
                       aria-label="Excluir"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
