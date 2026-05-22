@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, Car, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Car, Download, Wallet } from "lucide-react";
 import { getAdminTenant } from "@/lib/tenant";
 import {
   getFinanceiroPorVeiculo,
@@ -39,7 +39,16 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
             Visão consolidada de receita, custos e margem da loja.
           </p>
         </div>
-        <MonthPicker tab={tab} month={month} />
+        <div className="flex items-end gap-2 flex-wrap">
+          <a
+            href={`/api/financeiro/export?month=${month}`}
+            className="inline-flex items-center gap-1.5 border border-n200 text-ink text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-n50 transition-colors cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Exportar CSV
+          </a>
+          <MonthPicker tab={tab} month={month} />
+        </div>
       </header>
 
       <nav className="flex flex-wrap gap-1 border-b border-n100">
