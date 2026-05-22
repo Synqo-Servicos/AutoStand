@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
-import { getDocumentsByVehicle, getVehicleWithPhotos } from "@/lib/db";
+import { getDirectExpensesByVehicle, getDocumentsByVehicle, getVehicleWithPhotos } from "@/lib/db";
 import { getAdminTenant } from "@/lib/tenant";
 import { capabilitiesFor } from "@/lib/plans";
 import { VehicleForm } from "@/components/admin/VehicleForm";
 import { PostInstagramButton } from "@/components/admin/PostInstagramButton";
 import { VehicleDocumentsManager } from "@/components/admin/VehicleDocumentsManager";
+import { DirectExpensesCard } from "@/components/admin/DirectExpensesCard";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,10 @@ export default async function EditVeiculoPage({ params }: Params) {
   const { id } = await params;
   const tenant = await getAdminTenant();
   const vehicleId = Number(id);
-  const [vehicle, documents] = await Promise.all([
+  const [vehicle, documents, expenses] = await Promise.all([
     getVehicleWithPhotos(tenant.id, vehicleId),
     getDocumentsByVehicle(tenant.id, vehicleId),
+    getDirectExpensesByVehicle(tenant.id, vehicleId),
   ]);
   if (!vehicle) notFound();
 
@@ -34,6 +36,13 @@ export default async function EditVeiculoPage({ params }: Params) {
         />
       </div>
       <VehicleForm vehicle={vehicle} />
+      <DirectExpensesCard
+        vehicleId={vehicle.id}
+        costPrice={vehicle.cost_price}
+        salePrice={vehicle.sale_price}
+        vehicleStatus={vehicle.status}
+        initialExpenses={expenses}
+      />
       <VehicleDocumentsManager vehicleId={vehicle.id} initialDocuments={documents} />
     </div>
   );

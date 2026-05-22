@@ -17,7 +17,7 @@ import type {
 } from "@/lib/schema";
 import { demand_events, leads, partners, tenants, transactions, users, vehicle_documents, vehicle_photos, vehicles } from "@/lib/schema";
 import type { DashboardStats, MonthlyData, StockByStatus } from "@/types/dashboard";
-import type { TransactionInput, TransactionWithVehicle } from "@/types/transaction";
+import type { Transaction, TransactionInput, TransactionWithVehicle } from "@/types/transaction";
 import type { VehicleInput, VehicleWithPhotos } from "@/types/vehicle";
 
 // --- Connection ---
@@ -370,6 +370,25 @@ export async function listTransactions(
     .orderBy(desc(transactions.date), desc(transactions.created_at));
 
   return rows as TransactionWithVehicle[];
+}
+
+/** Despesas diretas registradas para um veículo (categoria de gasto interna). */
+export async function getDirectExpensesByVehicle(
+  tenantId: number,
+  vehicleId: number,
+): Promise<Transaction[]> {
+  const rows = await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.tenant_id, tenantId),
+        eq(transactions.vehicle_id, vehicleId),
+        eq(transactions.type, "despesa_direta"),
+      ),
+    )
+    .orderBy(desc(transactions.date), desc(transactions.created_at));
+  return rows as Transaction[];
 }
 
 export async function getTransaction(
