@@ -20,14 +20,14 @@ export default async function DashboardPage() {
   const mes = `${MONTH_NAMES[now.getMonth()]}/${String(now.getFullYear()).slice(2)}`;
 
   return (
-    <div className="p-8 max-w-6xl">
-      <div className="mb-8">
+    <div className="p-4 sm:p-8 max-w-6xl">
+      <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl font-bold text-ink">Dashboard</h1>
         <p className="text-sm text-n600 mt-1">Visão geral do mês de {mes}</p>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <DashboardCard label="Vendas este mês" value={String(stats.monthlySales.units)} sub="unidades vendidas" accent />
         <DashboardCard label="Receita este mês" value={formatBRL(stats.monthlySales.revenue)} sub="valor total das vendas" />
         <DashboardCard label="Lucro bruto do mês" value={formatBRL(stats.monthlyProfit)} sub="receita menos custo" />
@@ -35,28 +35,28 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stock */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-xl border border-n100 p-4 text-center">
-          <p className="text-3xl font-bold text-ink">{disponivel}</p>
-          <p className="text-xs text-n600 mt-1">{STATUS_LABELS.disponivel}</p>
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-4">
+        <div className="bg-white rounded-xl border border-n100 p-3 sm:p-4 text-center">
+          <p className="text-2xl sm:text-3xl font-bold text-ink">{disponivel}</p>
+          <p className="text-[11px] sm:text-xs text-n600 mt-1">{STATUS_LABELS.disponivel}</p>
         </div>
-        <div className="bg-white rounded-xl border border-n100 p-4 text-center">
-          <p className="text-3xl font-bold text-ink">{reservado}</p>
-          <p className="text-xs text-n600 mt-1">{STATUS_LABELS.reservado}</p>
+        <div className="bg-white rounded-xl border border-n100 p-3 sm:p-4 text-center">
+          <p className="text-2xl sm:text-3xl font-bold text-ink">{reservado}</p>
+          <p className="text-[11px] sm:text-xs text-n600 mt-1">{STATUS_LABELS.reservado}</p>
         </div>
-        <div className="bg-white rounded-xl border border-n100 p-4 text-center">
-          <p className="text-3xl font-bold text-n600">{vendido}</p>
-          <p className="text-xs text-n600 mt-1">{STATUS_LABELS.vendido} (total)</p>
+        <div className="bg-white rounded-xl border border-n100 p-3 sm:p-4 text-center">
+          <p className="text-2xl sm:text-3xl font-bold text-n600">{vendido}</p>
+          <p className="text-[11px] sm:text-xs text-n600 mt-1">{STATUS_LABELS.vendido}</p>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-n100 p-4 mb-8 text-center">
-        <p className="text-3xl font-bold text-ink">{total}</p>
-        <p className="text-xs text-n600 mt-1">Veículos cadastrados (total)</p>
+      <div className="bg-white rounded-xl border border-n100 p-3 sm:p-4 mb-6 sm:mb-8 text-center">
+        <p className="text-2xl sm:text-3xl font-bold text-ink">{total}</p>
+        <p className="text-xs text-n600 mt-1">Veículos cadastrados</p>
       </div>
 
       {/* Monthly table */}
       <div className="bg-white rounded-xl border border-n100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-n100">
+        <div className="px-5 sm:px-6 py-4 border-b border-n100">
           <h2 className="text-sm font-semibold text-ink">Histórico mensal</h2>
         </div>
         <MonthlyTable data={stats.monthly} />

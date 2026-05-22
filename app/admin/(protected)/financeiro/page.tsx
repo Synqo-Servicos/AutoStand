@@ -31,8 +31,8 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
   const tenant = await getAdminTenant();
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl space-y-6">
-      <header className="flex items-end justify-between gap-4 flex-wrap">
+    <div className="p-4 sm:p-8 max-w-6xl space-y-5 sm:space-y-6">
+      <header className="space-y-3 sm:flex sm:items-end sm:justify-between sm:gap-4 sm:space-y-0">
         <div>
           <h1 className="text-2xl font-bold text-ink">Financeiro</h1>
           <p className="text-sm text-n600 mt-1">
@@ -51,7 +51,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
         </div>
       </header>
 
-      <nav className="flex flex-wrap gap-1 border-b border-n100">
+      <nav className="-mx-4 sm:mx-0 px-4 sm:px-0 flex gap-1 border-b border-n100 overflow-x-auto whitespace-nowrap">
         {TABS.map(t => {
           const active = t.id === tab;
           const href = `/admin/financeiro?tab=${t.id}&month=${month}`;
@@ -59,7 +59,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
             <Link
               key={t.id}
               href={href}
-              className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${
+              className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-t-md transition-colors shrink-0 ${
                 active
                   ? "bg-white text-ink border border-n100 border-b-white -mb-px"
                   : "text-n600 hover:text-ink"
@@ -234,10 +234,10 @@ function Line({
   highlight?: "positive" | "negative";
 }) {
   return (
-    <div className="px-5 py-3 flex items-center justify-between gap-3">
-      <span className={`${bold ? "font-semibold text-ink" : "text-n600"}`}>{label}</span>
+    <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+      <span className={`min-w-0 ${bold ? "font-semibold text-ink" : "text-n600"}`}>{label}</span>
       <span
-        className={`tabular-nums ${
+        className={`tabular-nums whitespace-nowrap ${
           highlight === "positive"
             ? "text-success font-semibold"
             : highlight === "negative"
