@@ -145,7 +145,7 @@ export function VehicleForm({ vehicle }: Props) {
         </div>
 
         {/* Brand + Model */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Marca *</label>
             <select required value={form.brand} onChange={e => set("brand", e.target.value)} className={inp}>
@@ -161,7 +161,7 @@ export function VehicleForm({ vehicle }: Props) {
         </div>
 
         {/* Version + FIPE */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Versão</label>
             <input type="text" value={form.version} onChange={e => set("version", e.target.value)} className={inp} placeholder="Ex: 1.0 Turbo Premier" />
@@ -173,7 +173,7 @@ export function VehicleForm({ vehicle }: Props) {
         </div>
 
         {/* Year model + Year manufacture + KM */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Ano modelo *</label>
             <input required type="number" min="1990" max={currentYear + 1}
@@ -192,7 +192,7 @@ export function VehicleForm({ vehicle }: Props) {
         </div>
 
         {/* Transmission + Fuel + Doors */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Câmbio *</label>
             <select required value={form.transmission} onChange={e => set("transmission", e.target.value)} className={inp}>
@@ -214,7 +214,7 @@ export function VehicleForm({ vehicle }: Props) {
         </div>
 
         {/* Body type + Color + Condition */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Carroceria</label>
             <select value={form.body_type} onChange={e => set("body_type", e.target.value)} className={inp}>
@@ -235,7 +235,7 @@ export function VehicleForm({ vehicle }: Props) {
         </div>
 
         {/* Cost + Sale Price */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Preço de custo (R$) *</label>
             <input

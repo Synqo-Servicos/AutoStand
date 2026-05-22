@@ -215,13 +215,13 @@ function AddOperationalModal({ onClose, onCreated }: ModalProps) {
         <div className="p-5 space-y-4">
           <div>
             <label className={lbl}>Tipo *</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {TYPE_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
                   type="button"
                   onClick={() => handleTypeChange(opt.id)}
-                  className={`py-2 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
+                  className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
                     type === opt.id
                       ? "bg-ink text-white border-ink"
                       : "border-n200 text-n600 hover:bg-n50"

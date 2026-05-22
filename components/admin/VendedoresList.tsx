@@ -216,7 +216,7 @@ function SellerEditor({ seller, onClose, onSaved }: EditorProps) {
             <input required type="text" value={name} onChange={(e) => setName(e.target.value)} className={inp} placeholder="Ex: João Silva" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className={lbl}>Telefone</label>
               <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inp} placeholder="11999990000" />
@@ -243,7 +243,7 @@ function SellerEditor({ seller, onClose, onSaved }: EditorProps) {
               Aplicada automaticamente quando uma venda é registrada com este vendedor.
               Pode usar só % ou só fixo, ou os dois somados.
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={lbl}>Comissão (%)</label>
                 <input
