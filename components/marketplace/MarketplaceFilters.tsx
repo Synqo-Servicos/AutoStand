@@ -12,13 +12,15 @@ interface Props {
   brands: string[];
   cities: string[];
   current: Record<string, string>;
+  /** "card" (default): renderiza com card + sticky no lg+; "inline": sem card, herda o container. */
+  variant?: "card" | "inline";
 }
 
 const FIELD = "w-full rounded-lg border border-n200 bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-signal focus:border-transparent";
 const LABEL = "block text-xs font-medium text-n600 mb-1";
 
 /** Filtros da busca do marketplace — escrevem nos searchParams da URL. */
-export function MarketplaceFilters({ brands, cities, current }: Props) {
+export function MarketplaceFilters({ brands, cities, current, variant = "card" }: Props) {
   const router = useRouter();
   const [form, setForm] = useState({
     search:       current.search ?? "",
@@ -55,8 +57,13 @@ export function MarketplaceFilters({ brands, cities, current }: Props) {
 
   const hasFilters = Object.values(form).some((v) => v.trim());
 
+  const wrapper =
+    variant === "inline"
+      ? "p-5"
+      : "rounded-2xl border border-n200 bg-white p-5 lg:sticky lg:top-20";
+
   return (
-    <form onSubmit={apply} className="rounded-2xl border border-n200 bg-white p-5 lg:sticky lg:top-20">
+    <form onSubmit={apply} className={wrapper}>
       <div className="space-y-4">
         <div>
           <label className={LABEL}>Busca</label>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { requirePlatformHost } from "@/lib/tenant";
 import {
   searchMarketplaceVehicles,
@@ -89,10 +89,15 @@ export default async function ComprarPage({
   const from = total === 0 ? 0 : (page - 1) * MARKETPLACE_PAGE_SIZE + 1;
   const to = (page - 1) * MARKETPLACE_PAGE_SIZE + vehicles.length;
 
+  const activeFilterCount = [
+    sp.search, sp.brand, sp.city, sp.fuel, sp.transmission,
+    sp.body_type, sp.price_max, sp.year_min,
+  ].filter((v) => v && v.trim()).length;
+
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-ink">Comprar um carro</h1>
+    <div className="mx-auto max-w-6xl px-4 sm:px-5 py-6 sm:py-10">
+      <header className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-ink">Comprar um carro</h1>
         <p className="mt-1 text-sm text-n600">
           {total}{" "}
           {total === 1 ? "veículo disponível" : "veículos disponíveis"} em
@@ -100,9 +105,30 @@ export default async function ComprarPage({
         </p>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
+      <div className="grid gap-6 lg:gap-8 lg:grid-cols-[260px_1fr]">
         <aside>
-          <Filters brands={options.brands} cities={options.cities} current={sp} />
+          {/* Mobile: filtros em <details> colapsado por padrão */}
+          <details className="lg:hidden rounded-2xl border border-n200 bg-white mb-4 group">
+            <summary className="cursor-pointer list-none flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-ink">
+              <span className="inline-flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-n500" />
+                Filtros
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-signal/20 text-signal px-2 py-0.5 text-[11px] font-semibold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </span>
+              <ChevronDown className="h-4 w-4 text-n400 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="border-t border-n100">
+              <Filters brands={options.brands} cities={options.cities} current={sp} variant="inline" />
+            </div>
+          </details>
+          {/* Desktop: sticky sidebar */}
+          <div className="hidden lg:block">
+            <Filters brands={options.brands} cities={options.cities} current={sp} />
+          </div>
         </aside>
 
         <div>
@@ -122,7 +148,7 @@ export default async function ComprarPage({
                 <SortControl current={sp} />
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 sm:gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {vehicles.map((v) => (
                   <MarketplaceVehicleCard key={v.id} vehicle={v} />
                 ))}
