@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import type { Vehicle } from "@/types/vehicle";
+import type { Seller } from "@/types/seller";
 import { centsToDisplay, displayToCents } from "@/lib/money";
 
 interface Props {
@@ -23,10 +24,29 @@ export function TransactionSlideOver({ vehicles, onClose, onSaved }: Props) {
   const [buyerName,   setBuyerName]  = useState("");
   const [buyerPhone,  setBuyerPhone] = useState("");
   const [notes,       setNotes]      = useState("");
+  const [sellerId,    setSellerId]   = useState("");
+  const [sellers,     setSellers]    = useState<Seller[]>([]);
   const [saving,      setSaving]     = useState(false);
   const [error,       setError]      = useState<string | null>(null);
 
   const selectedVehicle = vehicles.find(v => String(v.id) === vehicleId);
+  const selectedSeller = sellers.find(s => String(s.id) === sellerId);
+
+  useEffect(() => {
+    if (type !== "saida") return;
+    fetch("/api/sellers")
+      .then(r => r.json())
+      .then((rows: Seller[]) => setSellers(rows.filter(s => s.status === "ativo")))
+      .catch(() => {});
+  }, [type]);
+
+  const previewCommission = (() => {
+    if (type !== "saida" || !selectedSeller || !amountStr) return null;
+    const cents = displayToCents(amountStr);
+    const pctPart = selectedSeller.commission_pct ? Math.round((cents * selectedSeller.commission_pct) / 10000) : 0;
+    const fixedPart = selectedSeller.commission_fixed_cents ?? 0;
+    return pctPart + fixedPart;
+  })();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +64,7 @@ export function TransactionSlideOver({ vehicles, onClose, onSaved }: Props) {
           date,
           buyer_name:  buyerName || null,
           buyer_phone: buyerPhone || null,
+          seller_id:   type === "saida" && sellerId ? Number(sellerId) : null,
           notes:       notes || null,
         }),
       });
@@ -142,6 +163,20 @@ export function TransactionSlideOver({ vehicles, onClose, onSaved }: Props) {
               <div>
                 <label className={lbl}>Telefone do comprador</label>
                 <input type="tel" value={buyerPhone} onChange={e => setBuyerPhone(e.target.value)} className={inp} placeholder="82999990000" />
+              </div>
+              <div>
+                <label className={lbl}>Vendedor</label>
+                <select value={sellerId} onChange={e => setSellerId(e.target.value)} className={inp}>
+                  <option value="">Sem vendedor</option>
+                  {sellers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                {previewCommission != null && previewCommission > 0 && (
+                  <p className="text-xs text-n400 mt-1">
+                    Comissão automática: R$ {centsToDisplay(previewCommission)}
+                  </p>
+                )}
               </div>
             </>
           )}
