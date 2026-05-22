@@ -6,6 +6,8 @@ import type { LeadRow } from "@/lib/schema";
 import type { Vehicle } from "@/types/vehicle";
 import { LeadCard, LEAD_STAGES } from "@/components/admin/LeadCard";
 
+type StageKey = (typeof LEAD_STAGES)[number]["key"];
+
 const STALE_DAYS = 2;
 
 /** True quando um lead `novo` está há mais de STALE_DAYS sem contato. */
@@ -20,6 +22,7 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [vehicles, setVehicles] = useState<Record<number, Vehicle>>({});
   const [loading, setLoading] = useState(true);
+  const [activeStage, setActiveStage] = useState<StageKey>(LEAD_STAGES[0].key as StageKey);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,8 +70,11 @@ export default function LeadsPage() {
     { label: "Taxa de conversão", value: taxa === null ? "—" : `${taxa}%` },
   ];
 
+  const activeStageLeads = leads.filter((l) => l.status === activeStage);
+  const activeStageMeta = LEAD_STAGES.find((s) => s.key === activeStage)!;
+
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-ink">Funil de leads</h1>
         <p className="text-sm text-n600 mt-1">
@@ -106,39 +112,87 @@ export default function LeadsPage() {
           formulário &quot;Tenho interesse&quot; no site ou no marketplace.
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {LEAD_STAGES.map((stage) => {
-            const stageLeads = leads.filter((l) => l.status === stage.key);
-            return (
-              <div key={stage.key} className="w-72 shrink-0">
-                <div className="mb-3 flex items-center justify-between px-1">
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${stage.color}`}>
+        <>
+          {/* Mobile: seletor horizontal de estágio + uma coluna por vez */}
+          <div className="md:hidden">
+            <div className="-mx-4 px-4 mb-4 flex gap-2 overflow-x-auto pb-1 snap-x">
+              {LEAD_STAGES.map((stage) => {
+                const count = leads.filter((l) => l.status === stage.key).length;
+                const active = stage.key === activeStage;
+                return (
+                  <button
+                    key={stage.key}
+                    type="button"
+                    onClick={() => setActiveStage(stage.key as StageKey)}
+                    className={`snap-start inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ring-1 whitespace-nowrap transition-colors cursor-pointer ${
+                      active
+                        ? stage.color
+                        : "bg-white text-n600 ring-n200 hover:bg-n50"
+                    }`}
+                  >
                     {stage.label}
-                  </span>
-                  <span className="text-xs font-medium text-n400">{stageLeads.length}</span>
+                    <span className={`min-w-[1.25rem] inline-flex items-center justify-center rounded-full text-[10px] font-semibold ${active ? "bg-white/60" : "bg-n100 text-n600"}`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="space-y-3">
+              {activeStageLeads.map((lead) => (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  vehicle={lead.vehicle_id ? vehicles[lead.vehicle_id] : undefined}
+                  stale={isStale(lead)}
+                  onStatusChange={changeStatus}
+                  onContacted={(id) => changeStatus(id, "contatado")}
+                  onDelete={remove}
+                />
+              ))}
+              {activeStageLeads.length === 0 && (
+                <div className="rounded-xl border border-dashed border-n200 py-12 text-center text-xs text-n400">
+                  Nenhum lead em {activeStageMeta.label.toLowerCase()}.
                 </div>
-                <div className="space-y-3">
-                  {stageLeads.map((lead) => (
-                    <LeadCard
-                      key={lead.id}
-                      lead={lead}
-                      vehicle={lead.vehicle_id ? vehicles[lead.vehicle_id] : undefined}
-                      stale={isStale(lead)}
-                      onStatusChange={changeStatus}
-                      onContacted={(id) => changeStatus(id, "contatado")}
-                      onDelete={remove}
-                    />
-                  ))}
-                  {stageLeads.length === 0 && (
-                    <div className="rounded-xl border border-dashed border-n200 py-8 text-center text-xs text-n400">
-                      Nenhum lead aqui
-                    </div>
-                  )}
+              )}
+            </div>
+          </div>
+
+          {/* Desktop: kanban */}
+          <div className="hidden md:flex gap-4 overflow-x-auto pb-4">
+            {LEAD_STAGES.map((stage) => {
+              const stageLeads = leads.filter((l) => l.status === stage.key);
+              return (
+                <div key={stage.key} className="w-72 shrink-0">
+                  <div className="mb-3 flex items-center justify-between px-1">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${stage.color}`}>
+                      {stage.label}
+                    </span>
+                    <span className="text-xs font-medium text-n400">{stageLeads.length}</span>
+                  </div>
+                  <div className="space-y-3">
+                    {stageLeads.map((lead) => (
+                      <LeadCard
+                        key={lead.id}
+                        lead={lead}
+                        vehicle={lead.vehicle_id ? vehicles[lead.vehicle_id] : undefined}
+                        stale={isStale(lead)}
+                        onStatusChange={changeStatus}
+                        onContacted={(id) => changeStatus(id, "contatado")}
+                        onDelete={remove}
+                      />
+                    ))}
+                    {stageLeads.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-n200 py-8 text-center text-xs text-n400">
+                        Nenhum lead aqui
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
