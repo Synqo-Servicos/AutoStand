@@ -465,6 +465,155 @@ export async function deleteTransaction(tenantId: number, id: number): Promise<v
     .where(and(eq(transactions.tenant_id, tenantId), eq(transactions.id, id)));
 }
 
+// --- Financeiro (tenant-scoped) ---
+
+export interface FinanceiroResumo {
+  receita: number;
+  custos: number;        // soma de cost_price das vendas
+  despesasDir: number;   // despesas diretas
+  despesasOp: number;    // fixa + var + comissao
+  lucroBruto: number;    // receita - custos
+  lucroLiquido: number;  // lucroBruto - despesasDir - despesasOp
+  vendasUnits: number;
+}
+
+export interface FinanceiroPorVeiculoRow {
+  vehicle_id: number;
+  brand: string;
+  model: string;
+  year: number;
+  sale_date: string;
+  receita: number;
+  custo: number;
+  despesas_diretas: number;
+  margem_real: number;
+}
+
+export interface OperationalExpenseRow {
+  id: number;
+  type: string;
+  category: string | null;
+  amount: number;
+  date: string;
+  notes: string | null;
+  seller_id: number | null;
+}
+
+/** Filtros de período do financeiro: `month` (YYYY-MM) ou `year` (YYYY). */
+export interface FinanceiroFilters {
+  month?: string;
+  year?: string;
+}
+
+function periodWhere(filters: FinanceiroFilters): string {
+  if (filters.month) return filters.month;
+  if (filters.year) return filters.year;
+  return ""; // tudo
+}
+
+export async function getFinanceiroResumo(
+  tenantId: number,
+  filters: FinanceiroFilters = {},
+): Promise<FinanceiroResumo> {
+  const period = periodWhere(filters);
+  const likePattern = period ? `${period}%` : "%";
+
+  const vendas = (await db.get(sql`
+    SELECT
+      COALESCE(SUM(t.amount), 0)        AS receita,
+      COALESCE(SUM(v.cost_price), 0)    AS custos,
+      COUNT(*)                          AS units
+    FROM transactions t
+    LEFT JOIN vehicles v ON v.id = t.vehicle_id
+    WHERE t.tenant_id = ${tenantId}
+      AND t.type      = 'saida'
+      AND t.date LIKE ${likePattern}
+  `)) as { receita: number; custos: number; units: number };
+
+  const despesasDir = (await db.get(sql`
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM transactions
+    WHERE tenant_id = ${tenantId}
+      AND type      = 'despesa_direta'
+      AND date LIKE ${likePattern}
+  `)) as { total: number };
+
+  const despesasOp = (await db.get(sql`
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM transactions
+    WHERE tenant_id = ${tenantId}
+      AND type IN ('despesa_fixa', 'despesa_var', 'comissao')
+      AND date LIKE ${likePattern}
+  `)) as { total: number };
+
+  const lucroBruto = vendas.receita - vendas.custos;
+  const lucroLiquido = lucroBruto - despesasDir.total - despesasOp.total;
+
+  return {
+    receita: vendas.receita,
+    custos: vendas.custos,
+    despesasDir: despesasDir.total,
+    despesasOp: despesasOp.total,
+    lucroBruto,
+    lucroLiquido,
+    vendasUnits: vendas.units,
+  };
+}
+
+export async function getFinanceiroPorVeiculo(
+  tenantId: number,
+  filters: FinanceiroFilters = {},
+): Promise<FinanceiroPorVeiculoRow[]> {
+  const period = periodWhere(filters);
+  const likePattern = period ? `${period}%` : "%";
+
+  return (await db.all(sql`
+    SELECT
+      v.id                          AS vehicle_id,
+      v.brand                       AS brand,
+      v.model                       AS model,
+      v.year                        AS year,
+      t.date                        AS sale_date,
+      t.amount                      AS receita,
+      v.cost_price                  AS custo,
+      COALESCE((
+        SELECT SUM(amount) FROM transactions
+        WHERE tenant_id = ${tenantId}
+          AND vehicle_id = v.id
+          AND type = 'despesa_direta'
+      ), 0)                         AS despesas_diretas,
+      (t.amount - v.cost_price - COALESCE((
+        SELECT SUM(amount) FROM transactions
+        WHERE tenant_id = ${tenantId}
+          AND vehicle_id = v.id
+          AND type = 'despesa_direta'
+      ), 0))                        AS margem_real
+    FROM transactions t
+    JOIN vehicles v ON v.id = t.vehicle_id
+    WHERE t.tenant_id = ${tenantId}
+      AND t.type      = 'saida'
+      AND t.date LIKE ${likePattern}
+    ORDER BY t.date DESC
+  `)) as FinanceiroPorVeiculoRow[];
+}
+
+export async function getOperationalExpenses(
+  tenantId: number,
+  filters: FinanceiroFilters = {},
+): Promise<OperationalExpenseRow[]> {
+  const period = periodWhere(filters);
+  const likePattern = period ? `${period}%` : "%";
+
+  return (await db.all(sql`
+    SELECT id, type, category, amount, date, notes, seller_id
+    FROM transactions
+    WHERE tenant_id = ${tenantId}
+      AND type IN ('despesa_fixa', 'despesa_var', 'comissao')
+      AND date LIKE ${likePattern}
+    ORDER BY date DESC, created_at DESC
+  `)) as OperationalExpenseRow[];
+}
+
 // --- Dashboard (tenant-scoped) ---
 
 export async function getDashboardStats(tenantId: number): Promise<DashboardStats> {

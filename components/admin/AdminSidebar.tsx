@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ArrowLeftRight, Car, CreditCard, FileText, LayoutDashboard, LogOut, Menu, Palette,
-  Sparkles, Store, TrendingUp, Users, X,
+  PiggyBank, Sparkles, Store, TrendingUp, Users, X,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
   { href: "/admin/veiculos",     label: "Veículos",     icon: Car },
   { href: "/admin/transacoes",   label: "Transações",   icon: ArrowLeftRight },
+  { href: "/admin/financeiro",   label: "Financeiro",   icon: PiggyBank },
   { href: "/admin/leads",        label: "Leads",        icon: Users },
   { href: "/admin/documentos",   label: "Documentos",   icon: FileText },
   { href: "/admin/personalizar", label: "Personalizar", icon: Palette },
