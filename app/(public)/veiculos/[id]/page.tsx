@@ -72,8 +72,8 @@ export default async function VehiclePage({ params }: Params) {
           <p className="text-xs font-semibold text-[var(--brand-accent)] uppercase tracking-widest mb-1">
             {vehicle.brand}
           </p>
-          <h1 className="text-3xl font-bold text-slate-900 leading-tight">{vehicle.model}</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-3xl font-bold text-n900 leading-tight">{vehicle.model}</h1>
+          <p className="text-n500 text-sm mt-1">
             {vehicle.year} · {vehicle.km.toLocaleString("pt-BR")} km
           </p>
 
@@ -84,14 +84,14 @@ export default async function VehiclePage({ params }: Params) {
                   ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
                   : vehicle.status === "reservado"
                     ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-                    : "bg-slate-100 text-slate-500 ring-1 ring-slate-200"
+                    : "bg-n100 text-n500 ring-1 ring-n200"
               }`}
             >
               {STATUS_LABELS[vehicle.status as keyof typeof STATUS_LABELS] ?? vehicle.status}
             </span>
           </div>
 
-          <p className="text-4xl font-bold text-slate-900 mt-6">{formatBRL(vehicle.sale_price)}</p>
+          <p className="text-4xl font-bold text-n900 mt-6">{formatBRL(vehicle.sale_price)}</p>
 
           {waHref && (
             <a
@@ -109,18 +109,18 @@ export default async function VehiclePage({ params }: Params) {
           <LeadForm vehicleId={vehicle.id} vehicleLabel={label} />
 
           {/* Specs */}
-          <div className="mt-8 border border-slate-100 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Especificações</p>
+          <div className="mt-8 border border-n100 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 bg-n50 border-b border-n100">
+              <p className="text-xs font-semibold text-n500 uppercase tracking-wide">Especificações</p>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-n100">
               {specs.map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Icon className="w-4 h-4 text-slate-400" />
+                  <div className="flex items-center gap-2 text-sm text-n500">
+                    <Icon className="w-4 h-4 text-n400" />
                     {label}
                   </div>
-                  <span className="text-sm font-medium text-slate-900">{value}</span>
+                  <span className="text-sm font-medium text-n900">{value}</span>
                 </div>
               ))}
             </div>
@@ -128,8 +128,8 @@ export default async function VehiclePage({ params }: Params) {
 
           {vehicle.description && (
             <div className="mt-6">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Descrição</p>
-              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{vehicle.description}</p>
+              <p className="text-xs font-semibold text-n500 uppercase tracking-wide mb-2">Descrição</p>
+              <p className="text-sm text-n600 leading-relaxed whitespace-pre-line">{vehicle.description}</p>
             </div>
           )}
         </div>

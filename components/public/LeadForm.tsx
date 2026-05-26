@@ -53,12 +53,12 @@ export function LeadForm({
   }
 
   const inputClass =
-    "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:border-transparent transition-shadow";
+    "w-full border border-n200 rounded-lg px-3 py-2 text-sm text-n800 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:border-transparent transition-shadow";
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 rounded-xl border border-slate-200 p-5 bg-slate-50">
-      <p className="text-sm font-semibold text-slate-800">Tenho interesse</p>
-      <p className="text-xs text-slate-500 mt-0.5 mb-4">
+    <form onSubmit={handleSubmit} className="mt-4 rounded-xl border border-n200 p-5 bg-n50">
+      <p className="text-sm font-semibold text-n800">Tenho interesse</p>
+      <p className="text-xs text-n500 mt-0.5 mb-4">
         Deixe seu contato e a concessionária retorna para você.
       </p>
       {error && (

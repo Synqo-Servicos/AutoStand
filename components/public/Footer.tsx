@@ -9,14 +9,14 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-[var(--brand-primary-d)] text-slate-400 py-12 px-4">
+    <footer className="bg-[var(--brand-primary-d)] text-n400 py-12 px-4">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-7 h-7 rounded-md bg-[var(--brand-accent)] flex items-center justify-center font-bold text-white text-xs">
               {tenantInitials(tenant.name)}
             </div>
-            <span className="text-white font-heading font-bold text-xs tracking-wider">
+            <span className="text-white font-display font-bold text-xs tracking-wider">
               {tenant.name.toUpperCase()}
             </span>
           </div>

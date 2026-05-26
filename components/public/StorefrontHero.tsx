@@ -53,10 +53,10 @@ export function StorefrontHero({
             {tenant.city}
           </p>
         )}
-        <h1 className="font-heading text-4xl md:text-6xl font-bold leading-tight mb-6 uppercase">
+        <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight mb-6 uppercase">
           {heroTitle}
         </h1>
-        <p className="text-slate-300 text-lg max-w-xl mb-8">{heroSubtitle}</p>
+        <p className="text-n300 text-lg max-w-xl mb-8">{heroSubtitle}</p>
         <div className="flex flex-col sm:flex-row gap-3">
           <a
             href="#estoque"
@@ -80,7 +80,7 @@ export function StorefrontHero({
           {[["100%", "Revisados"], ["0", "Surpresas"], ["Direto", "Comigo"]].map(([val, desc]) => (
             <div key={desc}>
               <p className="text-2xl font-bold text-white">{val}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+              <p className="text-xs text-n400 mt-0.5">{desc}</p>
             </div>
           ))}
         </div>

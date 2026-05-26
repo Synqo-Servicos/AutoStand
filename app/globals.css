@@ -46,7 +46,10 @@
   /* — Tipografia · famílias — */
   --font-display: 'Sora', system-ui, sans-serif;   /* títulos, números, impacto      */
   --font-body:    'Inter', system-ui, sans-serif;  /* corpo, UI, microcopy           */
-  --font-heading: 'Syncopate', sans-serif;         /* DEPRECATED · só legado storefront */
+  /* DEPRECATED — Syncopate sai do storefront na refatoração de design system.
+     Mantido como token até a próxima limpeza pra não quebrar PDFs/legacy.
+     Não usar `font-heading` em código novo — use `font-display` (Sora). */
+  --font-heading: 'Syncopate', sans-serif;
 
   /* — Tipografia · escala (size / line-height / letter-spacing) — */
   --text-display:                  3.5rem;   /* 56px */

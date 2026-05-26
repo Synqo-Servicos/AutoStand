@@ -11,12 +11,12 @@ type CardStyle = LayoutConfig["cardStyle"];
 /** Classes do contêiner por estilo (estilos "info abaixo da imagem"). */
 const STANDARD: Record<Exclude<CardStyle, "overlay">, { card: string; aspect: string; pad: string }> = {
   elevated: {
-    card: "bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg",
+    card: "bg-white rounded-2xl border border-n100 shadow-sm hover:shadow-lg",
     aspect: "aspect-[4/3]",
     pad: "p-4",
   },
   bordered: {
-    card: "bg-white rounded-2xl border-2 border-slate-200 hover:border-[var(--brand-accent)]",
+    card: "bg-white rounded-2xl border-2 border-n200 hover:border-[var(--brand-accent)]",
     aspect: "aspect-[4/3]",
     pad: "p-4",
   },
@@ -26,14 +26,14 @@ const STANDARD: Record<Exclude<CardStyle, "overlay">, { card: string; aspect: st
     pad: "pt-3",
   },
   compact: {
-    card: "bg-white rounded-xl border border-slate-100 hover:shadow-md",
+    card: "bg-white rounded-xl border border-n100 hover:shadow-md",
     aspect: "aspect-[3/2]",
     pad: "p-3",
   },
 };
 
 const PLACEHOLDER = (
-  <div className="absolute inset-0 flex items-center justify-center text-slate-300">
+  <div className="absolute inset-0 flex items-center justify-center text-n300">
     <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path
         strokeLinecap="round"
@@ -68,7 +68,7 @@ export function VehicleCard({
   // --- Variante overlay: dados sobre a foto ---
   if (cardStyle === "overlay") {
     return (
-      <div className="group relative flex aspect-[3/4] flex-col justify-end overflow-hidden rounded-2xl bg-slate-900">
+      <div className="group relative flex aspect-[3/4] flex-col justify-end overflow-hidden rounded-2xl bg-n900">
         {vehicle.primary_photo_url ? (
           <Image
             src={vehicle.primary_photo_url}
@@ -122,7 +122,7 @@ export function VehicleCard({
     >
       <Link
         href={detailHref}
-        className={`relative block ${s.aspect} overflow-hidden bg-slate-100`}
+        className={`relative block ${s.aspect} overflow-hidden bg-n100`}
       >
         {vehicle.primary_photo_url ? (
           <Image
@@ -144,49 +144,49 @@ export function VehicleCard({
 
       <div className={`flex flex-1 flex-col ${s.pad}`}>
         <Link href={detailHref} className="group/link">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <p className="text-xs font-medium uppercase tracking-wide text-n400">
             {vehicle.brand}
           </p>
-          <h3 className="mt-0.5 font-semibold leading-snug text-slate-900 transition-colors group-hover/link:text-[var(--brand-accent)]">
+          <h3 className="mt-0.5 font-semibold leading-snug text-n900 transition-colors group-hover/link:text-[var(--brand-accent)]">
             {vehicle.model}
           </h3>
         </Link>
 
         {!compact && (
-          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-slate-500">
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-n500">
             <div className="flex items-center gap-1.5">
-              <Gauge className="h-3.5 w-3.5 text-slate-400" />
+              <Gauge className="h-3.5 w-3.5 text-n400" />
               {vehicle.km.toLocaleString("pt-BR")} km
             </div>
             <div className="flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+              <Calendar className="h-3.5 w-3.5 text-n400" />
               {vehicle.year}
             </div>
             <div className="flex items-center gap-1.5">
-              <Fuel className="h-3.5 w-3.5 text-slate-400" />
+              <Fuel className="h-3.5 w-3.5 text-n400" />
               {fuel}
             </div>
             <div className="flex items-center gap-1.5">
-              <Settings className="h-3.5 w-3.5 text-slate-400" />
+              <Settings className="h-3.5 w-3.5 text-n400" />
               {transmission}
             </div>
           </div>
         )}
         {compact && (
-          <div className="mt-2 flex gap-3 text-xs text-slate-500">
+          <div className="mt-2 flex gap-3 text-xs text-n500">
             <span className="flex items-center gap-1">
-              <Gauge className="h-3.5 w-3.5 text-slate-400" />
+              <Gauge className="h-3.5 w-3.5 text-n400" />
               {vehicle.km.toLocaleString("pt-BR")} km
             </span>
             <span className="flex items-center gap-1">
-              <Fuel className="h-3.5 w-3.5 text-slate-400" />
+              <Fuel className="h-3.5 w-3.5 text-n400" />
               {fuel}
             </span>
           </div>
         )}
 
         <div className="mt-auto pt-4">
-          <p className={`font-bold text-slate-900 ${compact ? "text-lg" : "text-xl"}`}>
+          <p className={`font-bold text-n900 ${compact ? "text-lg" : "text-xl"}`}>
             {formatBRL(vehicle.sale_price)}
           </p>
           <a

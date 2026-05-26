@@ -49,11 +49,11 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
       <StorefrontHero tenant={tenant} config={layout} />
 
       {/* Estoque */}
-      <section id="estoque" className="py-16 px-4 bg-slate-50">
+      <section id="estoque" className="py-16 px-4 bg-n50">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
             <p className="text-xs font-semibold text-[var(--brand-accent)] uppercase tracking-widest mb-2">Estoque</p>
-            <h2 className="text-2xl font-bold text-slate-900">Veículos disponíveis</h2>
+            <h2 className="text-2xl font-bold text-n900">Veículos disponíveis</h2>
           </div>
 
           <Suspense>
@@ -62,7 +62,7 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
 
           <div className="mt-6">
             {vehicles.length === 0 ? (
-              <div className="text-center py-24 text-slate-400">
+              <div className="text-center py-24 text-n400">
                 <p className="text-lg font-medium">Nenhum veículo encontrado</p>
                 <p className="text-sm mt-1">Tente ajustar os filtros ou entre em contato</p>
                 {tenant.whatsapp_number && (
@@ -96,7 +96,7 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
       <section id="sobre" className="py-16 px-4 bg-[var(--brand-primary)] text-white">
         <div className="max-w-7xl mx-auto">
           <p className="text-xs font-semibold text-[var(--brand-accent)] uppercase tracking-widest mb-2">Sobre</p>
-          <h2 className="font-heading text-3xl font-bold mb-10">POR QUE {tenant.name.toUpperCase()}?</h2>
+          <h2 className="font-display text-3xl font-bold mb-10">POR QUE {tenant.name.toUpperCase()}?</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               ["✓", "Procedência garantida", "Cada veículo com histórico e revisão documentada."],
@@ -109,7 +109,7 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
                   {icon}
                 </div>
                 <h3 className="font-semibold text-white text-sm mb-1">{title}</h3>
-                <p className="text-slate-400 text-xs leading-relaxed">{desc}</p>
+                <p className="text-n400 text-xs leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -120,8 +120,8 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
       <section id="contato" className="py-16 px-4 bg-white">
         <div className="max-w-3xl mx-auto text-center">
           <p className="text-xs font-semibold text-[var(--brand-accent)] uppercase tracking-widest mb-2">Contato</p>
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">Pronto para comprar?</h2>
-          <p className="text-slate-500 mb-8">Entre em contato agora e encontre o carro ideal.</p>
+          <h2 className="text-2xl font-bold text-n900 mb-3">Pronto para comprar?</h2>
+          <p className="text-n500 mb-8">Entre em contato agora e encontre o carro ideal.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             {tenant.whatsapp_number && (
               <a
@@ -138,14 +138,14 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
                 href={tenant.instagram_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
+                className="inline-flex items-center justify-center gap-2 border border-n200 hover:bg-n50 text-n700 font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
               >
                 Instagram
               </a>
             )}
           </div>
           {tenant.business_hours && (
-            <p className="text-xs text-slate-400 mt-6">{tenant.business_hours}</p>
+            <p className="text-xs text-n400 mt-6">{tenant.business_hours}</p>
           )}
         </div>
       </section>

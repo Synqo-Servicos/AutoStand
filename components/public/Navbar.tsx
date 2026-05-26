@@ -23,14 +23,14 @@ export function Navbar() {
                 {tenantInitials(tenant.name)}
               </div>
             )}
-            <span className="font-heading text-white font-bold text-sm tracking-wider hidden sm:block">
+            <span className="font-display text-white font-bold text-sm tracking-wider hidden sm:block">
               {tenant.name.toUpperCase()}
             </span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
             {[["#estoque", "Estoque"], ["#sobre", "Sobre"], ["#contato", "Contato"]].map(([href, label]) => (
-              <a key={href} href={href} className="text-sm text-slate-300 hover:text-white transition-colors">
+              <a key={href} href={href} className="text-sm text-n300 hover:text-white transition-colors">
                 {label}
               </a>
             ))}
@@ -50,7 +50,7 @@ export function Navbar() {
             )}
             <button
               onClick={() => setOpen(!open)}
-              className="md:hidden w-9 h-9 flex items-center justify-center text-slate-300 hover:text-white cursor-pointer"
+              className="md:hidden w-9 h-9 flex items-center justify-center text-n300 hover:text-white cursor-pointer"
             >
               {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -61,7 +61,7 @@ export function Navbar() {
       {open && (
         <div className="md:hidden bg-[var(--brand-primary)] border-t border-white/10 px-4 py-4 space-y-3">
           {[["#estoque", "Estoque"], ["#sobre", "Sobre"], ["#contato", "Contato"]].map(([href, label]) => (
-            <a key={href} href={href} onClick={() => setOpen(false)} className="block text-sm text-slate-300 hover:text-white py-2">
+            <a key={href} href={href} onClick={() => setOpen(false)} className="block text-sm text-n300 hover:text-white py-2">
               {label}
             </a>
           ))}
