@@ -4,10 +4,22 @@ import { getAdminTenant } from "@/lib/tenant";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { SubscriptionBanner } from "@/components/admin/SubscriptionBanner";
 
+async function safeAuth() {
+  try {
+    return await auth();
+  } catch {
+    return null;
+  }
+}
+
 export default async function AdminProtectedLayout({ children }: { children: React.ReactNode }) {
   // Aceita loja suspensa — o painel funciona antes do pagamento (Fase 6).
   const tenant = await getAdminTenant();
-  const session = await auth();
+
+  // Token de admin ausente, expirado, com assinatura inválida ou qualquer
+  // outra falha de auth → manda pro login. auth() devolve null para os
+  // casos comuns; a função abaixo blinda contra exceções de validação do JWT.
+  const session = await safeAuth();
   if (!session?.user) redirect("/admin/login");
 
   // Only this tenant's own admin may enter its panel.
