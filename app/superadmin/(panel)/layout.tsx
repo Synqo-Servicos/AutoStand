@@ -1,20 +1,24 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getRequestHost, isPlatformHost } from "@/lib/tenant";
 import { SuperAdminSidebar } from "@/components/superadmin/SuperAdminSidebar";
 
 export const dynamic = "force-dynamic";
+
+async function safeAuth() {
+  try {
+    return await auth();
+  } catch {
+    return null;
+  }
+}
 
 export default async function SuperAdminPanelLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // The platform console only exists on platform hosts, never on a tenant domain.
-  const host = await getRequestHost();
-  if (!isPlatformHost(host)) notFound();
-
-  const session = await auth();
+  // O fence de host fica em app/superadmin/layout.tsx — aqui só auth.
+  const session = await safeAuth();
   if (!session?.user || session.user.role !== "super_admin") {
     redirect("/superadmin/login");
   }
