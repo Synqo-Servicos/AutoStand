@@ -123,6 +123,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Shimmer dos `<Skeleton>` — gradient deslizante sobre o bg-n150. */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%);  }
+}
+
 /* Respeita usuário que pediu menos movimento. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
