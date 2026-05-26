@@ -3,7 +3,7 @@
 
 /* =====================================================================
    AutoStand — Design tokens da PLATAFORMA
-   Fonte da verdade: Manual da Marca V1.2 · ver docs/Design System.md
+   Fonte da verdade: docs/SPEC-design-system.md + Manual da Marca V1.2
 
    Estes tokens vestem as superfícies AutoStand (Painel da Loja,
    Console super-admin, autostand.com.br). NÃO confundir com as
@@ -13,31 +13,43 @@
 @theme {
   /* — Cores · primária — */
   --color-ink:         #0B1F33;  /* institucional, texto primário, fundos escuros */
-  --color-ink-800:     #15324D;  /* superfície escura elevada (dark mode)         */
-  --color-signal:      #FF6A1A;  /* ação, CTAs, dados-destaque (máx. 15%)         */
+  --color-ink-700:     #1E3A55;  /* hover de superfície escura                    */
+  --color-ink-800:     #15324D;  /* superfície escura elevada (dark mode futuro)  */
+  --color-ink-900:     #061629;  /* superfície escura profunda (modal, command)   */
+  --color-signal:      #FF6A1A;  /* CTA primário, dado-destaque (máx. 15%)        */
   --color-signal-dark: #D9521A;  /* hover/pressed do laranja                      */
-  --color-sand:        #F5F1EA;  /* fundo quente, substitui o branco puro         */
+  --color-signal-soft: #FFF1E8;  /* background tonal de destaque (uso limitado)   */
+  --color-sand:        #F5F1EA;  /* fundo quente, superfície premium              */
+  --color-sand-dark:   #EBE5DA;  /* hover sobre sand, borda quente                */
 
-  /* — Cores · neutros de interface (nº maior = mais escuro) — */
-  --color-n50:         #F6F7F8;  /* fundo de app       */
-  --color-n100:        #EAEDEF;  /* superfícies, cards */
-  --color-n200:        #D5DADF;  /* bordas, divisores  */
-  --color-n400:        #94A0AB;  /* texto desabilitado */
-  --color-n600:        #6B7A88;  /* texto secundário   */
+  /* — Cores · rampa neutra (10 passos, nº maior = mais escuro) — */
+  --color-n50:         #F6F7F8;  /* canvas, fundo de app           */
+  --color-n100:        #EAEDEF;  /* superfícies sutis, cards       */
+  --color-n150:        #E0E4E8;  /* hover de n100, divisor suave   */
+  --color-n200:        #D5DADF;  /* bordas, divisores              */
+  --color-n300:        #BFC6CD;  /* borda forte, divisor de seção  */
+  --color-n400:        #94A0AB;  /* ícones leves, texto desabilitado */
+  --color-n500:        #7C8895;  /* texto muted (não disabled)     */
+  --color-n600:        #6B7A88;  /* texto secundário (padrão)      */
+  --color-n700:        #4F5D6B;  /* texto secundário forte         */
+  --color-n800:        #33414F;  /* texto quase-primário           */
   --color-n900:        #0B1F33;  /* texto primário (alias de --color-ink) */
 
   /* — Cores · sistema (feedback; nunca em peça de marca pura) — */
-  --color-success:     #2BB673;
-  --color-warning:     #F2B600;
-  --color-danger:      #C8102E;
+  --color-success:      #2BB673;
+  --color-success-dark: #1F8C57;  /* uso como texto sobre fundo claro */
+  --color-warning:      #F2B600;
+  --color-warning-dark: #B8860B;  /* uso como texto sobre fundo claro */
+  --color-danger:       #C8102E;
+  --color-danger-soft:  #FDECEE;  /* fundo tonal de erro              */
 
   /* — Tipografia · famílias — */
   --font-display: 'Sora', system-ui, sans-serif;   /* títulos, números, impacto      */
   --font-body:    'Inter', system-ui, sans-serif;  /* corpo, UI, microcopy           */
-  --font-heading: 'Syncopate', sans-serif;         /* legado · storefront whitelabel */
+  --font-heading: 'Syncopate', sans-serif;         /* DEPRECATED · só legado storefront */
 
   /* — Tipografia · escala (size / line-height / letter-spacing) — */
-  --text-display:                 3.5rem;   /* 56px */
+  --text-display:                  3.5rem;   /* 56px */
   --text-display--line-height:     1.05;
   --text-display--letter-spacing:  -0.03em;
   --text-h1:                       2.5rem;   /* 40px */
@@ -58,10 +70,62 @@
   --text-eyebrow:                  0.75rem;  /* 12px · usar com `uppercase` */
   --text-eyebrow--line-height:     1.40;
   --text-eyebrow--letter-spacing:  0.22em;
+
+  /* — Border radius (filho < pai) — */
+  --radius-xs:   0.25rem;   /* 4px  · chips, tags, badges          */
+  --radius-sm:   0.375rem;  /* 6px  · botões pequenos, inputs      */
+  --radius-md:   0.5rem;    /* 8px  · botões padrão, dropdowns     */
+  --radius-lg:   0.75rem;   /* 12px · inputs grandes, cards lista  */
+  --radius-xl:   1rem;      /* 16px · cards destaque, modais       */
+  --radius-2xl:  1.5rem;    /* 24px · hero cards, painéis premium  */
+  --radius-full: 9999px;    /* avatares, pílulas                   */
+
+  /* — Sombras · sutis, longa e baixa-opacidade (não Material) — */
+  --shadow-xs:    0 1px 2px rgba(11, 31, 51, 0.04);
+  --shadow-sm:    0 2px 8px rgba(11, 31, 51, 0.06);
+  --shadow-md:    0 8px 24px rgba(11, 31, 51, 0.08);
+  --shadow-lg:    0 16px 48px rgba(11, 31, 51, 0.12);
+  --shadow-xl:    0 24px 64px rgba(11, 31, 51, 0.16);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* — Motion · durações — */
+  --duration-instant: 80ms;
+  --duration-fast:    150ms;
+  --duration-normal:  240ms;
+  --duration-slow:    360ms;
+  --duration-slower:  600ms;
+
+  /* — Motion · easings — */
+  --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:  cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* — Z-index (escala convivendo com sticky de Next, Radix etc.) — */
+  --z-base:     0;
+  --z-raised:   10;
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-overlay:  300;
+  --z-modal:    400;
+  --z-toast:    500;
+  --z-tooltip:  600;
+  --z-max:      9999;
 }
 
 body {
   font-family: var(--font-body);
   background: var(--color-n50);
   color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Respeita usuário que pediu menos movimento. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
