@@ -7,7 +7,7 @@ import {
   UserCheck, MapPin, Store, MessageCircle,
 } from "lucide-react";
 import { requirePlatformHost } from "@/lib/tenant";
-import { getMarketplaceVehicle } from "@/lib/marketplace";
+import { getMarketplaceVehicle, tenantSiteUrl } from "@/lib/marketplace";
 import { recordView } from "@/lib/demand";
 import { formatBRL } from "@/lib/money";
 import {
@@ -164,8 +164,8 @@ export default async function ComprarDetalhePage({ params }: Params) {
             <p className="mt-4 text-3xl font-bold text-ink">{formatBRL(v.sale_price)}</p>
 
             {/* Loja */}
-            <Link
-              href={`/loja/${v.loja.slug}`}
+            <a
+              href={tenantSiteUrl(v.loja)}
               className="mt-5 flex items-center gap-3 rounded-xl border border-n200 p-3 transition-colors hover:bg-n50"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink/5 text-ink">
@@ -178,7 +178,7 @@ export default async function ComprarDetalhePage({ params }: Params) {
                   {v.loja.city ?? "Ver loja"}
                 </span>
               </span>
-            </Link>
+            </a>
 
             {whatsappHref && (
               <a

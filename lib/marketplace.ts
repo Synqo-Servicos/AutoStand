@@ -2,6 +2,17 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tenants, vehicles, vehicle_photos } from "@/lib/schema";
 
+const PLATFORM_DOMAIN = (process.env.PLATFORM_DOMAIN ?? "autostand.com.br").trim().toLowerCase();
+
+/**
+ * URL canônica do site público de uma loja: `custom_domain` se configurado,
+ * caso contrário `<slug>.<PLATFORM_DOMAIN>`. Sempre HTTPS.
+ */
+export function tenantSiteUrl(loja: { slug: string; custom_domain: string | null }): string {
+  const host = loja.custom_domain?.trim() || `${loja.slug}.${PLATFORM_DOMAIN}`;
+  return `https://${host}`;
+}
+
 /**
  * Camada de leitura do MARKETPLACE — a exceção sancionada à regra
  * "toda query filtra por tenant_id".
@@ -20,6 +31,7 @@ export interface MarketplaceLoja {
   city: string | null;
   logo_url: string | null;
   whatsapp_number: string | null;
+  custom_domain: string | null;
 }
 
 export interface MarketplaceVehicle {
@@ -54,7 +66,6 @@ export interface MarketplaceLojaSummary extends MarketplaceLoja {
 }
 
 export interface MarketplaceLojaProfile extends MarketplaceLoja {
-  custom_domain: string | null;
   instagram_url: string | null;
   business_hours: string | null;
   vehicles: MarketplaceVehicle[];
@@ -116,6 +127,7 @@ const LOJA_PUBLIC = {
   loja_city: tenants.city,
   loja_logo: tenants.logo_url,
   loja_whatsapp: tenants.whatsapp_number,
+  loja_custom_domain: tenants.custom_domain,
 } as const;
 
 type JoinedRow = Record<string, unknown> & {
@@ -124,10 +136,19 @@ type JoinedRow = Record<string, unknown> & {
   loja_city: string | null;
   loja_logo: string | null;
   loja_whatsapp: string | null;
+  loja_custom_domain: string | null;
 };
 
 function toMarketplaceVehicle(row: JoinedRow): MarketplaceVehicle {
-  const { loja_slug, loja_name, loja_city, loja_logo, loja_whatsapp, ...v } = row;
+  const {
+    loja_slug,
+    loja_name,
+    loja_city,
+    loja_logo,
+    loja_whatsapp,
+    loja_custom_domain,
+    ...v
+  } = row;
   return {
     ...(v as Omit<MarketplaceVehicle, "loja">),
     loja: {
@@ -136,6 +157,7 @@ function toMarketplaceVehicle(row: JoinedRow): MarketplaceVehicle {
       city: loja_city,
       logo_url: loja_logo,
       whatsapp_number: loja_whatsapp,
+      custom_domain: loja_custom_domain,
     },
   };
 }
@@ -242,6 +264,7 @@ export async function listMarketplaceTenants(): Promise<MarketplaceLojaSummary[]
       city: tenants.city,
       logo_url: tenants.logo_url,
       whatsapp_number: tenants.whatsapp_number,
+      custom_domain: tenants.custom_domain,
       vehicleCount: sql<number>`count(${vehicles.id})`,
     })
     .from(tenants)

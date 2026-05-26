@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { Store, MapPin } from "lucide-react";
 import { requirePlatformHost } from "@/lib/tenant";
-import { listMarketplaceTenants } from "@/lib/marketplace";
+import { listMarketplaceTenants, tenantSiteUrl } from "@/lib/marketplace";
 
 export const dynamic = "force-dynamic";
 
@@ -33,9 +32,9 @@ export default async function LojasPage() {
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {lojas.map((loja) => (
-            <Link
+            <a
               key={loja.slug}
-              href={`/loja/${loja.slug}`}
+              href={tenantSiteUrl(loja)}
               className="group flex items-center gap-4 rounded-2xl border border-n200 bg-white p-5 transition-shadow hover:shadow-lg"
             >
               <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-ink/5">
@@ -59,7 +58,7 @@ export default async function LojasPage() {
                   {loja.vehicleCount} {loja.vehicleCount === 1 ? "veículo" : "veículos"}
                 </span>
               </span>
-            </Link>
+            </a>
           ))}
         </div>
       )}
