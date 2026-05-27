@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getApiTenantId } from "@/lib/auth";
 import { addPhoto, deletePhoto, getPhotosByVehicle, getVehicle, updateVehicle } from "@/lib/db";
-import { deleteFromBlob, uploadToBlob } from "@/lib/blob";
+import {
+  IMAGE_MIMES, MB, UploadValidationError,
+  deleteFromBlob, uploadToBlob,
+} from "@/lib/blob";
+
+const PHOTO_UPLOAD_OPTIONS = {
+  allowedMimes: IMAGE_MIMES,
+  maxBytes: 8 * MB,
+} as const;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -37,10 +45,21 @@ export async function POST(req: NextRequest, { params }: Params) {
   const existing = await getPhotosByVehicle(tenantId, vehicleId);
   const urls: string[] = [];
 
-  for (let i = 0; i < files.length; i++) {
-    const url = await uploadToBlob(files[i], `tenants/${tenantId}/vehicles/${vehicleId}`);
-    await addPhoto(tenantId, vehicleId, url, existing.length + i);
-    urls.push(url);
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const url = await uploadToBlob(
+        files[i],
+        `tenants/${tenantId}/vehicles/${vehicleId}`,
+        PHOTO_UPLOAD_OPTIONS,
+      );
+      await addPhoto(tenantId, vehicleId, url, existing.length + i);
+      urls.push(url);
+    }
+  } catch (err) {
+    if (err instanceof UploadValidationError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    throw err;
   }
 
   if (setPrimary && urls[0]) {

@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { addVehicleDocument, deleteVehicleDocument, getDocumentsByVehicle, getVehicle } from "@/lib/db";
-import { deleteFromBlob, uploadToBlob } from "@/lib/blob";
+import {
+  DOC_MIMES, MB, UploadValidationError,
+  deleteFromBlob, uploadToBlob,
+} from "@/lib/blob";
+
+const DOC_UPLOAD_OPTIONS = {
+  allowedMimes: DOC_MIMES,
+  maxBytes: 20 * MB,
+} as const;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -46,10 +54,19 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Categoria inválida" }, { status: 400 });
   }
   const displayName = name && name.length > 0 ? name : file.name;
-  const url = await uploadToBlob(
-    file,
-    `tenants/${tenantId}/vehicles/${vehicleId}/docs`,
-  );
+  let url: string;
+  try {
+    url = await uploadToBlob(
+      file,
+      `tenants/${tenantId}/vehicles/${vehicleId}/docs`,
+      DOC_UPLOAD_OPTIONS,
+    );
+  } catch (err) {
+    if (err instanceof UploadValidationError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    throw err;
+  }
   const row = await addVehicleDocument({
     tenantId,
     vehicleId,
