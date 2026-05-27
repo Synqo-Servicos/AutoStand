@@ -1,0 +1,139 @@
+import { desc, eq, sql } from "drizzle-orm";
+import {
+  demand_events, leads, partners, tenants, transactions, users,
+  vehicle_documents, vehicle_photos, vehicles,
+} from "@/lib/schema";
+import type { NewTenant, TenantRow } from "@/lib/schema";
+import { db } from "./client";
+
+// — CRUD ———————————————————————————————————————————————————————
+
+export async function listTenants(): Promise<TenantRow[]> {
+  return db.select().from(tenants).orderBy(desc(tenants.created_at));
+}
+
+export async function getTenantById(id: number): Promise<TenantRow | null> {
+  const [row] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+  return row ?? null;
+}
+
+export async function getTenantBySlug(slug: string): Promise<TenantRow | null> {
+  const [row] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+  return row ?? null;
+}
+
+export async function getTenantByDomain(domain: string): Promise<TenantRow | null> {
+  const [row] = await db
+    .select()
+    .from(tenants)
+    .where(eq(tenants.custom_domain, domain))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Allowlist dos campos editáveis em createTenant/updateTenant.
+ * Bloqueia mass-assignment: o handler pode receber um body com chaves
+ * extras (stripe_subscription_id, subscription_status, current_period_end…)
+ * e elas não passam pra query.
+ */
+const TENANT_WRITABLE_FIELDS = [
+  "slug", "name", "city", "logo_url", "address", "contact_email",
+  "whatsapp_number", "instagram_url", "business_hours",
+  "primary_color", "accent_color", "accent_dark_color",
+  "hero_title", "hero_subtitle", "layout_config",
+  "custom_domain", "plan", "status", "marketplace_opt_in",
+  "partner_banks", "referred_by",
+] as const;
+
+function pickTenantFields<T extends Record<string, unknown>>(input: T): Partial<T> {
+  const safe: Record<string, unknown> = {};
+  for (const key of TENANT_WRITABLE_FIELDS) {
+    if (key in input) safe[key] = (input as Record<string, unknown>)[key];
+  }
+  return safe as Partial<T>;
+}
+
+export async function createTenant(input: NewTenant): Promise<TenantRow> {
+  const safe = pickTenantFields(input);
+  if (!safe.slug || !safe.name) {
+    throw new Error("Slug e nome são obrigatórios");
+  }
+  const [row] = await db.insert(tenants).values(safe as NewTenant).returning();
+  return row;
+}
+
+export async function updateTenant(
+  id: number,
+  input: Partial<NewTenant>,
+): Promise<TenantRow | null> {
+  const safe = pickTenantFields(input);
+  if (Object.keys(safe).length > 0) {
+    await db
+      .update(tenants)
+      .set({ ...safe, updated_at: sql`CURRENT_TIMESTAMP` })
+      .where(eq(tenants.id, id));
+  }
+  return getTenantById(id);
+}
+
+export async function deleteTenant(id: number): Promise<void> {
+  // Remove explicitamente os dados dependentes — não dependemos do cascade
+  // do SQLite (a checagem de foreign key pode estar desligada na conexão).
+  await db.delete(leads).where(eq(leads.tenant_id, id));
+  await db.delete(transactions).where(eq(transactions.tenant_id, id));
+  await db.delete(vehicle_documents).where(eq(vehicle_documents.tenant_id, id));
+  await db.delete(vehicle_photos).where(eq(vehicle_photos.tenant_id, id));
+  await db.delete(vehicles).where(eq(vehicles.tenant_id, id));
+  await db.delete(demand_events).where(eq(demand_events.tenant_id, id));
+  await db.delete(users).where(eq(users.tenant_id, id));
+  await db.delete(tenants).where(eq(tenants.id, id));
+}
+
+// — Plataforma / super-admin (cross-tenant) ———————————————————————
+
+export interface PlatformStats {
+  totalTenants: number;
+  activeTenants: number;
+  suspendedTenants: number;
+  totalVehicles: number;
+  totalLeads: number;
+}
+
+export async function getPlatformStats(): Promise<PlatformStats> {
+  const byStatus = (await db.all(sql`
+    SELECT status, COUNT(*) as count FROM tenants GROUP BY status
+  `)) as { status: string; count: number }[];
+  const vehicleCount = (await db.get(sql`SELECT COUNT(*) as c FROM vehicles`)) as { c: number };
+  const leadCount = (await db.get(sql`SELECT COUNT(*) as c FROM leads`)) as { c: number };
+
+  const active = byStatus.find((r) => r.status === "active")?.count ?? 0;
+  const suspended = byStatus.find((r) => r.status === "suspended")?.count ?? 0;
+
+  return {
+    totalTenants: active + suspended,
+    activeTenants: active,
+    suspendedTenants: suspended,
+    totalVehicles: vehicleCount?.c ?? 0,
+    totalLeads: leadCount?.c ?? 0,
+  };
+}
+
+export interface TenantWithStats extends TenantRow {
+  vehicle_count: number;
+  lead_count: number;
+}
+
+export async function listTenantsWithStats(): Promise<TenantWithStats[]> {
+  return (await db.all(sql`
+    SELECT t.*,
+      (SELECT COUNT(*) FROM vehicles v WHERE v.tenant_id = t.id) as vehicle_count,
+      (SELECT COUNT(*) FROM leads l WHERE l.tenant_id = t.id) as lead_count
+    FROM tenants t
+    ORDER BY t.created_at DESC
+  `)) as TenantWithStats[];
+}
+
+// Re-export pra outros módulos que precisam — não querer expor o helper
+// publicamente, mas o partners precisa pra consultar tenants referidos.
+export { partners };
