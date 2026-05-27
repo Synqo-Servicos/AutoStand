@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getApiTenantId } from "@/lib/auth";
 import { addPhoto, deletePhoto, getPhotosByVehicle, getVehicle, updateVehicle } from "@/lib/db";
 import {
-  IMAGE_MIMES, MB, UploadValidationError,
+  IMAGE_MIMES, MAX_PHOTOS_PER_VEHICLE, PHOTO_MAX_BYTES, UploadValidationError,
   deleteFromBlob, uploadToBlob,
 } from "@/lib/blob";
 
 const PHOTO_UPLOAD_OPTIONS = {
   allowedMimes: IMAGE_MIMES,
-  maxBytes: 8 * MB,
+  maxBytes: PHOTO_MAX_BYTES,
 } as const;
 
 type Params = { params: Promise<{ id: string }> };
@@ -43,6 +43,20 @@ export async function POST(req: NextRequest, { params }: Params) {
   const setPrimary = formData.get("set_primary") === "true";
 
   const existing = await getPhotosByVehicle(tenantId, vehicleId);
+
+  // Limite total — protege contra galeria infinita (gasto de storage,
+  // página de veículo pesada). Validação no client é melhor UX, esta
+  // é defesa em profundidade.
+  if (existing.length + files.length > MAX_PHOTOS_PER_VEHICLE) {
+    return NextResponse.json(
+      {
+        error:
+          `Limite de ${MAX_PHOTOS_PER_VEHICLE} fotos por veículo. ` +
+          `Você tem ${existing.length} e tentou subir ${files.length}.`,
+      },
+      { status: 413 },
+    );
+  }
   const urls: string[] = [];
 
   try {

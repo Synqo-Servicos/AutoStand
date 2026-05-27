@@ -57,6 +57,11 @@ export interface UploadOptions {
 
 export const MB = 1024 * 1024;
 
+/** Limites de upload reaproveitados no client + servidor. */
+export const PHOTO_MAX_BYTES = 8 * MB;
+export const DOC_MAX_BYTES = 20 * MB;
+export const MAX_PHOTOS_PER_VEHICLE = 15;
+
 function matches(buf: Buffer, signature: number[]): boolean {
   if (buf.length < signature.length) return false;
   for (let i = 0; i < signature.length; i++) {
