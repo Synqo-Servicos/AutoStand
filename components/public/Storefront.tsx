@@ -1,4 +1,8 @@
 import { Suspense } from "react";
+import {
+  ShieldCheck, Handshake, CreditCard, MessageCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { listVehicles } from "@/lib/db";
 import { recordSearch } from "@/lib/demand";
 import { getCurrentTenant } from "@/lib/tenant";
@@ -95,21 +99,44 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
       {/* Sobre */}
       <section id="sobre" className="py-16 px-4 bg-[var(--brand-primary)] text-white">
         <div className="max-w-7xl mx-auto">
-          <p className="text-xs font-semibold text-[var(--brand-accent)] uppercase tracking-widest mb-2">Sobre</p>
-          <h2 className="font-display text-3xl font-bold mb-10">POR QUE {tenant.name.toUpperCase()}?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              ["✓", "Procedência garantida", "Cada veículo com histórico e revisão documentada."],
-              ["✓", "Sem taxa de intermediário", "Você negocia direto, sem surpresas no final."],
-              ["✓", "Financiamento facilitado", "Condições especiais, mesmo para negativados."],
-              ["✓", "Atendimento humano", `${tenant.business_hours ?? "Atendimento"}, sempre disponível.`],
-            ].map(([icon, title, desc]) => (
-              <div key={title} className="bg-white/5 rounded-xl p-5 border border-white/10">
-                <div className="w-8 h-8 bg-[var(--brand-accent)] rounded-lg flex items-center justify-center text-white font-bold text-sm mb-3">
-                  {icon}
+          <p className="text-eyebrow uppercase text-[var(--brand-accent)] mb-3">Sobre</p>
+          <h2 className="font-display text-h2 font-semibold mb-10">
+            Por que {tenant.name}?
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {(
+              [
+                {
+                  Icon: ShieldCheck,
+                  title: "Procedência garantida",
+                  desc: "Cada veículo com histórico e revisão documentada.",
+                },
+                {
+                  Icon: Handshake,
+                  title: "Sem taxa de intermediário",
+                  desc: "Você negocia direto, sem surpresas no final.",
+                },
+                {
+                  Icon: CreditCard,
+                  title: "Financiamento facilitado",
+                  desc: "Condições especiais, mesmo para negativados.",
+                },
+                {
+                  Icon: MessageCircle,
+                  title: "Atendimento humano",
+                  desc: `${tenant.business_hours ?? "Atendimento"}, sempre disponível.`,
+                },
+              ] satisfies { Icon: LucideIcon; title: string; desc: string }[]
+            ).map(({ Icon, title, desc }) => (
+              <div
+                key={title}
+                className="rounded-xl bg-white/[0.06] p-5 ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/[0.08]"
+              >
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--brand-accent)] text-white">
+                  <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
                 </div>
-                <h3 className="font-semibold text-white text-sm mb-1">{title}</h3>
-                <p className="text-n400 text-xs leading-relaxed">{desc}</p>
+                <h3 className="text-body-s font-semibold text-white">{title}</h3>
+                <p className="mt-1 text-body-s leading-relaxed text-white/70">{desc}</p>
               </div>
             ))}
           </div>
