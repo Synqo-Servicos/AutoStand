@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 
+// Fonte canônica em lib/platform.ts. Aqui replicamos o fallback porque
+// next.config.ts roda antes do path alias `@/` estar disponível e não
+// pode importar do app code.
 const PLATFORM_DOMAIN = (process.env.PLATFORM_DOMAIN ?? "autostand.com.br").trim();
 
 const config: NextConfig = {

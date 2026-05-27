@@ -5,7 +5,9 @@ import {
   MARKETPLACE_PAGE_SIZE,
 } from "@/lib/marketplace";
 
-const SITE = `https://${(process.env.PLATFORM_DOMAIN ?? "autostand.com.br").trim()}`;
+import { PLATFORM_ORIGIN } from "@/lib/platform";
+
+const SITE = PLATFORM_ORIGIN;
 
 /** Regenera o sitemap a cada hora. */
 export const revalidate = 3600;

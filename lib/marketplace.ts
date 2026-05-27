@@ -1,8 +1,9 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { PLATFORM_DOMAIN_LC } from "@/lib/platform";
 import { tenants, vehicles, vehicle_photos } from "@/lib/schema";
 
-const PLATFORM_DOMAIN = (process.env.PLATFORM_DOMAIN ?? "autostand.com.br").trim().toLowerCase();
+const PLATFORM_DOMAIN = PLATFORM_DOMAIN_LC;
 
 /**
  * URL canônica do site público de uma loja: `custom_domain` se configurado,

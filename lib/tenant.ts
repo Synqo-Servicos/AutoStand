@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getTenantByDomain, getTenantBySlug } from "@/lib/db";
+import { PLATFORM_DOMAIN_LC } from "@/lib/platform";
 import type { TenantRow } from "@/lib/schema";
 
 /**
@@ -17,7 +18,7 @@ const PLATFORM_HOSTS = (process.env.PLATFORM_HOSTS ?? "localhost,127.0.0.1,app.l
   .filter(Boolean);
 
 /** Domínio-base da plataforma — `<slug>.PLATFORM_DOMAIN` resolve o tenant por slug. */
-const PLATFORM_DOMAIN = (process.env.PLATFORM_DOMAIN ?? "autostand.com.br").trim().toLowerCase();
+const PLATFORM_DOMAIN = PLATFORM_DOMAIN_LC;
 
 export function isPlatformHost(host: string): boolean {
   const bare = stripPort(host).toLowerCase();

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
+import { PLATFORM_ORIGIN } from "@/lib/platform";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(`https://${(process.env.PLATFORM_DOMAIN ?? "autostand.com.br").trim()}`),
+  metadataBase: new URL(PLATFORM_ORIGIN),
   title: "AutoStand",
   description: "Seminovos de concessionárias multimarca selecionadas, num só lugar.",
   openGraph: {

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import type { LayoutConfig } from "./layout";
 
 /**
@@ -117,7 +117,13 @@ export const vehicles = sqliteTable("vehicles", {
   primary_photo_url: text("primary_photo_url"),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updated_at: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => ({
+  // Listagens do admin filtram por (tenant_id, status) e ordenam por
+  // updated_at. Sem índice, cada chamada do dashboard/listagem é
+  // table-scan + filter proporcional ao total de veículos da plataforma.
+  byTenantStatus: index("idx_vehicles_tenant_status").on(table.tenant_id, table.status),
+  byTenantUpdated: index("idx_vehicles_tenant_updated").on(table.tenant_id, table.updated_at),
+}));
 
 // --- Vehicle photos ---
 
@@ -132,7 +138,10 @@ export const vehicle_photos = sqliteTable("vehicle_photos", {
   url: text("url").notNull(),
   order_idx: integer("order_idx").notNull().default(0),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => ({
+  // Toda leitura é "fotos do veículo X do tenant Y, ordem N".
+  byTenantVehicle: index("idx_photos_tenant_vehicle").on(table.tenant_id, table.vehicle_id),
+}));
 
 // --- Vehicle documents (anexos do estoque — controle interno) ---
 
@@ -157,7 +166,9 @@ export const vehicle_documents = sqliteTable("vehicle_documents", {
   /** Usuário que fez o upload. */
   uploaded_by: integer("uploaded_by").references(() => users.id, { onDelete: "set null" }),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => ({
+  byTenantVehicle: index("idx_docs_tenant_vehicle").on(table.tenant_id, table.vehicle_id),
+}));
 
 // --- Transactions ---
 
@@ -190,7 +201,12 @@ export const transactions = sqliteTable("transactions", {
   buyer_phone: text("buyer_phone"),
   notes: text("notes"),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => ({
+  // Relatório financeiro filtra por (tenant_id, date) num intervalo.
+  byTenantDate: index("idx_tx_tenant_date").on(table.tenant_id, table.date),
+  // Algumas consultas filtram por tipo (vendas, comissões, etc.).
+  byTenantType: index("idx_tx_tenant_type").on(table.tenant_id, table.type),
+}));
 
 // --- Sellers (vendedores da concessionária) ---
 
@@ -213,7 +229,9 @@ export const sellers = sqliteTable("sellers", {
   /** 'ativo' | 'desligado' */
   status: text("status").notNull().default("ativo"),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => ({
+  byTenantStatus: index("idx_sellers_tenant_status").on(table.tenant_id, table.status),
+}));
 
 // --- Leads (lightweight CRM — feeds email/WhatsApp campaigns) ---
 
@@ -233,7 +251,11 @@ export const leads = sqliteTable("leads", {
   /** 'novo' | 'contatado' | 'negociando' | 'convertido' | 'perdido' */
   status: text("status").notNull().default("novo"),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => ({
+  // Kanban do CRM filtra por status; timeline ordena por created_at desc.
+  byTenantStatus: index("idx_leads_tenant_status").on(table.tenant_id, table.status),
+  byTenantCreated: index("idx_leads_tenant_created").on(table.tenant_id, table.created_at),
+}));
 
 // --- Partners (links de desconto / atribuição) ---
 
@@ -282,7 +304,11 @@ export const demand_events = sqliteTable("demand_events", {
   /** Visualização: id do veículo visto. */
   vehicle_id: integer("vehicle_id"),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => ({
+  // Inteligência de demanda agrega por janela temporal e tipo de evento.
+  byTenantCreated: index("idx_demand_tenant_created").on(table.tenant_id, table.created_at),
+  byTypeCreated: index("idx_demand_type_created").on(table.event_type, table.created_at),
+}));
 
 export type TenantRow = typeof tenants.$inferSelect;
 export type NewTenant = typeof tenants.$inferInsert;
