@@ -18,3 +18,4 @@ export * from "./transactions";
 export * from "./leads";
 export * from "./dashboard";
 export * from "./partners";
+export * from "./about";

@@ -39,9 +39,12 @@ export async function getTenantByDomain(domain: string): Promise<TenantRow | nul
  */
 const TENANT_WRITABLE_FIELDS = [
   "slug", "name", "city", "logo_url", "address", "contact_email",
-  "whatsapp_number", "instagram_url", "business_hours",
+  "whatsapp_number", "instagram_url", "facebook_url", "youtube_url",
+  "tiktok_url", "twitter_url", "business_hours",
   "primary_color", "accent_color", "accent_dark_color",
-  "hero_title", "hero_subtitle", "layout_config",
+  "hero_title", "hero_subtitle", "slogan", "about_heading",
+  "contact_cta_title", "contact_cta_body",
+  "layout_config",
   "custom_domain", "plan", "status", "marketplace_opt_in",
   "partner_banks", "referred_by",
 ] as const;

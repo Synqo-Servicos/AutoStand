@@ -138,6 +138,66 @@ export const publicLeadSchema = z.object({
   source: z.enum(LEAD_SOURCES).optional(),
 });
 
+// ---------- About items (storefront) ----------
+
+/** Allowlist de ícones Lucide pra seção "Sobre" — palette curada. */
+export const ABOUT_ICONS = [
+  "ShieldCheck", "Handshake", "CreditCard", "MessageCircle",
+  "Wrench", "Award", "Truck", "Clock", "PhoneCall",
+  "Star", "Heart", "ThumbsUp", "Sparkles", "Gauge",
+  "MapPin", "Users", "FileCheck", "BadgeCheck",
+] as const;
+export type AboutIcon = (typeof ABOUT_ICONS)[number];
+
+export const aboutItemInputSchema = z.object({
+  icon_slug: z.enum(ABOUT_ICONS),
+  title: required(60),
+  description: required(280),
+});
+
+export const aboutItemUpdateSchema = aboutItemInputSchema.partial();
+
+export const aboutReorderSchema = z.object({
+  order: z.array(z.number().int().positive()).min(1).max(20),
+});
+
+// ---------- Tenant storefront config (subset editável pelo lojista) ----------
+
+const optionalUrl = z
+  .union([z.string().url(), z.literal("")])
+  .transform((v) => (v === "" ? null : v))
+  .nullable()
+  .optional();
+
+export const tenantStorefrontSchema = z.object({
+  // identidade visual
+  primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  accent_color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  accent_dark_color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  // textos do hero + sobre + cta
+  hero_title: trimmed(80).nullable().optional(),
+  hero_subtitle: trimmed(200).nullable().optional(),
+  slogan: trimmed(80).nullable().optional(),
+  about_heading: trimmed(80).nullable().optional(),
+  contact_cta_title: trimmed(80).nullable().optional(),
+  contact_cta_body: trimmed(280).nullable().optional(),
+  // contato + endereço
+  business_hours: trimmed(80).nullable().optional(),
+  contact_email: z
+    .union([z.string().email(), z.literal("")])
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .optional(),
+  whatsapp_number: trimmed(30).nullable().optional(),
+  address: trimmed(200).nullable().optional(),
+  // redes
+  instagram_url: optionalUrl,
+  facebook_url: optionalUrl,
+  youtube_url: optionalUrl,
+  tiktok_url: optionalUrl,
+  twitter_url: optionalUrl,
+});
+
 // ---------- Vehicle photos ----------
 
 /** Lista ordenada de URLs pra reordenar as fotos do veículo. */

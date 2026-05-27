@@ -27,8 +27,13 @@ export const tenants = sqliteTable("tenants", {
   // Branding / contact (replaces the old hardcoded lib/constants.ts values)
   whatsapp_number: text("whatsapp_number"),
   instagram_url: text("instagram_url"),
+  facebook_url: text("facebook_url"),
+  youtube_url: text("youtube_url"),
+  tiktok_url: text("tiktok_url"),
+  twitter_url: text("twitter_url"),
   business_hours: text("business_hours"),
   contact_email: text("contact_email"),
+  address: text("address"),
   city: text("city"),
   primary_color: text("primary_color").notNull().default("#1E293B"),
   accent_color: text("accent_color").notNull().default("#DC2626"),
@@ -36,6 +41,14 @@ export const tenants = sqliteTable("tenants", {
   logo_url: text("logo_url"),
   hero_title: text("hero_title"),
   hero_subtitle: text("hero_subtitle"),
+  /** Frase curta acima do título do hero (ex.: "Seu próximo carro em Brasília"). */
+  slogan: text("slogan"),
+  /** Override editorial do "Por que {nome}?" — fallback usa tenant.name. */
+  about_heading: text("about_heading"),
+  /** Título do bloco final ("Pronto para comprar?"). Null = default. */
+  contact_cta_title: text("contact_cta_title"),
+  /** Subtítulo do bloco final. Null = default. */
+  contact_cta_body: text("contact_cta_body"),
 
   // Billing (Stripe). Null em tenants provisionados manualmente pelo super-admin.
   plan: text("plan"), // PlanSlug — 'basico' | 'pro' | 'premium'
@@ -75,6 +88,24 @@ export const users = sqliteTable("users", {
   role: text("role").notNull().default("tenant_admin"),
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+// --- Tenant about items (CRUD da seção "Sobre" do storefront) ---
+
+export const tenant_about_items = sqliteTable("tenant_about_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  tenant_id: integer("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  /** Posição na grade (0..N-1). order_idx é o nome canonico no projeto. */
+  position: integer("position").notNull().default(0),
+  /** Slug de ícone Lucide — limitado por allowlist em zod (ver lib/schemas). */
+  icon_slug: text("icon_slug").notNull().default("ShieldCheck"),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  byTenantPosition: index("idx_about_tenant_position").on(table.tenant_id, table.position),
+}));
 
 // --- Vehicles ---
 
@@ -328,3 +359,5 @@ export type PartnerRow = typeof partners.$inferSelect;
 export type NewPartner = typeof partners.$inferInsert;
 export type DemandEventRow = typeof demand_events.$inferSelect;
 export type NewDemandEvent = typeof demand_events.$inferInsert;
+export type TenantAboutItemRow = typeof tenant_about_items.$inferSelect;
+export type NewTenantAboutItem = typeof tenant_about_items.$inferInsert;
