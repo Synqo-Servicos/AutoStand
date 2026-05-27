@@ -1,31 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getApiTenantId } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { deleteTransaction, updateTransaction } from "@/lib/db";
+import { ApiError, parseBody, withTenant } from "@/lib/api";
+import { transactionUpdateSchema } from "@/lib/schemas";
 
-type Params = { params: Promise<{ id: string }> };
+export const PUT = withTenant<{ id: string }>(async (req, { tenantId, params }) => {
+  const input = await parseBody(req, transactionUpdateSchema);
+  const tx = await updateTransaction(tenantId, Number(params.id), input);
+  if (!tx) throw new ApiError("Not found", 404);
+  return NextResponse.json(tx);
+});
 
-export async function PUT(req: NextRequest, { params }: Params) {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const { id } = await params;
-  try {
-    const body = await req.json();
-    const transaction = await updateTransaction(tenantId, Number(id), body);
-    if (!transaction) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(transaction);
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-  }
-}
-
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const { id } = await params;
-  await deleteTransaction(tenantId, Number(id));
+export const DELETE = withTenant<{ id: string }>(async (_req, { tenantId, params }) => {
+  await deleteTransaction(tenantId, Number(params.id));
   return NextResponse.json({ ok: true });
-}
+});

@@ -1,46 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getApiTenantId } from "@/lib/auth";
 import { createTransaction, listTransactions } from "@/lib/db";
+import { parseBody, withTenant } from "@/lib/api";
+import { transactionInputSchema } from "@/lib/schemas";
 
-export async function GET(req: NextRequest) {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const sp = req.nextUrl.searchParams;
-  const transactions = await listTransactions(tenantId, {
+export const GET = withTenant(async (req, { tenantId }) => {
+  const sp = (req as NextRequest).nextUrl.searchParams;
+  const list = await listTransactions(tenantId, {
     vehicle_id: sp.get("vehicle_id") ? Number(sp.get("vehicle_id")) : undefined,
     type:       sp.get("type")       ?? undefined,
     year:       sp.get("year")       ?? undefined,
     month:      sp.get("month")      ?? undefined,
   });
-  return NextResponse.json(transactions);
-}
+  return NextResponse.json(list);
+});
 
-const VEHICLE_REQUIRED = new Set(["entrada", "saida", "despesa_direta"]);
-
-export async function POST(req: NextRequest) {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  try {
-    const body = await req.json();
-    if (VEHICLE_REQUIRED.has(body.type) && !body.vehicle_id) {
-      return NextResponse.json(
-        { error: "vehicle_id é obrigatório para este tipo de transação" },
-        { status: 400 },
-      );
-    }
-    if (body.type === "despesa_direta" && !body.category) {
-      return NextResponse.json(
-        { error: "Categoria é obrigatória em despesa direta" },
-        { status: 400 },
-      );
-    }
-    const transaction = await createTransaction(tenantId, body);
-    return NextResponse.json(transaction, { status: 201 });
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-  }
-}
+export const POST = withTenant(async (req, { tenantId }) => {
+  // zod (transactionInputSchema.superRefine) já garante:
+  //  - vehicle_id obrigatório quando type ∈ {entrada, saida, despesa_direta}
+  //  - category obrigatória em despesa_direta
+  const input = await parseBody(req, transactionInputSchema);
+  // TransactionInput exige `T | null` (sem undefined) em todo opcional.
+  const tx = await createTransaction(tenantId, {
+    type: input.type,
+    amount: input.amount,
+    date: input.date,
+    vehicle_id: input.vehicle_id ?? null,
+    seller_id: input.seller_id ?? null,
+    category: input.category ?? null,
+    buyer_name: input.buyer_name ?? null,
+    buyer_phone: input.buyer_phone ?? null,
+    notes: input.notes ?? null,
+  });
+  return NextResponse.json(tx, { status: 201 });
+});

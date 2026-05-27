@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, getApiTenantId } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { deleteVehicle, getVehicleWithPhotos, updateVehicle } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
+import { ApiError, parseBody, withTenant } from "@/lib/api";
+import { vehicleUpdateSchema } from "@/lib/schemas";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -34,36 +36,21 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!vehicle) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Admin do próprio tenant pode ver a ficha completa (cost_price etc.);
-  // qualquer outro consumidor (storefront público, marketplace, scraper)
-  // recebe só as colunas públicas.
+  // qualquer outro consumidor recebe só as colunas públicas.
   const session = await auth().catch(() => null);
   const isOwnAdmin =
     session?.user?.role === "tenant_admin" && session.user.tenantId === tenant.id;
   return NextResponse.json(isOwnAdmin ? vehicle : sanitizeForPublic(vehicle));
 }
 
-export async function PUT(req: NextRequest, { params }: Params) {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const { id } = await params;
-  try {
-    const body = await req.json();
-    const vehicle = await updateVehicle(tenantId, Number(id), body);
-    if (!vehicle) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(vehicle);
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-  }
-}
+export const PUT = withTenant<{ id: string }>(async (req, { tenantId, params }) => {
+  const input = await parseBody(req, vehicleUpdateSchema);
+  const vehicle = await updateVehicle(tenantId, Number(params.id), input);
+  if (!vehicle) throw new ApiError("Not found", 404);
+  return NextResponse.json(vehicle);
+});
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const { id } = await params;
-  await deleteVehicle(tenantId, Number(id));
+export const DELETE = withTenant<{ id: string }>(async (_req, { tenantId, params }) => {
+  await deleteVehicle(tenantId, Number(params.id));
   return NextResponse.json({ ok: true });
-}
+});

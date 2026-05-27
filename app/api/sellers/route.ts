@@ -1,38 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getApiTenantId } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { createSeller, listSellers } from "@/lib/db";
+import { parseBody, withTenant } from "@/lib/api";
+import { sellerInputSchema } from "@/lib/schemas";
 
-export async function GET() {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const GET = withTenant(async (_req, { tenantId }) => {
   const rows = await listSellers(tenantId);
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(req: NextRequest) {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  try {
-    const body = await req.json();
-    if (!body.name || typeof body.name !== "string") {
-      return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
-    }
-    const seller = await createSeller(tenantId, {
-      name: body.name,
-      phone: body.phone ?? null,
-      email: body.email ?? null,
-      document: body.document ?? null,
-      photo_url: body.photo_url ?? null,
-      commission_pct: body.commission_pct ?? null,
-      commission_fixed_cents: body.commission_fixed_cents ?? null,
-      status: body.status ?? "ativo",
-    });
-    return NextResponse.json(seller, { status: 201 });
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-  }
-}
+export const POST = withTenant(async (req, { tenantId }) => {
+  const input = await parseBody(req, sellerInputSchema);
+  const seller = await createSeller(tenantId, {
+    name: input.name,
+    phone: input.phone ?? null,
+    email: input.email ?? null,
+    document: input.document ?? null,
+    photo_url: input.photo_url ?? null,
+    commission_pct: input.commission_pct ?? null,
+    commission_fixed_cents: input.commission_fixed_cents ?? null,
+    status: input.status ?? "ativo",
+  });
+  return NextResponse.json(seller, { status: 201 });
+});
