@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getApiTenantId } from "@/lib/auth";
-import { addPhoto, deletePhoto, getPhotosByVehicle, updateVehicle } from "@/lib/db";
+import { addPhoto, deletePhoto, getPhotosByVehicle, getVehicle, updateVehicle } from "@/lib/db";
 import { deleteFromBlob, uploadToBlob } from "@/lib/blob";
 
 type Params = { params: Promise<{ id: string }> };
@@ -21,6 +21,14 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
   const { id } = await params;
   const vehicleId = Number(id);
+
+  // Confirma que o veículo pertence ao tenant da sessão antes de aceitar
+  // qualquer escrita — defesa contra um admin de loja gravar foto com FK
+  // pra veículo de outra loja (mesmo que listagens depois filtrem por
+  // tenant_id, isso polui o DB e abre caminho pra joins por vehicle_id).
+  if (!(await getVehicle(tenantId, vehicleId))) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   const formData = await req.formData();
   const files = formData.getAll("files") as File[];

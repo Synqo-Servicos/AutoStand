@@ -58,8 +58,35 @@ export async function getTenantByDomain(domain: string): Promise<TenantRow | nul
   return row ?? null;
 }
 
+/**
+ * Allowlist explícita dos campos editáveis em createTenant/updateTenant.
+ * Bloqueia mass-assignment: o handler pode receber um body com chaves
+ * extras (stripe_subscription_id, referred_by, subscription_status, …)
+ * e elas não passam pra query.
+ */
+const TENANT_WRITABLE_FIELDS = [
+  "slug", "name", "city", "logo_url", "address", "contact_email",
+  "whatsapp_number", "instagram_url", "business_hours",
+  "primary_color", "accent_color", "accent_dark_color",
+  "hero_title", "hero_subtitle", "layout_config",
+  "custom_domain", "plan", "status", "marketplace_opt_in",
+  "partner_banks", "partner_id",
+] as const;
+
+function pickTenantFields<T extends Record<string, unknown>>(input: T): Partial<T> {
+  const safe: Record<string, unknown> = {};
+  for (const key of TENANT_WRITABLE_FIELDS) {
+    if (key in input) safe[key] = (input as Record<string, unknown>)[key];
+  }
+  return safe as Partial<T>;
+}
+
 export async function createTenant(input: NewTenant): Promise<TenantRow> {
-  const [row] = await db.insert(tenants).values(input).returning();
+  const safe = pickTenantFields(input);
+  if (!safe.slug || !safe.name) {
+    throw new Error("Slug e nome são obrigatórios");
+  }
+  const [row] = await db.insert(tenants).values(safe as NewTenant).returning();
   return row;
 }
 
@@ -67,9 +94,7 @@ export async function updateTenant(
   id: number,
   input: Partial<NewTenant>,
 ): Promise<TenantRow | null> {
-  const { id: _omit, created_at: _omit2, ...safe } = input;
-  void _omit;
-  void _omit2;
+  const safe = pickTenantFields(input);
   if (Object.keys(safe).length > 0) {
     await db
       .update(tenants)
@@ -408,6 +433,27 @@ export async function createTransaction(
   tenantId: number,
   input: TransactionInput,
 ): Promise<TransactionRow> {
+  // Defesa em profundidade: vehicle_id e seller_id vêm do body do request
+  // e poderiam apontar pra entidades de outro tenant (insert mantém o
+  // tenant_id correto, mas a FK ficaria cross-tenant — pollution de DB).
+  // Validamos antes de qualquer escrita.
+  if (input.vehicle_id) {
+    const [v] = await db
+      .select({ id: vehicles.id })
+      .from(vehicles)
+      .where(and(eq(vehicles.tenant_id, tenantId), eq(vehicles.id, input.vehicle_id)))
+      .limit(1);
+    if (!v) throw new Error("Veículo não encontrado neste tenant");
+  }
+  if (input.seller_id) {
+    const [s] = await db
+      .select({ id: sellers.id })
+      .from(sellers)
+      .where(and(eq(sellers.tenant_id, tenantId), eq(sellers.id, input.seller_id)))
+      .limit(1);
+    if (!s) throw new Error("Vendedor não encontrado neste tenant");
+  }
+
   return db.transaction(async (tx) => {
     const [row] = await tx
       .insert(transactions)

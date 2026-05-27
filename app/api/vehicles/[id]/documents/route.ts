@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { addVehicleDocument, deleteVehicleDocument, getDocumentsByVehicle } from "@/lib/db";
+import { addVehicleDocument, deleteVehicleDocument, getDocumentsByVehicle, getVehicle } from "@/lib/db";
 import { deleteFromBlob, uploadToBlob } from "@/lib/blob";
 
 type Params = { params: Promise<{ id: string }> };
@@ -29,6 +29,12 @@ export async function POST(req: NextRequest, { params }: Params) {
   const userId = session.user.id ? Number(session.user.id) : null;
   const { id } = await params;
   const vehicleId = Number(id);
+
+  // Confirma ownership do veículo antes de aceitar upload (mesmo motivo
+  // da rota de fotos — evita FK órfã cross-tenant).
+  if (!(await getVehicle(tenantId, vehicleId))) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

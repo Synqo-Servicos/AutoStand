@@ -29,7 +29,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/admin/login",
   },
-  session: { strategy: "jwt" },
+  // JWT expira em 8h em vez do default de 30 dias — limita janela de
+  // exploração de um token roubado e força revalidação periódica.
+  session: { strategy: "jwt", maxAge: 60 * 60 * 8 },
+  jwt:     { maxAge: 60 * 60 * 8 },
   callbacks: {
     jwt({ token, user }) {
       if (user) {
