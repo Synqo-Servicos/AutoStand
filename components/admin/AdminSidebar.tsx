@@ -9,19 +9,50 @@ import {
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
-const NAV = [
-  { href: "/admin/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
-  { href: "/admin/veiculos",     label: "Veículos",     icon: Car },
-  { href: "/admin/transacoes",   label: "Transações",   icon: ArrowLeftRight },
-  { href: "/admin/financeiro",   label: "Financeiro",   icon: PiggyBank },
-  { href: "/admin/vendedores",   label: "Vendedores",   icon: UserCircle2 },
-  { href: "/admin/leads",        label: "Leads",        icon: Users },
-  { href: "/admin/documentos",   label: "Documentos",   icon: FileText },
-  { href: "/admin/personalizar", label: "Personalizar", icon: Palette },
-  { href: "/admin/analise",      label: "Análise IA",   icon: Sparkles },
-  { href: "/admin/inteligencia", label: "Inteligência", icon: TrendingUp },
-  { href: "/admin/marketplace",  label: "Marketplace",  icon: Store },
-  { href: "/admin/assinatura",   label: "Assinatura",   icon: CreditCard },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Operação",
+    items: [
+      { href: "/admin/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
+      { href: "/admin/veiculos",   label: "Veículos",   icon: Car },
+      { href: "/admin/documentos", label: "Documentos", icon: FileText },
+    ],
+  },
+  {
+    label: "Vendas",
+    items: [
+      { href: "/admin/leads",      label: "Leads",      icon: Users },
+      { href: "/admin/transacoes", label: "Transações", icon: ArrowLeftRight },
+      { href: "/admin/vendedores", label: "Vendedores", icon: UserCircle2 },
+      { href: "/admin/financeiro", label: "Financeiro", icon: PiggyBank },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { href: "/admin/marketplace",  label: "Marketplace",  icon: Store },
+      { href: "/admin/personalizar", label: "Personalizar", icon: Palette },
+      { href: "/admin/analise",      label: "Análise IA",   icon: Sparkles },
+      { href: "/admin/inteligencia", label: "Inteligência", icon: TrendingUp },
+    ],
+  },
+  {
+    label: "Conta",
+    items: [
+      { href: "/admin/assinatura", label: "Assinatura", icon: CreditCard },
+    ],
+  },
 ];
 
 export function AdminSidebar({ tenantName }: { tenantName: string }) {
@@ -56,7 +87,7 @@ export function AdminSidebar({ tenantName }: { tenantName: string }) {
           <Menu className="w-5 h-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold text-n400 uppercase tracking-widest leading-none">Admin</p>
+          <p className="text-eyebrow text-n500 leading-none">Admin</p>
           <p className="text-sm font-semibold text-ink truncate mt-0.5">{tenantName}</p>
         </div>
       </header>
@@ -79,8 +110,8 @@ export function AdminSidebar({ tenantName }: { tenantName: string }) {
       >
         <div className="px-6 py-5 border-b border-n100 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-n400 uppercase tracking-widest">Admin</p>
-            <p className="text-sm font-semibold text-ink mt-0.5 truncate">{tenantName}</p>
+            <p className="text-eyebrow text-n500">Admin</p>
+            <p className="text-sm font-semibold text-ink mt-1 truncate">{tenantName}</p>
           </div>
           <button
             onClick={() => setOpen(false)}
@@ -90,23 +121,40 @@ export function AdminSidebar({ tenantName }: { tenantName: string }) {
             <X className="w-4 h-4" />
           </button>
         </div>
-        <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  active ? "bg-signal/10 text-signal" : "text-n600 hover:bg-n50 hover:text-ink"
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                {label}
-              </Link>
-            );
-          })}
+
+        <nav className="flex-1 py-4 overflow-y-auto" aria-label="Navegação principal">
+          {NAV_GROUPS.map((group, idx) => (
+            <div
+              key={group.label}
+              className={idx > 0 ? "mt-5 pt-4 border-t border-n100" : ""}
+            >
+              <p className="px-6 mb-1.5 text-eyebrow text-n500">{group.label}</p>
+              <ul className="px-3 space-y-0.5">
+                {group.items.map(({ href, label, icon: Icon }) => {
+                  const active = pathname.startsWith(href);
+                  return (
+                    <li key={href}>
+                      <Link
+                        href={href}
+                        aria-current={active ? "page" : undefined}
+                        className={
+                          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors " +
+                          (active
+                            ? "bg-signal/10 text-signal"
+                            : "text-n700 hover:bg-n50 hover:text-ink")
+                        }
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        {label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
         </nav>
+
         <div className="px-3 py-4 border-t border-n100">
           <button
             onClick={() => signOut({ callbackUrl: "/admin/login" })}

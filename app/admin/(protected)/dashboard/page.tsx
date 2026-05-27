@@ -2,8 +2,8 @@ import { getDashboardStats } from "@/lib/db";
 import { getAdminTenant } from "@/lib/tenant";
 import { DashboardCard } from "@/components/admin/DashboardCard";
 import { MonthlyTable } from "@/components/admin/MonthlyTable";
+import { StockBreakdown } from "@/components/admin/StockBreakdown";
 import { formatBRL } from "@/lib/money";
-import { STATUS_LABELS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,6 @@ export default async function DashboardPage() {
   const disponivel = stats.stockByStatus.find(s => s.status === "disponivel")?.count ?? 0;
   const reservado  = stats.stockByStatus.find(s => s.status === "reservado")?.count ?? 0;
   const vendido    = stats.stockByStatus.find(s => s.status === "vendido")?.count ?? 0;
-  const total      = disponivel + reservado + vendido;
 
   const MONTH_NAMES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
   const now = new Date();
@@ -34,24 +33,9 @@ export default async function DashboardPage() {
         <DashboardCard label="Valor do estoque" value={formatBRL(stats.totalCostValue)} sub="custo total dos disponíveis" />
       </div>
 
-      {/* Stock */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-4">
-        <div className="bg-white rounded-xl border border-n100 p-3 sm:p-4 text-center">
-          <p className="text-2xl sm:text-3xl font-bold text-ink">{disponivel}</p>
-          <p className="text-[11px] sm:text-xs text-n600 mt-1">{STATUS_LABELS.disponivel}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-n100 p-3 sm:p-4 text-center">
-          <p className="text-2xl sm:text-3xl font-bold text-ink">{reservado}</p>
-          <p className="text-[11px] sm:text-xs text-n600 mt-1">{STATUS_LABELS.reservado}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-n100 p-3 sm:p-4 text-center">
-          <p className="text-2xl sm:text-3xl font-bold text-n600">{vendido}</p>
-          <p className="text-[11px] sm:text-xs text-n600 mt-1">{STATUS_LABELS.vendido}</p>
-        </div>
-      </div>
-      <div className="bg-white rounded-xl border border-n100 p-3 sm:p-4 mb-6 sm:mb-8 text-center">
-        <p className="text-2xl sm:text-3xl font-bold text-ink">{total}</p>
-        <p className="text-xs text-n600 mt-1">Veículos cadastrados</p>
+      {/* Estoque — stacked bar proporcional */}
+      <div className="mb-6 sm:mb-8">
+        <StockBreakdown disponivel={disponivel} reservado={reservado} vendido={vendido} />
       </div>
 
       {/* Monthly table */}

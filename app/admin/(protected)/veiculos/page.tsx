@@ -30,9 +30,10 @@ export default async function VeiculosPage() {
       </div>
 
       {vehicles.length === 0 ? (
-        <div className="bg-white rounded-xl border border-n100 py-16 text-center text-n400">
-          <p className="font-medium">Nenhum veículo cadastrado</p>
-          <Link href="/admin/veiculos/novo" className="mt-3 inline-block text-sm text-signal hover:text-signal-dark">
+        <div className="bg-white rounded-xl border border-n200 py-16 text-center text-n500">
+          <p className="font-medium text-ink">Nenhum veículo cadastrado</p>
+          <p className="mt-1 text-body-s text-n600">Adicione seu primeiro veículo para começar.</p>
+          <Link href="/admin/veiculos/novo" className="mt-4 inline-block text-sm font-medium text-signal hover:text-signal-dark">
             Adicionar primeiro veículo →
           </Link>
         </div>
@@ -61,18 +62,18 @@ export default async function VeiculosPage() {
                             {v.primary_photo_url ? (
                               <Image src={v.primary_photo_url} alt="" fill className="object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-n400 text-xs">PI</div>
+                              <div className="w-full h-full flex items-center justify-center text-n500 text-[10px] font-medium">FOTO</div>
                             )}
                           </div>
                           <div>
                             <p className="font-medium text-ink">{v.brand} {v.model}</p>
-                            <p className="text-xs text-n400">{v.color} · {v.doors}p</p>
+                            <p className="text-xs text-n600">{v.color} · {v.doors}p</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-n600 whitespace-nowrap">
                         <p>{v.year}</p>
-                        <p className="text-xs text-n400">{v.km.toLocaleString("pt-BR")} km</p>
+                        <p className="text-xs text-n600">{v.km.toLocaleString("pt-BR")} km</p>
                       </td>
                       <td className="px-4 py-3 text-n600 whitespace-nowrap">{formatBRL(v.cost_price)}</td>
                       <td className="px-4 py-3 font-medium text-ink whitespace-nowrap">{formatBRL(v.sale_price)}</td>
@@ -110,14 +111,14 @@ export default async function VeiculosPage() {
                       {v.primary_photo_url ? (
                         <Image src={v.primary_photo_url} alt="" fill className="object-cover" sizes="80px" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-n400 text-xs">sem foto</div>
+                        <div className="w-full h-full flex items-center justify-center text-n500 text-xs">sem foto</div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="font-semibold text-ink truncate">{v.brand} {v.model}</p>
-                          <p className="text-xs text-n400">
+                          <p className="text-xs text-n600">
                             {v.year} · {v.km.toLocaleString("pt-BR")} km · {v.color}
                           </p>
                         </div>
