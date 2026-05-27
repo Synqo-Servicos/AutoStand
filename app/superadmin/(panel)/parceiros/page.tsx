@@ -79,7 +79,7 @@ export default async function ParceirosPage() {
                 <td className="px-4 py-3">
                   <Link
                     href={`/superadmin/parceiros/${p.id}`}
-                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-n200 text-n600 hover:border-signal hover:text-signal hover:bg-signal/10 transition-colors"
+                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-n200 text-n700 transition-colors hover:border-n400 hover:bg-n50 hover:text-ink"
                   >
                     <Pencil className="w-3 h-3" />
                     Editar

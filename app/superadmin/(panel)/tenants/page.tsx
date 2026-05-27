@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { listTenantsWithStats } from "@/lib/db";
+import { Badge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -11,26 +12,28 @@ export default async function TenantsPage() {
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Concessionárias</h1>
-          <p className="text-sm text-n600 mt-1">{tenants.length} cadastradas</p>
+          <h1 className="font-display text-h1 font-semibold text-ink">Concessionárias</h1>
+          <p className="text-body-s text-n600 mt-1">
+            {tenants.length} {tenants.length === 1 ? "cadastrada" : "cadastradas"}
+          </p>
         </div>
         <Link
           href="/superadmin/tenants/novo"
-          className="inline-flex items-center gap-2 bg-signal text-ink text-sm font-medium px-4 py-2 rounded-lg hover:bg-signal-dark transition-colors"
+          className="inline-flex items-center gap-2 bg-signal text-ink text-body-s font-medium px-4 py-2.5 rounded-md shadow-xs transition-colors hover:bg-signal-dark"
         >
           <Plus className="w-4 h-4" />
           Nova concessionária
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl border border-n200/70 overflow-hidden">
+      <div className="bg-white rounded-xl border border-n200 overflow-hidden shadow-xs">
         <table className="min-w-full divide-y divide-n100 text-sm">
           <thead>
             <tr className="bg-n50">
               {["Concessionária", "Domínio", "Estoque", "Leads", "Status", ""].map((h) => (
                 <th
                   key={h}
-                  className="px-4 py-3 text-left text-xs font-semibold text-n600 uppercase tracking-wider"
+                  className="px-4 py-3 text-left text-eyebrow text-n600"
                 >
                   {h}
                 </th>
@@ -50,37 +53,35 @@ export default async function TenantsPage() {
                     </span>
                     <div>
                       <p className="font-medium text-ink">{t.name}</p>
-                      <p className="text-xs text-n400">/{t.slug}</p>
+                      <p className="text-xs text-n500">/{t.slug}</p>
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-n600 whitespace-nowrap">
+                <td className="px-4 py-3 text-n700 whitespace-nowrap">
                   {t.custom_domain ? (
                     <span className="inline-flex items-center gap-1">
                       {t.custom_domain}
-                      <ExternalLink className="w-3 h-3 text-n400" />
+                      <ExternalLink className="w-3 h-3 text-n500" />
                     </span>
                   ) : (
-                    <span className="text-n400">— não configurado</span>
+                    <span className="text-n500">— não configurado</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-n600">{t.vehicle_count}</td>
-                <td className="px-4 py-3 text-n600">{t.lead_count}</td>
+                <td className="px-4 py-3 text-n700 tabular-nums">{t.vehicle_count}</td>
+                <td className="px-4 py-3 text-n700 tabular-nums">{t.lead_count}</td>
                 <td className="px-4 py-3">
-                  <span
-                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                      t.status === "active"
-                        ? "bg-success/12 text-ink ring-1 ring-success/30"
-                        : "bg-warning/12 text-ink ring-1 ring-warning/30"
-                    }`}
+                  <Badge
+                    tone={t.status === "active" ? "available" : "pending"}
+                    dot
+                    size="sm"
                   >
                     {t.status === "active" ? "Ativa" : "Suspensa"}
-                  </span>
+                  </Badge>
                 </td>
                 <td className="px-4 py-3">
                   <Link
                     href={`/superadmin/tenants/${t.id}`}
-                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-n200 text-n600 hover:border-signal hover:text-signal hover:bg-signal/10 transition-colors"
+                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-n200 text-n700 transition-colors hover:border-n400 hover:bg-n50 hover:text-ink"
                   >
                     <Pencil className="w-3 h-3" />
                     Editar
@@ -91,11 +92,14 @@ export default async function TenantsPage() {
           </tbody>
         </table>
         {tenants.length === 0 && (
-          <div className="py-16 text-center text-n400">
-            <p className="font-medium">Nenhuma concessionária cadastrada</p>
+          <div className="py-16 text-center">
+            <p className="font-medium text-ink">Nenhuma concessionária cadastrada</p>
+            <p className="mt-1 text-body-s text-n600">
+              Cadastre a primeira loja cliente para começar.
+            </p>
             <Link
               href="/superadmin/tenants/novo"
-              className="mt-3 inline-block text-sm text-signal hover:text-signal-dark"
+              className="mt-4 inline-block text-body-s font-medium text-signal hover:text-signal-dark"
             >
               Cadastrar a primeira →
             </Link>
