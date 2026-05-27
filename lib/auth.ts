@@ -4,6 +4,11 @@ import bcrypt from "bcryptjs";
 import { getUserByEmail } from "@/lib/db";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Em multi-tenant (loja.autostand.com.br, console.autostand.com.br),
+  // o origin varia por request. Sem trustHost, NextAuth v5 usa AUTH_URL
+  // (fixo) como base canônica e o callback após login sai pro host
+  // errado — quebrava o login no painel da loja em dev.
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
