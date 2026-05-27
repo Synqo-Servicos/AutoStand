@@ -7,7 +7,7 @@ import { Button, Modal, toast } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
   IMAGE_MIMES, MAX_PHOTOS_PER_VEHICLE, PHOTO_MAX_BYTES,
-} from "@/lib/blob";
+} from "@/lib/blob-constants";
 
 interface UploadedPhoto {
   url: string;

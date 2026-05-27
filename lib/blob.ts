@@ -1,11 +1,20 @@
+import "server-only";
 import { put, del } from "@vercel/blob";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
+// Re-exporta as constantes pra não obrigar caller de servidor a saber
+// de qual módulo vem cada coisa.
+export {
+  IMAGE_MIMES, DOC_MIMES, MB,
+  PHOTO_MAX_BYTES, DOC_MAX_BYTES, MAX_PHOTOS_PER_VEHICLE,
+  type AllowedMime,
+} from "./blob-constants";
+
 /**
- * Validação de upload — defesa contra arquivos maliciosos, abuso de CDN
- * pública e blob bombs:
+ * Validação + persistência de upload — server-only. Defesa contra
+ * arquivos maliciosos, abuso de CDN pública e blob bombs:
  *
  *  1) MIME declarado (file.type) está na allowlist
  *  2) Tamanho ≤ maxBytes (chega 2x — antes e depois de ler o buffer,
@@ -14,22 +23,10 @@ import path from "node:path";
  *  4) MIME declarado bate com o detectado (proteção extra)
  *
  * Storage:
- *  - Em prod (Vercel) com BLOB_READ_WRITE_TOKEN setado: usa @vercel/blob
- *  - Em dev sem token: cai num stub de filesystem que grava em
- *    public/uploads/dev/ — Next.js serve /public automaticamente, então
- *    os URLs `/uploads/dev/<...>` resolvem direto
+ *  - Em prod (Vercel) com BLOB_READ_WRITE_TOKEN setado: @vercel/blob
+ *  - Em dev sem token: filesystem stub em public/uploads/dev/
+ *    (Next serve /public direto)
  */
-
-// Tipos suportados. Adicionar uma linha aqui não é suficiente:
-// precisa de magic bytes correspondente em MAGIC_BYTES.
-export const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"] as const;
-export const DOC_MIMES = [
-  ...IMAGE_MIMES,
-  "application/pdf",
-] as const;
-export type AllowedMime =
-  | (typeof IMAGE_MIMES)[number]
-  | (typeof DOC_MIMES)[number];
 
 /** Assinaturas (offset 0). WebP precisa de um check extra no offset 8. */
 const MAGIC_BYTES: Record<string, number[][]> = {
@@ -61,13 +58,6 @@ export interface UploadOptions {
   maxBytes: number;
 }
 
-export const MB = 1024 * 1024;
-
-/** Limites de upload reaproveitados no client + servidor. */
-export const PHOTO_MAX_BYTES = 8 * MB;
-export const DOC_MAX_BYTES = 20 * MB;
-export const MAX_PHOTOS_PER_VEHICLE = 15;
-
 function matches(buf: Buffer, signature: number[]): boolean {
   if (buf.length < signature.length) return false;
   for (let i = 0; i < signature.length; i++) {
@@ -92,6 +82,7 @@ function detectMime(buf: Buffer): string | null {
 }
 
 function formatLimit(bytes: number): string {
+  const MB = 1024 * 1024;
   const mb = bytes / MB;
   return mb >= 1 ? `${mb.toFixed(0)}MB` : `${Math.ceil(bytes / 1024)}KB`;
 }
@@ -100,14 +91,11 @@ async function validateUpload(
   file: File,
   opts: UploadOptions,
 ): Promise<{ buffer: Buffer; mime: string; ext: string }> {
-  // 1) Tipo declarado — barra cedo, antes de ler o arquivo.
   if (!file.type || !opts.allowedMimes.includes(file.type)) {
     throw new UploadValidationError(
       `Tipo de arquivo não permitido${file.type ? `: ${file.type}` : ""}.`,
     );
   }
-
-  // 2) Tamanho declarado.
   if (file.size > opts.maxBytes) {
     throw new UploadValidationError(
       `Arquivo maior que o limite (${formatLimit(opts.maxBytes)}).`,
@@ -115,7 +103,6 @@ async function validateUpload(
     );
   }
 
-  // 3) Lê e re-confere tamanho real (file.size pode mentir).
   const buffer = Buffer.from(await file.arrayBuffer());
   if (buffer.byteLength > opts.maxBytes) {
     throw new UploadValidationError(
@@ -124,7 +111,6 @@ async function validateUpload(
     );
   }
 
-  // 4) Magic bytes — bloqueia HTML/SVG/JS disfarçados com extensão de imagem.
   const detected = detectMime(buffer);
   if (!detected || !opts.allowedMimes.includes(detected)) {
     throw new UploadValidationError(
@@ -140,7 +126,7 @@ async function validateUpload(
   return { buffer, mime: detected, ext: SAFE_EXT[detected] ?? "bin" };
 }
 
-// — Storage backend: Vercel Blob (prod) ou filesystem local (dev) ———
+// — Storage backend ———————————————————————————————————————————————
 
 const HAS_BLOB_TOKEN = Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 const IS_PROD = process.env.NODE_ENV === "production";
@@ -148,13 +134,7 @@ const IS_PROD = process.env.NODE_ENV === "production";
 const LOCAL_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "dev");
 const LOCAL_URL_PREFIX = "/uploads/dev";
 
-async function putLocal(
-  buffer: Buffer,
-  folder: string,
-  ext: string,
-  mime: string,
-): Promise<string> {
-  void mime; // o tipo já vem no header da response do Next pela extensão
+async function putLocal(buffer: Buffer, folder: string, ext: string): Promise<string> {
   const dir = path.join(LOCAL_UPLOAD_DIR, folder);
   if (!existsSync(dir)) await mkdir(dir, { recursive: true });
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -163,22 +143,18 @@ async function putLocal(
 }
 
 async function delLocal(url: string): Promise<void> {
-  // URL local começa com /uploads/dev/...; converte pro caminho no disco.
   if (!url.startsWith(LOCAL_URL_PREFIX + "/")) return;
   const rel = url.slice(LOCAL_URL_PREFIX.length + 1);
   const full = path.join(LOCAL_UPLOAD_DIR, rel);
   try {
     await unlink(full);
   } catch {
-    // Arquivo já não existe — operação idempotente.
+    // Idempotente — arquivo já não existe.
   }
 }
 
 /**
- * Sobe um arquivo respeitando as regras do `options`. Em prod (Vercel
- * Blob) ou em dev (filesystem stub) — escolha do storage é transparente
- * pro caller.
- *
+ * Sobe um arquivo respeitando as regras do `options`. Server-only.
  * Lança UploadValidationError em qualquer falha de validação.
  */
 export async function uploadToBlob(
@@ -190,32 +166,23 @@ export async function uploadToBlob(
 
   if (HAS_BLOB_TOKEN) {
     const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const blob = await put(filename, buffer, {
-      access: "public",
-      contentType: mime,
-    });
+    const blob = await put(filename, buffer, { access: "public", contentType: mime });
     return blob.url;
   }
 
   if (IS_PROD) {
-    // Em produção sem token, é melhor falhar alto do que cair num stub
-    // que grava no FS efêmero da Vercel e desaparece no próximo deploy.
     throw new Error(
       "BLOB_READ_WRITE_TOKEN ausente em produção — configure o Vercel Blob.",
     );
   }
 
-  return putLocal(buffer, folder, ext, mime);
+  return putLocal(buffer, folder, ext);
 }
 
 export async function deleteFromBlob(url: string): Promise<void> {
-  if (url.startsWith(LOCAL_URL_PREFIX + "/")) {
-    return delLocal(url);
-  }
+  if (url.startsWith(LOCAL_URL_PREFIX + "/")) return delLocal(url);
   if (HAS_BLOB_TOKEN) {
     await del(url);
-    return;
   }
-  // URL é remota mas não temos token — ignora silenciosamente (já
-  // estava lá antes do token sumir). Caller decide se quer logar.
+  // Sem token + URL remota: best-effort silencioso.
 }
