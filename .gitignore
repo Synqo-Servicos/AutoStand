@@ -41,3 +41,6 @@ next-env.d.ts
 
 # Playwright MCP browser artifacts (snapshots, console logs)
 .playwright-mcp/
+
+# uploads do stub de dev (BLOB_READ_WRITE_TOKEN vazio em local)
+/public/uploads/

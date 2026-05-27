@@ -1,4 +1,7 @@
 import { put, del } from "@vercel/blob";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import path from "node:path";
 
 /**
  * Validação de upload — defesa contra arquivos maliciosos, abuso de CDN
@@ -10,8 +13,11 @@ import { put, del } from "@vercel/blob";
  *  3) Magic bytes do conteúdo batem com um MIME da allowlist
  *  4) MIME declarado bate com o detectado (proteção extra)
  *
- * Quem chama lança `UploadValidationError` em qualquer falha — o
- * handler converte pra 400/413.
+ * Storage:
+ *  - Em prod (Vercel) com BLOB_READ_WRITE_TOKEN setado: usa @vercel/blob
+ *  - Em dev sem token: cai num stub de filesystem que grava em
+ *    public/uploads/dev/ — Next.js serve /public automaticamente, então
+ *    os URLs `/uploads/dev/<...>` resolvem direto
  */
 
 // Tipos suportados. Adicionar uma linha aqui não é suficiente:
@@ -134,13 +140,46 @@ async function validateUpload(
   return { buffer, mime: detected, ext: SAFE_EXT[detected] ?? "bin" };
 }
 
+// — Storage backend: Vercel Blob (prod) ou filesystem local (dev) ———
+
+const HAS_BLOB_TOKEN = Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+const IS_PROD = process.env.NODE_ENV === "production";
+
+const LOCAL_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "dev");
+const LOCAL_URL_PREFIX = "/uploads/dev";
+
+async function putLocal(
+  buffer: Buffer,
+  folder: string,
+  ext: string,
+  mime: string,
+): Promise<string> {
+  void mime; // o tipo já vem no header da response do Next pela extensão
+  const dir = path.join(LOCAL_UPLOAD_DIR, folder);
+  if (!existsSync(dir)) await mkdir(dir, { recursive: true });
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  await writeFile(path.join(dir, filename), buffer);
+  return `${LOCAL_URL_PREFIX}/${folder}/${filename}`;
+}
+
+async function delLocal(url: string): Promise<void> {
+  // URL local começa com /uploads/dev/...; converte pro caminho no disco.
+  if (!url.startsWith(LOCAL_URL_PREFIX + "/")) return;
+  const rel = url.slice(LOCAL_URL_PREFIX.length + 1);
+  const full = path.join(LOCAL_UPLOAD_DIR, rel);
+  try {
+    await unlink(full);
+  } catch {
+    // Arquivo já não existe — operação idempotente.
+  }
+}
+
 /**
- * Sobe um arquivo para o Vercel Blob com `access: "public"`.
- * Lança UploadValidationError se o arquivo falhar nas regras do `options`.
+ * Sobe um arquivo respeitando as regras do `options`. Em prod (Vercel
+ * Blob) ou em dev (filesystem stub) — escolha do storage é transparente
+ * pro caller.
  *
- * Sempre passe `options`. A versão sem validação foi removida pra evitar
- * regressão (a CDN da Vercel é pública e indexa rápido — não dá pra confiar
- * em quem está chamando).
+ * Lança UploadValidationError em qualquer falha de validação.
  */
 export async function uploadToBlob(
   file: File,
@@ -148,14 +187,35 @@ export async function uploadToBlob(
   options: UploadOptions,
 ): Promise<string> {
   const { buffer, mime, ext } = await validateUpload(file, options);
-  const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const blob = await put(filename, buffer, {
-    access: "public",
-    contentType: mime,
-  });
-  return blob.url;
+
+  if (HAS_BLOB_TOKEN) {
+    const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const blob = await put(filename, buffer, {
+      access: "public",
+      contentType: mime,
+    });
+    return blob.url;
+  }
+
+  if (IS_PROD) {
+    // Em produção sem token, é melhor falhar alto do que cair num stub
+    // que grava no FS efêmero da Vercel e desaparece no próximo deploy.
+    throw new Error(
+      "BLOB_READ_WRITE_TOKEN ausente em produção — configure o Vercel Blob.",
+    );
+  }
+
+  return putLocal(buffer, folder, ext, mime);
 }
 
 export async function deleteFromBlob(url: string): Promise<void> {
-  await del(url);
+  if (url.startsWith(LOCAL_URL_PREFIX + "/")) {
+    return delLocal(url);
+  }
+  if (HAS_BLOB_TOKEN) {
+    await del(url);
+    return;
+  }
+  // URL é remota mas não temos token — ignora silenciosamente (já
+  // estava lá antes do token sumir). Caller decide se quer logar.
 }
