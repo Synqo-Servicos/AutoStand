@@ -1,8 +1,20 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ImageIcon, Loader2, Star, Trash2, Upload } from "lucide-react";
+import {
+  GripVertical, ImageIcon, Loader2, Star, Trash2, Upload,
+} from "lucide-react";
+import {
+  closestCenter, DndContext, DragOverlay, KeyboardSensor, PointerSensor,
+  TouchSensor, useSensor, useSensors,
+  type DragEndEvent, type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove, SortableContext, rectSortingStrategy,
+  sortableKeyboardCoordinates, useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button, Modal, toast } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
@@ -22,7 +34,6 @@ interface Props {
 
 const ACCEPT = IMAGE_MIMES.join(",");
 
-/** Bytes humanizados pra mensagens de erro: 8388608 → "8MB". */
 function formatMB(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(0)}MB`;
 }
@@ -32,13 +43,18 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
   const [uploading, setUploading] = useState(false);
   const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<UploadedPhoto | null>(null);
+  const [draggingUrl, setDraggingUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  /**
-   * Pre-flight no client: bloqueia o upload antes de bater o servidor
-   * em caso de tipo errado, arquivo grande demais ou estouro de cota.
-   * Mais responsivo que esperar 8MB de upload pra cair em 413.
-   */
+  // Sensores: pointer (mouse + dedo) + touch (telas pequenas) + keyboard
+  // (acessibilidade — setas movem o item ativo).
+  // `distance: 8` evita que cliques curtos nos botões de ação virem drag.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   function validateBeforeUpload(files: File[]): string | null {
     if (photos.length + files.length > MAX_PHOTOS_PER_VEHICLE) {
       return (
@@ -60,28 +76,22 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
   async function handleFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
     const files = Array.from(fileList);
-
     const err = validateBeforeUpload(files);
     if (err) {
       toast.error(err);
       return;
     }
-
     setUploading(true);
     try {
       const formData = new FormData();
       files.forEach((f) => formData.append("files", f));
       if (photos.length === 0) formData.append("set_primary", "true");
-
       const res = await fetch(`/api/vehicles/${vehicleId}/photos`, {
         method: "POST",
         body: formData,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error ?? "Erro ao fazer upload das fotos.");
-      }
-
+      if (!res.ok) throw new Error(data?.error ?? "Erro ao fazer upload das fotos.");
       const newPhotos: UploadedPhoto[] = (data.urls as string[]).map((url, i) => ({
         url,
         isPrimary: photos.length === 0 && i === 0,
@@ -96,8 +106,6 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
       toast.error((e as Error).message);
     } finally {
       setUploading(false);
-      // Limpa o input pra permitir reselecionar o mesmo arquivo
-      // (caso o usuário tenha cancelado e queira tentar de novo).
       if (inputRef.current) inputRef.current.value = "";
     }
   }
@@ -115,7 +123,6 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
         throw new Error(data?.error ?? "Erro ao excluir a foto.");
       }
       const updated = photos.filter((p) => p.url !== photo.url);
-      // Se a foto excluída era a principal, promove a próxima.
       if (photo.isPrimary && updated.length > 0) updated[0].isPrimary = true;
       setPhotos(updated);
       onChange?.(updated.find((p) => p.isPrimary)?.url ?? null);
@@ -128,18 +135,55 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
     }
   }
 
-  async function setPrimary(photo: UploadedPhoto) {
+  function setPrimary(photo: UploadedPhoto) {
     if (photo.isPrimary) return;
-    // Otimista: atualiza local antes da rede; servidor é authority via
-    // updateVehicle (chamado no fim).
     const updated = photos.map((p) => ({ ...p, isPrimary: p.url === photo.url }));
     setPhotos(updated);
     onChange?.(photo.url);
     toast.success("Foto principal atualizada.");
   }
 
+  /** Persiste a ordem atual no servidor; em caso de erro, reverte. */
+  async function persistOrder(snapshot: UploadedPhoto[], next: UploadedPhoto[]) {
+    try {
+      const res = await fetch(`/api/vehicles/${vehicleId}/photos`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: next.map((p) => p.url) }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Erro ao salvar a ordem.");
+      }
+    } catch (e) {
+      // Rollback: volta pra ordem anterior.
+      setPhotos(snapshot);
+      toast.error((e as Error).message);
+    }
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    setDraggingUrl(String(event.active.id));
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggingUrl(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = photos.findIndex((p) => p.url === active.id);
+    const newIndex = photos.findIndex((p) => p.url === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const snapshot = photos;
+    const next = arrayMove(photos, oldIndex, newIndex);
+    setPhotos(next);
+    persistOrder(snapshot, next);
+  }
+
   const remaining = MAX_PHOTOS_PER_VEHICLE - photos.length;
   const canUpload = remaining > 0 && !uploading;
+  const draggingPhoto = draggingUrl
+    ? photos.find((p) => p.url === draggingUrl) ?? null
+    : null;
 
   return (
     <div className="space-y-4">
@@ -190,54 +234,53 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
         />
       </div>
 
-      {/* Grid de fotos */}
+      {/* Grid de fotos com drag-and-drop */}
       {photos.length > 0 && (
-        <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {photos.map((photo) => (
-            <li
-              key={photo.url}
-              className="relative aspect-[4/3] rounded-lg overflow-hidden bg-n100 ring-1 ring-n200"
+        <>
+          <p className="text-body-s text-n600">
+            <GripVertical className="inline h-3.5 w-3.5 align-text-bottom text-n500" />
+            {" "}Arraste para reordenar — a primeira é a foto principal no marketplace.
+          </p>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={photos.map((p) => p.url)}
+              strategy={rectSortingStrategy}
             >
-              <Image
-                src={photo.url}
-                alt=""
-                fill
-                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                className="object-cover"
-              />
-
-              {photo.isPrimary && (
-                <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink/85 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
-                  <Star className="h-3 w-3 fill-white" />
-                  Principal
-                </span>
-              )}
-
-              {/* Toolbar sempre visível — funciona em touch sem precisar
-                  do hover overlay. Buttons individuais com bg branco
-                  + sombra leve dão peso visual mesmo sobre foto clara. */}
-              <div className="absolute right-2 top-2 flex gap-1.5">
-                {!photo.isPrimary && (
-                  <PhotoAction
-                    icon={Star}
-                    label="Definir como principal"
-                    onClick={() => setPrimary(photo)}
+              <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {photos.map((photo) => (
+                  <SortablePhotoCard
+                    key={photo.url}
+                    photo={photo}
+                    deleting={deletingUrl === photo.url}
+                    onSetPrimary={() => setPrimary(photo)}
+                    onAskDelete={() => setConfirmDelete(photo)}
                   />
-                )}
-                <PhotoAction
-                  icon={Trash2}
-                  label="Excluir foto"
-                  tone="danger"
-                  loading={deletingUrl === photo.url}
-                  onClick={() => setConfirmDelete(photo)}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
+                ))}
+              </ul>
+            </SortableContext>
+            <DragOverlay>
+              {draggingPhoto && (
+                <div className="aspect-[4/3] w-full overflow-hidden rounded-lg shadow-xl ring-2 ring-signal/40">
+                  <Image
+                    src={draggingPhoto.url}
+                    alt=""
+                    width={400}
+                    height={300}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
+        </>
       )}
 
-      {/* Estado vazio (sem foto cadastrada) */}
+      {/* Estado vazio */}
       {photos.length === 0 && !uploading && (
         <div className="rounded-xl border border-dashed border-n200 px-6 py-12 text-center text-n500">
           <ImageIcon className="mx-auto mb-2 h-8 w-8 text-n400" aria-hidden />
@@ -284,10 +327,76 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
   );
 }
 
-/**
- * Botão de ação dentro do card da foto. Sempre visível (sem hover) pra
- * funcionar em touch. tone="danger" vermelhinho pra exclusão.
- */
+interface SortableCardProps {
+  photo: UploadedPhoto;
+  deleting: boolean;
+  onSetPrimary: () => void;
+  onAskDelete: () => void;
+}
+
+function SortablePhotoCard({ photo, deleting, onSetPrimary, onAskDelete }: SortableCardProps) {
+  const {
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
+  } = useSortable({ id: photo.url });
+
+  // Esconde o original durante o drag — DragOverlay desenha a versão
+  // flutuante com sombra/ring. Mantém o slot pra grid não pular.
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : 1,
+  };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className="relative aspect-[4/3] rounded-lg overflow-hidden bg-n100 ring-1 ring-n200 touch-none"
+    >
+      <Image
+        src={photo.url}
+        alt=""
+        fill
+        sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+        className="object-cover"
+      />
+
+      {photo.isPrimary && (
+        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink/85 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
+          <Star className="h-3 w-3 fill-white" />
+          Principal
+        </span>
+      )}
+
+      {/* Drag handle no canto inf. esquerdo — visual de "agarra aqui";
+          a área inteira ainda é sensível, mas a alça é o sinal claro. */}
+      <button
+        type="button"
+        {...listeners}
+        aria-label="Arrastar para reordenar"
+        className="absolute left-2 bottom-2 inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/95 backdrop-blur-sm shadow-sm ring-1 ring-ink/5 text-ink/70 hover:text-ink cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+
+      {/* Ações sempre visíveis no canto sup. direito */}
+      <div className="absolute right-2 top-2 flex gap-1.5">
+        {!photo.isPrimary && (
+          <PhotoAction icon={Star} label="Definir como principal" onClick={onSetPrimary} />
+        )}
+        <PhotoAction
+          icon={Trash2}
+          label="Excluir foto"
+          tone="danger"
+          loading={deleting}
+          onClick={onAskDelete}
+        />
+      </div>
+    </li>
+  );
+}
+
 function PhotoAction({
   icon: Icon,
   label,
@@ -305,6 +414,7 @@ function PhotoAction({
     <button
       type="button"
       onClick={onClick}
+      onPointerDown={(e) => e.stopPropagation()}
       disabled={loading}
       title={label}
       aria-label={label}
@@ -326,3 +436,24 @@ function PhotoAction({
     </button>
   );
 }
+
+// Mantém efeito de "primary segue a primeira posição" quando reordena —
+// hook isolado pra não poluir o componente principal e pra rodar uma
+// vez quando o primeiro item muda.
+function useSyncPrimaryWithFirst(
+  photos: UploadedPhoto[],
+  setPhotos: (next: UploadedPhoto[]) => void,
+) {
+  const firstUrl = photos[0]?.url;
+  useEffect(() => {
+    if (!firstUrl) return;
+    if (photos[0]?.isPrimary) return;
+    setPhotos(photos.map((p, i) => ({ ...p, isPrimary: i === 0 })));
+  }, [firstUrl, photos, setPhotos]);
+}
+
+// Helper exportado pra ser explícito sobre o comportamento, mas não
+// estamos usando-o ainda — a regra atual é: "primária" é independente
+// da ordem. Se quiser ativar, basta chamar useSyncPrimaryWithFirst()
+// dentro do PhotoUploader.
+export { useSyncPrimaryWithFirst };

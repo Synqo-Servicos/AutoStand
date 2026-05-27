@@ -138,6 +138,13 @@ export const publicLeadSchema = z.object({
   source: z.enum(LEAD_SOURCES).optional(),
 });
 
+// ---------- Vehicle photos ----------
+
+/** Lista ordenada de URLs pra reordenar as fotos do veículo. */
+export const photoReorderSchema = z.object({
+  order: z.array(z.string().url().max(2048)).min(1).max(50),
+});
+
 /** Atualização pelo admin do CRM (kanban). */
 export const leadUpdateSchema = z.object({
   status: z.enum(LEAD_STATUS).optional(),

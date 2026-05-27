@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getApiTenantId } from "@/lib/auth";
-import { addPhoto, deletePhoto, getPhotosByVehicle, getVehicle, updateVehicle } from "@/lib/db";
+import {
+  addPhoto, deletePhoto, getPhotosByVehicle, getVehicle,
+  reorderVehiclePhotos, updateVehicle,
+} from "@/lib/db";
 import {
   IMAGE_MIMES, MAX_PHOTOS_PER_VEHICLE, PHOTO_MAX_BYTES, UploadValidationError,
   deleteFromBlob, uploadToBlob,
 } from "@/lib/blob";
+import { ApiError, parseBody, withTenant } from "@/lib/api";
+import { photoReorderSchema } from "@/lib/schemas";
 
 const PHOTO_UPLOAD_OPTIONS = {
   allowedMimes: IMAGE_MIMES,
@@ -102,3 +107,18 @@ export async function DELETE(req: NextRequest, { params }: Params) {
 
   return NextResponse.json({ ok: true });
 }
+
+/**
+ * Reordena as fotos do veículo. Body: `{ order: [url1, url2, ...] }`
+ * com as URLs na nova ordem. Cada URL precisa existir como foto do
+ * mesmo (tenant, vehicleId). order_idx vira o índice no array.
+ */
+export const PATCH = withTenant<{ id: string }>(async (req, { tenantId, params }) => {
+  const vehicleId = Number(params.id);
+  if (!(await getVehicle(tenantId, vehicleId))) {
+    throw new ApiError("Not found", 404);
+  }
+  const { order } = await parseBody(req, photoReorderSchema);
+  await reorderVehiclePhotos(tenantId, vehicleId, order);
+  return NextResponse.json({ ok: true });
+});

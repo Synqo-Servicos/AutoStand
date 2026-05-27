@@ -142,6 +142,34 @@ export async function getPhotosByVehicle(
     .orderBy(vehicle_photos.order_idx);
 }
 
+/**
+ * Reordena as fotos do veículo segundo a ordem das URLs fornecida.
+ * Atualiza `order_idx` em ordem (0..N-1) para cada URL na sequência;
+ * fotos não-mencionadas ficam intocadas (defensivo — o caller deveria
+ * passar todas, mas idempotência é segura). Roda em transação.
+ */
+export async function reorderVehiclePhotos(
+  tenantId: number,
+  vehicleId: number,
+  orderedUrls: string[],
+): Promise<void> {
+  if (orderedUrls.length === 0) return;
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < orderedUrls.length; i++) {
+      await tx
+        .update(vehicle_photos)
+        .set({ order_idx: i })
+        .where(
+          and(
+            eq(vehicle_photos.tenant_id, tenantId),
+            eq(vehicle_photos.vehicle_id, vehicleId),
+            eq(vehicle_photos.url, orderedUrls[i]),
+          ),
+        );
+    }
+  });
+}
+
 // — Documents (anexos internos do veículo) ———————————————————————
 
 export async function addVehicleDocument(input: {
