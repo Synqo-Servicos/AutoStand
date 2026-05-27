@@ -20,7 +20,14 @@ const PLATFORM_HOSTS = (process.env.PLATFORM_HOSTS ?? "localhost,127.0.0.1,app.l
 const PLATFORM_DOMAIN = (process.env.PLATFORM_DOMAIN ?? "autostand.com.br").trim().toLowerCase();
 
 export function isPlatformHost(host: string): boolean {
-  return PLATFORM_HOSTS.includes(stripPort(host).toLowerCase());
+  const bare = stripPort(host).toLowerCase();
+  if (PLATFORM_HOSTS.includes(bare)) return true;
+  // O subdomínio do console (console.<plataforma>) também é um host
+  // de plataforma — não tem tenant, serve o painel super-admin.
+  if (bare.startsWith("console.") && PLATFORM_HOSTS.includes(bare.slice("console.".length))) {
+    return true;
+  }
+  return false;
 }
 
 function stripPort(host: string): string {
@@ -79,4 +86,27 @@ export async function getAdminTenant(): Promise<TenantRow> {
 export async function requirePlatformHost(): Promise<void> {
   const host = await getRequestHost();
   if (!isPlatformHost(host)) notFound();
+}
+
+/**
+ * Hosts do console super-admin. Reconhece subdomínio `console.*` em
+ * cima de qualquer PLATFORM_HOST listado. Pensado para que a entrada
+ * do admin da plataforma fique em `console.autostand.com.br` em vez
+ * de uma URI óbvia em `autostand.com.br/superadmin/...`.
+ */
+export function isConsoleHost(host: string): boolean {
+  const bare = stripPort(host).toLowerCase();
+  if (!bare.startsWith("console.")) return false;
+  const parent = bare.slice("console.".length);
+  return PLATFORM_HOSTS.includes(parent);
+}
+
+/**
+ * 404 quando a requisição NÃO está no host do console (console.*).
+ * Garante que `/superadmin/*` só exista atrás do subdomínio dedicado —
+ * `autostand.com.br/superadmin/login` deixa de responder.
+ */
+export async function requireConsoleHost(): Promise<void> {
+  const host = await getRequestHost();
+  if (!isConsoleHost(host)) notFound();
 }

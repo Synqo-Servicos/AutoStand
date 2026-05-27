@@ -9,7 +9,7 @@ export const SLUG_MAX = 32;
 
 /** Nomes que não podem virar subdomínio de tenant (colidem com a plataforma). */
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
-  "www", "app", "api", "admin", "superadmin", "autostand", "auto", "stand",
+  "www", "app", "api", "admin", "superadmin", "console", "autostand", "auto", "stand",
   "mail", "smtp", "imap", "ftp", "cdn", "static", "assets",
   "blog", "suporte", "ajuda", "help", "status", "docs", "doc",
   "assinar", "sucesso", "login", "logout", "conta", "painel", "sistema",
