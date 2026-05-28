@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { deleteVehicle, getVehicleWithPhotos, updateVehicle } from "@/lib/db";
+import { deleteFromBlob } from "@/lib/blob";
+import {
+  deleteVehicle,
+  getVehicleWithPhotos,
+  listVehicleBlobUrls,
+  updateVehicle,
+} from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { ApiError, parseBody, withTenant } from "@/lib/api";
 import { vehicleUpdateSchema } from "@/lib/schemas";
@@ -51,6 +57,11 @@ export const PUT = withTenant<{ id: string }>(async (req, { tenantId, params }) 
 });
 
 export const DELETE = withTenant<{ id: string }>(async (_req, { tenantId, params }) => {
-  await deleteVehicle(tenantId, Number(params.id));
+  const id = Number(params.id);
+  // Snapshot dos blobs antes do cascade — fotos + documentos. Cleanup é
+  // best-effort: falha no storage não reverte o delete do DB.
+  const blobUrls = await listVehicleBlobUrls(tenantId, id);
+  await deleteVehicle(tenantId, id);
+  await Promise.allSettled(blobUrls.map((url) => deleteFromBlob(url)));
   return NextResponse.json({ ok: true });
 });

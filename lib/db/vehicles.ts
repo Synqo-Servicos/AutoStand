@@ -108,6 +108,28 @@ export async function deleteVehicle(tenantId: number, id: number): Promise<void>
     .where(and(eq(vehicles.tenant_id, tenantId), eq(vehicles.id, id)));
 }
 
+/**
+ * Coleta todas as URLs de blob de um veículo — fotos + documentos.
+ * Usado antes de deleteVehicle pra que o caller possa apagar os
+ * arquivos no storage depois que o cascade DB sair.
+ */
+export async function listVehicleBlobUrls(
+  tenantId: number,
+  id: number,
+): Promise<string[]> {
+  const [photoUrls, docUrls] = await Promise.all([
+    db
+      .select({ url: vehicle_photos.url })
+      .from(vehicle_photos)
+      .where(and(eq(vehicle_photos.tenant_id, tenantId), eq(vehicle_photos.vehicle_id, id))),
+    db
+      .select({ url: vehicle_documents.url })
+      .from(vehicle_documents)
+      .where(and(eq(vehicle_documents.tenant_id, tenantId), eq(vehicle_documents.vehicle_id, id))),
+  ]);
+  return [...photoUrls.map((r) => r.url), ...docUrls.map((r) => r.url)];
+}
+
 // — Photos (tenant-scoped) ———————————————————————————————————————
 
 export async function addPhoto(
