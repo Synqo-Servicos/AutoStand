@@ -179,10 +179,17 @@ export async function uploadToBlob(
   return putLocal(buffer, folder, ext);
 }
 
+/** Detecta URLs servidas pelo Vercel Blob — só essas podem ser deletadas
+ *  via @vercel/blob. Evita errors quando o caller passa URL externa
+ *  (Unsplash, CDN colada por super-admin, etc) que não é nossa. */
+function isVercelBlobUrl(url: string): boolean {
+  return url.includes(".public.blob.vercel-storage.com");
+}
+
 export async function deleteFromBlob(url: string): Promise<void> {
   if (url.startsWith(LOCAL_URL_PREFIX + "/")) return delLocal(url);
-  if (HAS_BLOB_TOKEN) {
+  if (HAS_BLOB_TOKEN && isVercelBlobUrl(url)) {
     await del(url);
   }
-  // Sem token + URL remota: best-effort silencioso.
+  // URL externa ou sem token: best-effort silencioso.
 }
