@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import imageCompression from "browser-image-compression";
 import {
   GripVertical, ImageIcon, Loader2, Star, Trash2, Upload,
 } from "lucide-react";
@@ -20,6 +21,37 @@ import { cn } from "@/lib/cn";
 import {
   IMAGE_MIMES, MAX_PHOTOS_PER_VEHICLE, PHOTO_MAX_BYTES,
 } from "@/lib/blob-constants";
+import { Lightbox } from "./Lightbox";
+
+/**
+ * Compressão client antes do upload — reduz tráfego e melhora UX em
+ * conexões móveis. JPEG/WebP saem ~70% menores; PNG geralmente piora
+ * (lossless), então mantemos JPEG/WebP e deixamos PNG passar.
+ */
+const COMPRESSION_OPTIONS = {
+  maxSizeMB: 1.5,
+  maxWidthOrHeight: 1920,
+  useWebWorker: true,
+  initialQuality: 0.8,
+} as const;
+
+async function compressIfWorthwhile(file: File): Promise<File> {
+  // PNG transparente fica maior se recomprimido — não vale.
+  if (file.type === "image/png") return file;
+  // Arquivos já pequenos (< 500KB) provavelmente não economizam muito.
+  if (file.size < 500 * 1024) return file;
+  try {
+    const compressed = await imageCompression(file, {
+      ...COMPRESSION_OPTIONS,
+      fileType: file.type,
+    });
+    // Se a "compressão" resultou em arquivo maior (raro), descarta.
+    return compressed.size < file.size ? compressed : file;
+  } catch {
+    // Falha silenciosa — segue com o original, o server-side valida.
+    return file;
+  }
+}
 
 interface UploadedPhoto {
   url: string;
@@ -40,11 +72,13 @@ function formatMB(bytes: number): string {
 
 export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props) {
   const [photos, setPhotos] = useState<UploadedPhoto[]>(initialPhotos);
-  const [uploading, setUploading] = useState(false);
+  const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<UploadedPhoto | null>(null);
   const [draggingUrl, setDraggingUrl] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const uploading = busyLabel !== null;
 
   // Sensores: pointer (mouse + dedo) + touch (telas pequenas) + keyboard
   // (acessibilidade — setas movem o item ativo).
@@ -81,10 +115,13 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
       toast.error(err);
       return;
     }
-    setUploading(true);
     try {
+      setBusyLabel(files.length === 1 ? "Comprimindo…" : `Comprimindo ${files.length} fotos…`);
+      const prepared = await Promise.all(files.map(compressIfWorthwhile));
+
+      setBusyLabel(files.length === 1 ? "Enviando…" : `Enviando ${files.length} fotos…`);
       const formData = new FormData();
-      files.forEach((f) => formData.append("files", f));
+      prepared.forEach((f) => formData.append("files", f));
       if (photos.length === 0) formData.append("set_primary", "true");
       const res = await fetch(`/api/vehicles/${vehicleId}/photos`, {
         method: "POST",
@@ -105,7 +142,7 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
-      setUploading(false);
+      setBusyLabel(null);
       if (inputRef.current) inputRef.current.value = "";
     }
   }
@@ -215,7 +252,7 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
         )}
         <p className="text-body-s text-n700 font-medium">
           {uploading
-            ? "Enviando..."
+            ? busyLabel
             : remaining > 0
             ? "Arraste fotos ou clique para selecionar"
             : "Limite de fotos atingido"}
@@ -252,13 +289,14 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
               strategy={rectSortingStrategy}
             >
               <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {photos.map((photo) => (
+                {photos.map((photo, i) => (
                   <SortablePhotoCard
                     key={photo.url}
                     photo={photo}
                     deleting={deletingUrl === photo.url}
                     onSetPrimary={() => setPrimary(photo)}
                     onAskDelete={() => setConfirmDelete(photo)}
+                    onOpenLightbox={() => setLightboxIndex(i)}
                   />
                 ))}
               </ul>
@@ -287,6 +325,14 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
           <p className="text-body-s">Nenhuma foto ainda. A primeira que você subir vira a foto principal.</p>
         </div>
       )}
+
+      {/* Lightbox — fullscreen viewer */}
+      <Lightbox
+        photos={photos}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onChange={setLightboxIndex}
+      />
 
       {/* Modal de confirmação de exclusão */}
       <Modal
@@ -332,9 +378,16 @@ interface SortableCardProps {
   deleting: boolean;
   onSetPrimary: () => void;
   onAskDelete: () => void;
+  onOpenLightbox: () => void;
 }
 
-function SortablePhotoCard({ photo, deleting, onSetPrimary, onAskDelete }: SortableCardProps) {
+function SortablePhotoCard({
+  photo,
+  deleting,
+  onSetPrimary,
+  onAskDelete,
+  onOpenLightbox,
+}: SortableCardProps) {
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: photo.url });
@@ -354,13 +407,23 @@ function SortablePhotoCard({ photo, deleting, onSetPrimary, onAskDelete }: Sorta
       {...attributes}
       className="relative aspect-[4/3] rounded-lg overflow-hidden bg-n100 ring-1 ring-n200 touch-none"
     >
-      <Image
-        src={photo.url}
-        alt=""
-        fill
-        sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-        className="object-cover"
-      />
+      {/* Botão invisível que cobre a imagem — abre o lightbox.
+          Os listeners de drag estão no GripVertical, então clique aqui
+          não interfere com o drag. */}
+      <button
+        type="button"
+        onClick={onOpenLightbox}
+        aria-label="Ampliar foto"
+        className="absolute inset-0 cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-inset"
+      >
+        <Image
+          src={photo.url}
+          alt=""
+          fill
+          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          className="object-cover"
+        />
+      </button>
 
       {photo.isPrimary && (
         <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink/85 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
