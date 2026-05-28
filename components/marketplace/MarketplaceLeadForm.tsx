@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Loader2, CheckCircle2 } from "lucide-react";
+import { Turnstile, isTurnstileEnabled } from "@/components/Turnstile";
 
 interface Props {
   vehicleId: number;
@@ -23,10 +24,16 @@ export function MarketplaceLeadForm({ vehicleId, vehicleLabel, lojaName }: Props
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  const onCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
+
+  const captchaEnabled = isTurnstileEnabled();
+  const canSubmit = !saving && (!captchaEnabled || captchaToken !== null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,7 +43,11 @@ export function MarketplaceLeadForm({ vehicleId, vehicleLabel, lojaName }: Props
       const res = await fetch("/api/marketplace/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, vehicle_id: vehicleId }),
+        body: JSON.stringify({
+          ...form,
+          vehicle_id: vehicleId,
+          turnstile_token: captchaToken,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erro ao enviar");
@@ -96,10 +107,11 @@ export function MarketplaceLeadForm({ vehicleId, vehicleLabel, lojaName }: Props
           className={`${FIELD} resize-none`}
         />
       </div>
+      {captchaEnabled && <Turnstile onVerify={setCaptchaToken} onExpire={onCaptchaExpire} />}
       {error && <p className="text-xs text-danger">{error}</p>}
       <button
         type="submit"
-        disabled={saving}
+        disabled={!canSubmit}
         className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-signal-dark disabled:opacity-50 cursor-pointer"
       >
         {saving && <Loader2 className="h-4 w-4 animate-spin" />}

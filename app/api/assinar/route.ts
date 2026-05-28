@@ -11,6 +11,8 @@ import {
 import { getPlan, isPlanSlug } from "@/lib/plans";
 import { normalizeSlug, slugError } from "@/lib/slug";
 import { createCheckoutSession } from "@/lib/checkout";
+import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -23,10 +25,26 @@ function bad(message: string) {
  *
  * Cria o tenant como `incomplete` (site fora do ar até o 1º pagamento) e o
  * usuário admin. O Checkout é um seam — ver lib/checkout.ts.
+ * Endpoint público — protegido por rate limit (IP) + Turnstile.
  */
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+
+  const rl = await checkRateLimit("signup", ip);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Muitas tentativas de cadastro. Tente novamente em alguns minutos." },
+      { status: 429, headers: rl.retryAfter ? { "Retry-After": String(rl.retryAfter) } : undefined },
+    );
+  }
+
   try {
     const body = await req.json();
+
+    const captchaOk = await verifyTurnstile(body.turnstile_token, ip);
+    if (!captchaOk) {
+      return bad("Verificação de segurança falhou. Recarregue a página e tente novamente.");
+    }
 
     const plan = String(body.plan ?? "");
     const slug = normalizeSlug(String(body.slug ?? ""));

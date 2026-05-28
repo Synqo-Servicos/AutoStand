@@ -23,7 +23,9 @@
   pública /api/vehicles/[id], allowlist superadmin, JWT 8h)
 - 5b índices em tenant_id (11 índices, migration 0010) + `lib/platform.ts`
 - 5c validação de upload (MIME + tamanho + magic bytes)
-- **Pendente: 5d** rate limit + CAPTCHA (precisa Upstash + Turnstile)
+- **5d** rate limit + CAPTCHA via Upstash + Turnstile — código pronto,
+  no-op enquanto as 3 envs ficam vazias (ver `lib/ratelimit.ts`,
+  `lib/turnstile.ts`, `components/Turnstile.tsx`)
 
 ### Onda 6 — Estrutura que escala
 - 6a wrappers `withTenant`/`withSuperAdmin` + zod (10 endpoints migrados)
@@ -96,9 +98,10 @@ chamar `listAboutItems(tenant.id)` no Storefront.
 
 ## Outras frentes pendentes (priorizar com calma)
 
-1. **5d Rate limit + CAPTCHA** — precisa criar Upstash Redis +
-   Cloudflare Turnstile. Posso escrever código com env vazias
-   (degrada pra no-op).
+1. **Plugar Upstash + Turnstile em prod** (código pronto, só envs):
+   - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (server)
+   - `TURNSTILE_SECRET_KEY` (server), `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (client)
+   Sem as envs, rate limit e CAPTCHA viram no-op silencioso.
 2. **Migrar handlers restantes pro withTenant**: `/api/assinar`,
    `/api/marketplace/lead`, `/api/superadmin/*`, `/api/analise`,
    `/api/inteligencia`, `/api/personalizar`. Polish técnico, invisível.

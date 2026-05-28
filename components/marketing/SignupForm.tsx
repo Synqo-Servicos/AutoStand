@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PLAN_SLUGS, PLANS, type PlanSlug } from "@/lib/plans";
 import { normalizeSlug, slugError } from "@/lib/slug";
+import { Turnstile, isTurnstileEnabled } from "@/components/Turnstile";
 
 function formatBRL(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
@@ -36,8 +37,12 @@ export function SignupForm({
   const [adminPassword, setAdminPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const liveSlugError = slug ? slugError(slug) : null;
+  const onCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
+  const captchaEnabled = isTurnstileEnabled();
+  const canSubmit = !submitting && (!captchaEnabled || captchaToken !== null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,6 +67,7 @@ export function SignupForm({
           admin_email: adminEmail,
           admin_password: adminPassword,
           partner_code: partnerCode ?? "",
+          turnstile_token: captchaToken,
         }),
       });
       const data = await res.json();
@@ -206,13 +212,15 @@ export function SignupForm({
         </div>
       </div>
 
+      {captchaEnabled && <Turnstile onVerify={setCaptchaToken} onExpire={onCaptchaExpire} />}
+
       {error && (
         <p className="rounded-lg bg-danger/10 px-3 py-2 text-body-s text-danger">{error}</p>
       )}
 
       <button
         type="submit"
-        disabled={submitting || !!liveSlugError}
+        disabled={!canSubmit || !!liveSlugError}
         className="w-full rounded-lg bg-signal px-4 py-3 font-semibold text-ink transition-colors hover:bg-signal-dark disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting ? "Enviando…" : "Criar minha conta"}
