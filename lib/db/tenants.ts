@@ -80,6 +80,27 @@ export async function updateTenant(
   return getTenantById(id);
 }
 
+/**
+ * Coleta todas as URLs de blob de um tenant — logo, hero image, fotos de
+ * veículos e documentos. Usado antes de deleteTenant pra que o caller
+ * possa apagar os arquivos no storage depois que a transação no DB sair.
+ */
+export async function listTenantBlobUrls(id: number): Promise<string[]> {
+  const tenant = await getTenantById(id);
+  if (!tenant) return [];
+
+  const [photoUrls, docUrls] = await Promise.all([
+    db.select({ url: vehicle_photos.url }).from(vehicle_photos).where(eq(vehicle_photos.tenant_id, id)),
+    db.select({ url: vehicle_documents.url }).from(vehicle_documents).where(eq(vehicle_documents.tenant_id, id)),
+  ]);
+
+  const urls = [...photoUrls.map((r) => r.url), ...docUrls.map((r) => r.url)];
+  if (tenant.logo_url) urls.push(tenant.logo_url);
+  const heroUrl = tenant.layout_config?.heroImageUrl ?? null;
+  if (heroUrl) urls.push(heroUrl);
+  return urls;
+}
+
 export async function deleteTenant(id: number): Promise<void> {
   // Remove explicitamente os dados dependentes — não dependemos do cascade
   // do SQLite (a checagem de foreign key pode estar desligada na conexão).
