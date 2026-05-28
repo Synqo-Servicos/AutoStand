@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Lock } from "lucide-react";
+import { Lock, MapPin } from "lucide-react";
 import { BANKS } from "@/lib/banks";
 import { StorefrontHero } from "@/components/public/StorefrontHero";
 import { VehicleCard } from "@/components/public/VehicleCard";
 import { CARD_STYLES, HERO_STYLES, resolveLayoutConfig } from "@/lib/layout";
 import type { LayoutConfig } from "@/lib/layout";
-import type { TenantRow, VehicleRow } from "@/lib/schema";
+import type { TenantAboutItemRow, TenantRow, VehicleRow } from "@/lib/schema";
 import type { Vehicle } from "@/types/vehicle";
+import { AboutEditor } from "./AboutEditor";
 
 const HERO_LABELS: Record<LayoutConfig["heroStyle"], string> = {
   gradient: "Degradê",
@@ -60,19 +61,30 @@ export function PersonalizarEditor({
   sampleVehicles,
   canEditLayout,
   planName,
+  initialAboutItems,
 }: {
   tenant: TenantRow;
   sampleVehicles: VehicleRow[];
   canEditLayout: boolean;
   planName: string;
+  initialAboutItems: TenantAboutItemRow[];
 }) {
   const layout0 = resolveLayoutConfig(tenant.layout_config);
 
   const [primary, setPrimary] = useState(tenant.primary_color);
   const [accent, setAccent] = useState(tenant.accent_color);
   const [accentDark, setAccentDark] = useState(tenant.accent_dark_color);
+  const [slogan, setSlogan] = useState(tenant.slogan ?? "");
   const [heroTitle, setHeroTitle] = useState(tenant.hero_title ?? "");
   const [heroSubtitle, setHeroSubtitle] = useState(tenant.hero_subtitle ?? "");
+  const [aboutHeading, setAboutHeading] = useState(tenant.about_heading ?? "");
+  const [contactCtaTitle, setContactCtaTitle] = useState(tenant.contact_cta_title ?? "");
+  const [contactCtaBody, setContactCtaBody] = useState(tenant.contact_cta_body ?? "");
+  const [address, setAddress] = useState(tenant.address ?? "");
+  const [facebookUrl, setFacebookUrl] = useState(tenant.facebook_url ?? "");
+  const [youtubeUrl, setYoutubeUrl] = useState(tenant.youtube_url ?? "");
+  const [tiktokUrl, setTiktokUrl] = useState(tenant.tiktok_url ?? "");
+  const [twitterUrl, setTwitterUrl] = useState(tenant.twitter_url ?? "");
   const [heroStyle, setHeroStyle] = useState<LayoutConfig["heroStyle"]>(layout0.heroStyle);
   const [heroImageUrl, setHeroImageUrl] = useState(layout0.heroImageUrl ?? "");
   const [cardStyle, setCardStyle] = useState<LayoutConfig["cardStyle"]>(layout0.cardStyle);
@@ -93,6 +105,7 @@ export function PersonalizarEditor({
     primary_color: primary,
     accent_color: accent,
     accent_dark_color: accentDark,
+    slogan: slogan || null,
     hero_title: heroTitle || null,
     hero_subtitle: heroSubtitle || null,
   };
@@ -125,8 +138,17 @@ export function PersonalizarEditor({
           primary_color: primary,
           accent_color: accent,
           accent_dark_color: accentDark,
+          slogan,
           hero_title: heroTitle,
           hero_subtitle: heroSubtitle,
+          about_heading: aboutHeading,
+          contact_cta_title: contactCtaTitle,
+          contact_cta_body: contactCtaBody,
+          address,
+          facebook_url: facebookUrl,
+          youtube_url: youtubeUrl,
+          tiktok_url: tiktokUrl,
+          twitter_url: twitterUrl,
           layout_config: previewConfig,
           partner_banks: bankSlugs,
         }),
@@ -160,8 +182,24 @@ export function PersonalizarEditor({
 
         {/* Conteúdo do hero */}
         <section className={cardClass}>
-          <h2 className="font-display text-h3 font-semibold text-ink">Conteúdo do hero</h2>
+          <h2 className="font-display text-h3 font-semibold text-ink">Topo do site</h2>
+          <p className="mt-0.5 text-body-s text-n600">
+            Slogan acima do título + título e subtítulo do hero.
+          </p>
           <div className="mt-4 space-y-3">
+            <div>
+              <label htmlFor="slogan" className={labelClass}>
+                Slogan (frase curta acima do título)
+              </label>
+              <input
+                id="slogan"
+                className={`mt-1 ${inputClass}`}
+                value={slogan}
+                onChange={(e) => setSlogan(e.target.value)}
+                placeholder="Seu próximo carro em Brasília"
+                maxLength={80}
+              />
+            </div>
             <div>
               <label htmlFor="hero_title" className={labelClass}>
                 Título
@@ -172,6 +210,7 @@ export function PersonalizarEditor({
                 value={heroTitle}
                 onChange={(e) => setHeroTitle(e.target.value)}
                 placeholder="Seminovos com procedência"
+                maxLength={80}
               />
             </div>
             <div>
@@ -185,8 +224,127 @@ export function PersonalizarEditor({
                 value={heroSubtitle}
                 onChange={(e) => setHeroSubtitle(e.target.value)}
                 placeholder="Carros revisados, documentação em dia e financiamento facilitado."
+                maxLength={200}
               />
             </div>
+          </div>
+        </section>
+
+        {/* Seção "Sobre" — heading editorial + lista de cards */}
+        <section className={cardClass}>
+          <h2 className="font-display text-h3 font-semibold text-ink">Seção “Sobre nós”</h2>
+          <p className="mt-0.5 text-body-s text-n600">
+            Bloco editorial logo abaixo do hero — vantagens, confiança, diferenciais.
+          </p>
+          <div className="mt-4 space-y-4">
+            <div>
+              <label htmlFor="about_heading" className={labelClass}>
+                Título da seção
+              </label>
+              <input
+                id="about_heading"
+                className={`mt-1 ${inputClass}`}
+                value={aboutHeading}
+                onChange={(e) => setAboutHeading(e.target.value)}
+                placeholder={`Por que ${tenant.name}?`}
+                maxLength={80}
+              />
+              <p className="mt-1 text-body-s text-n500">
+                Vazio = usa o padrão “Por que {tenant.name}?”
+              </p>
+            </div>
+            <AboutEditor initialItems={initialAboutItems} />
+          </div>
+        </section>
+
+        {/* Bloco de contato */}
+        <section className={cardClass}>
+          <h2 className="font-display text-h3 font-semibold text-ink">Bloco de contato</h2>
+          <p className="mt-0.5 text-body-s text-n600">
+            Aparece como CTA final antes do rodapé.
+          </p>
+          <div className="mt-4 space-y-3">
+            <div>
+              <label htmlFor="contact_cta_title" className={labelClass}>
+                Título do CTA
+              </label>
+              <input
+                id="contact_cta_title"
+                className={`mt-1 ${inputClass}`}
+                value={contactCtaTitle}
+                onChange={(e) => setContactCtaTitle(e.target.value)}
+                placeholder="Pronto para comprar?"
+                maxLength={80}
+              />
+            </div>
+            <div>
+              <label htmlFor="contact_cta_body" className={labelClass}>
+                Texto do CTA
+              </label>
+              <textarea
+                id="contact_cta_body"
+                className={`mt-1 ${inputClass} resize-none`}
+                rows={2}
+                value={contactCtaBody}
+                onChange={(e) => setContactCtaBody(e.target.value)}
+                placeholder="Fale com a gente no WhatsApp e tire suas dúvidas."
+                maxLength={280}
+              />
+            </div>
+            <div>
+              <label htmlFor="address" className={labelClass}>
+                Endereço da loja
+              </label>
+              <div className="relative mt-1">
+                <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-n500" />
+                <input
+                  id="address"
+                  className={`${inputClass} pl-9`}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Av. Principal, 1234 — Brasília/DF"
+                  maxLength={200}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Redes sociais */}
+        <section className={cardClass}>
+          <h2 className="font-display text-h3 font-semibold text-ink">Redes sociais</h2>
+          <p className="mt-0.5 text-body-s text-n600">
+            Links que aparecem no rodapé do seu site. Deixe em branco para esconder.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <SocialField
+              id="facebook_url"
+              label="Facebook"
+              value={facebookUrl}
+              onChange={setFacebookUrl}
+              placeholder="https://facebook.com/sua-loja"
+            />
+            <SocialField
+              id="youtube_url"
+              label="YouTube"
+              value={youtubeUrl}
+              onChange={setYoutubeUrl}
+              placeholder="https://youtube.com/@sua-loja"
+            />
+            <SocialField
+              id="tiktok_url"
+              label="TikTok"
+              value={tiktokUrl}
+              onChange={setTiktokUrl}
+              placeholder="https://tiktok.com/@sua-loja"
+            />
+            <SocialField
+              id="twitter_url"
+              label="X (Twitter)"
+              value={twitterUrl}
+              onChange={setTwitterUrl}
+              placeholder="https://x.com/sua-loja"
+            />
           </div>
         </section>
 
@@ -392,6 +550,36 @@ function ColorField({
           aria-label={`${label} — seletor`}
         />
       </div>
+    </div>
+  );
+}
+
+function SocialField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className={labelClass}>
+        {label}
+      </label>
+      <input
+        id={id}
+        type="url"
+        className={`mt-1 ${inputClass}`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
     </div>
   );
 }

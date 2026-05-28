@@ -1,5 +1,5 @@
 import { getAdminTenant } from "@/lib/tenant";
-import { listVehicles } from "@/lib/db";
+import { listAboutItems, listVehicles } from "@/lib/db";
 import { capabilitiesFor, getPlan } from "@/lib/plans";
 import { PersonalizarEditor } from "@/components/admin/PersonalizarEditor";
 
@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 
 export default async function PersonalizarPage() {
   const tenant = await getAdminTenant();
-  const vehicles = await listVehicles(tenant.id, { status: "disponivel" });
+  const [vehicles, aboutItems] = await Promise.all([
+    listVehicles(tenant.id, { status: "disponivel" }),
+    listAboutItems(tenant.id),
+  ]);
 
   return (
     <div className="p-6 lg:p-8">
@@ -22,6 +25,7 @@ export default async function PersonalizarPage() {
         sampleVehicles={vehicles.slice(0, 4)}
         canEditLayout={capabilitiesFor(tenant.plan).layoutConfig}
         planName={getPlan(tenant.plan).name}
+        initialAboutItems={aboutItems}
       />
     </div>
   );
