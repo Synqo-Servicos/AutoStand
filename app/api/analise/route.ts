@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getApiTenantId } from "@/lib/auth";
+import { ApiError, withTenant } from "@/lib/api";
 import { getTenantById, listVehicles } from "@/lib/db";
 import { capabilitiesFor } from "@/lib/plans";
 import { resolveLayoutConfig } from "@/lib/layout";
@@ -9,27 +9,18 @@ import { aiConfigured, analisarVitrine, type VitrineSnapshot } from "@/lib/ai";
  * Análise de IA da vitrine — sob demanda, exclusiva do plano Premium (Fase 8).
  * Monta um snapshot da loja (marca, layout, catálogo) e pede recomendações.
  */
-export async function POST() {
-  const tenantId = await getApiTenantId();
-  if (!tenantId) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-
+export const POST = withTenant(async (_req, { tenantId }) => {
   const tenant = await getTenantById(tenantId);
-  if (!tenant) {
-    return NextResponse.json({ error: "Concessionária não encontrada" }, { status: 404 });
-  }
+  if (!tenant) throw new ApiError("Concessionária não encontrada", 404);
 
   // Gating no servidor — recurso do plano Premium.
   if (!capabilitiesFor(tenant.plan).aiAnalysis) {
-    return NextResponse.json(
-      { error: "A análise de IA faz parte do plano Premium." },
-      { status: 403 },
-    );
+    throw new ApiError("A análise de IA faz parte do plano Premium.", 403);
   }
-
   if (!aiConfigured()) {
-    return NextResponse.json(
-      { error: "Análise indisponível — a chave de API ainda não foi configurada." },
-      { status: 503 },
+    throw new ApiError(
+      "Análise indisponível — a chave de API ainda não foi configurada.",
+      503,
     );
   }
 
@@ -62,9 +53,6 @@ export async function POST() {
     const analise = await analisarVitrine(snapshot);
     return NextResponse.json({ ok: true, analise });
   } catch {
-    return NextResponse.json(
-      { error: "Não foi possível gerar a análise agora. Tente novamente." },
-      { status: 502 },
-    );
+    throw new ApiError("Não foi possível gerar a análise agora. Tente novamente.", 502);
   }
-}
+});

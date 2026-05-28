@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getApiTenantId } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { withTenant } from "@/lib/api";
 import {
   getFinanceiroPorVeiculo,
   getFinanceiroResumo,
@@ -9,12 +9,7 @@ import {
 import { TRANSACTION_LABELS, type TransactionType } from "@/lib/constants";
 import { centsToCsv, CSV_BOM, joinCsv } from "@/lib/csv";
 
-export async function GET(req: NextRequest) {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withTenant(async (req, { tenantId }) => {
   const sp = req.nextUrl.searchParams;
   const month = sp.get("month");
   const year = sp.get("year");
@@ -86,4 +81,4 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
-}
+});

@@ -1,39 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isSuperAdmin } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { ApiError, withSuperAdmin } from "@/lib/api";
 import { deleteTenant, getTenantById, updateTenant } from "@/lib/db";
 
-type Params = { params: Promise<{ id: string }> };
-
-export async function GET(_req: NextRequest, { params }: Params) {
-  if (!(await isSuperAdmin())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const { id } = await params;
-  const tenant = await getTenantById(Number(id));
-  if (!tenant) return NextResponse.json({ error: "Not found" }, { status: 404 });
+export const GET = withSuperAdmin<{ id: string }>(async (_req, { params }) => {
+  const tenant = await getTenantById(Number(params.id));
+  if (!tenant) throw new ApiError("Not found", 404);
   return NextResponse.json(tenant);
-}
+});
 
-export async function PATCH(req: NextRequest, { params }: Params) {
-  if (!(await isSuperAdmin())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const { id } = await params;
-  try {
-    const body = await req.json();
-    const tenant = await updateTenant(Number(id), body);
-    if (!tenant) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(tenant);
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-  }
-}
+export const PATCH = withSuperAdmin<{ id: string }>(async (req, { params }) => {
+  const body = await req.json();
+  const tenant = await updateTenant(Number(params.id), body);
+  if (!tenant) throw new ApiError("Not found", 404);
+  return NextResponse.json(tenant);
+});
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  if (!(await isSuperAdmin())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const { id } = await params;
-  await deleteTenant(Number(id));
+export const DELETE = withSuperAdmin<{ id: string }>(async (_req, { params }) => {
+  await deleteTenant(Number(params.id));
   return NextResponse.json({ ok: true });
-}
+});

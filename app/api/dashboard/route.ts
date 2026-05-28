@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import { getApiTenantId } from "@/lib/auth";
+import { withTenant } from "@/lib/api";
 import { getDashboardStats } from "@/lib/db";
 
-export async function GET() {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const GET = withTenant(async (_req, { tenantId }) => {
   return NextResponse.json(await getDashboardStats(tenantId));
-}
+});

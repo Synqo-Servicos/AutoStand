@@ -1,26 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getApiTenantId } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { ApiError, parseBody, withTenant } from "@/lib/api";
 import { updateTenant } from "@/lib/db";
+
+const marketplaceOptInSchema = z.object({
+  marketplace_opt_in: z.boolean(),
+});
 
 /**
  * Adesão da concessionária ao marketplace AutoStand.
  * PATCH liga/desliga `marketplace_opt_in` — disponível em qualquer plano.
  */
-export async function PATCH(req: NextRequest) {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-  try {
-    const body = await req.json();
-    if (typeof body.marketplace_opt_in !== "boolean") {
-      return NextResponse.json({ error: "Valor inválido" }, { status: 400 });
-    }
-    const tenant = await updateTenant(tenantId, {
-      marketplace_opt_in: body.marketplace_opt_in,
-    });
-    return NextResponse.json({ ok: true, marketplace_opt_in: tenant?.marketplace_opt_in ?? false });
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-  }
-}
+export const PATCH = withTenant(async (req, { tenantId }) => {
+  const { marketplace_opt_in } = await parseBody(req, marketplaceOptInSchema);
+  const tenant = await updateTenant(tenantId, { marketplace_opt_in });
+  if (!tenant) throw new ApiError("Concessionária não encontrada", 404);
+  return NextResponse.json({ ok: true, marketplace_opt_in: tenant.marketplace_opt_in });
+});

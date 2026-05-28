@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getApiTenantId } from "@/lib/auth";
+import { ApiError, withTenant } from "@/lib/api";
 import { getTenantById } from "@/lib/db";
 import { capabilitiesFor } from "@/lib/plans";
 import { getDemandSnapshot } from "@/lib/demand";
@@ -9,26 +9,17 @@ import { aiConfigured, gerarDicasDemanda } from "@/lib/ai";
  * Dicas de demanda por IA — sob demanda, exclusivo do plano Premium.
  * Monta os snapshots (marketplace + loja) e pede recomendações.
  */
-export async function POST() {
-  const tenantId = await getApiTenantId();
-  if (!tenantId) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-
+export const POST = withTenant(async (_req, { tenantId }) => {
   const tenant = await getTenantById(tenantId);
-  if (!tenant) {
-    return NextResponse.json({ error: "Concessionária não encontrada" }, { status: 404 });
-  }
+  if (!tenant) throw new ApiError("Concessionária não encontrada", 404);
 
   if (!capabilitiesFor(tenant.plan).marketInsights) {
-    return NextResponse.json(
-      { error: "A inteligência de demanda faz parte do plano Premium." },
-      { status: 403 },
-    );
+    throw new ApiError("A inteligência de demanda faz parte do plano Premium.", 403);
   }
-
   if (!aiConfigured()) {
-    return NextResponse.json(
-      { error: "Dicas indisponíveis — a chave de API ainda não foi configurada." },
-      { status: 503 },
+    throw new ApiError(
+      "Dicas indisponíveis — a chave de API ainda não foi configurada.",
+      503,
     );
   }
 
@@ -41,9 +32,6 @@ export async function POST() {
     const dicas = await gerarDicasDemanda({ marketplace, loja });
     return NextResponse.json({ ok: true, dicas });
   } catch {
-    return NextResponse.json(
-      { error: "Não foi possível gerar as dicas agora. Tente novamente." },
-      { status: 502 },
-    );
+    throw new ApiError("Não foi possível gerar as dicas agora. Tente novamente.", 502);
   }
-}
+});

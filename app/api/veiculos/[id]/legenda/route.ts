@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getApiTenantId } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { ApiError, withTenant } from "@/lib/api";
 import { getTenantById, getVehicleWithPhotos } from "@/lib/db";
 import { capabilitiesFor } from "@/lib/plans";
 import { formatBRL } from "@/lib/money";
@@ -10,34 +10,23 @@ import { aiConfigured, gerarLegendaPost, type PostInput } from "@/lib/ai";
 /**
  * Legenda do post de Instagram de um veículo — gerada por IA, plano Pro.
  */
-
-type Params = { params: Promise<{ id: string }> };
-
-export async function POST(_req: NextRequest, { params }: Params) {
-  const tenantId = await getApiTenantId();
-  if (!tenantId) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-
+export const POST = withTenant<{ id: string }>(async (_req, { tenantId, params }) => {
   const tenant = await getTenantById(tenantId);
-  if (!tenant) return NextResponse.json({ error: "Concessionária não encontrada" }, { status: 404 });
+  if (!tenant) throw new ApiError("Concessionária não encontrada", 404);
 
   // Gating no servidor — recurso do plano Pro.
   if (!capabilitiesFor(tenant.plan).instagramPost) {
-    return NextResponse.json(
-      { error: "A geração de posts faz parte do plano Pro." },
-      { status: 403 },
-    );
+    throw new ApiError("A geração de posts faz parte do plano Pro.", 403);
   }
-
   if (!aiConfigured()) {
-    return NextResponse.json(
-      { error: "Legenda indisponível — a chave de API ainda não foi configurada." },
-      { status: 503 },
+    throw new ApiError(
+      "Legenda indisponível — a chave de API ainda não foi configurada.",
+      503,
     );
   }
 
-  const { id } = await params;
-  const vehicle = await getVehicleWithPhotos(tenant.id, Number(id));
-  if (!vehicle) return NextResponse.json({ error: "Veículo não encontrado" }, { status: 404 });
+  const vehicle = await getVehicleWithPhotos(tenant.id, Number(params.id));
+  if (!vehicle) throw new ApiError("Veículo não encontrado", 404);
 
   const anos =
     vehicle.year_manufacture && vehicle.year_manufacture !== vehicle.year
@@ -72,9 +61,6 @@ export async function POST(_req: NextRequest, { params }: Params) {
     const legenda = await gerarLegendaPost(input);
     return NextResponse.json({ ok: true, legenda });
   } catch {
-    return NextResponse.json(
-      { error: "Não foi possível gerar a legenda agora. Tente novamente." },
-      { status: 502 },
-    );
+    throw new ApiError("Não foi possível gerar a legenda agora. Tente novamente.", 502);
   }
-}
+});
