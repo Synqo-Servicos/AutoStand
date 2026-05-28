@@ -11,6 +11,7 @@ import type { LayoutConfig } from "@/lib/layout";
 import type { TenantAboutItemRow, TenantRow, VehicleRow } from "@/lib/schema";
 import type { Vehicle } from "@/types/vehicle";
 import { AboutEditor } from "./AboutEditor";
+import { ImageUpload } from "./ImageUpload";
 
 const HERO_LABELS: Record<LayoutConfig["heroStyle"], string> = {
   gradient: "Degradê",
@@ -74,6 +75,7 @@ export function PersonalizarEditor({
   const [primary, setPrimary] = useState(tenant.primary_color);
   const [accent, setAccent] = useState(tenant.accent_color);
   const [accentDark, setAccentDark] = useState(tenant.accent_dark_color);
+  const [logoUrl, setLogoUrl] = useState<string | null>(tenant.logo_url ?? null);
   const [slogan, setSlogan] = useState(tenant.slogan ?? "");
   const [heroTitle, setHeroTitle] = useState(tenant.hero_title ?? "");
   const [heroSubtitle, setHeroSubtitle] = useState(tenant.hero_subtitle ?? "");
@@ -105,6 +107,7 @@ export function PersonalizarEditor({
     primary_color: primary,
     accent_color: accent,
     accent_dark_color: accentDark,
+    logo_url: logoUrl,
     slogan: slogan || null,
     hero_title: heroTitle || null,
     hero_subtitle: heroSubtitle || null,
@@ -138,6 +141,7 @@ export function PersonalizarEditor({
           primary_color: primary,
           accent_color: accent,
           accent_dark_color: accentDark,
+          logo_url: logoUrl,
           slogan,
           hero_title: heroTitle,
           hero_subtitle: heroSubtitle,
@@ -169,14 +173,29 @@ export function PersonalizarEditor({
     <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
       {/* ------- Formulário ------- */}
       <div className="space-y-5">
-        {/* Cores */}
+        {/* Identidade visual — logo + cores */}
         <section className={cardClass}>
-          <h2 className="font-display text-h3 font-semibold text-ink">Cores da marca</h2>
-          <p className="mt-0.5 text-body-s text-n600">Aplicadas ao site público inteiro.</p>
-          <div className="mt-4 space-y-3">
-            <ColorField label="Cor principal" value={primary} onChange={setPrimary} />
-            <ColorField label="Cor de destaque" value={accent} onChange={setAccent} />
-            <ColorField label="Destaque (escuro)" value={accentDark} onChange={setAccentDark} />
+          <h2 className="font-display text-h3 font-semibold text-ink">Identidade visual</h2>
+          <p className="mt-0.5 text-body-s text-n600">
+            Logo + cores aplicadas ao site público inteiro.
+          </p>
+          <div className="mt-4 space-y-5">
+            <div>
+              <span className={labelClass}>Logo da loja</span>
+              <div className="mt-2">
+                <ImageUpload
+                  kind="logo"
+                  value={logoUrl}
+                  onChange={setLogoUrl}
+                  hint="PNG ou WebP com fundo transparente. Até 4MB."
+                />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <ColorField label="Cor principal" value={primary} onChange={setPrimary} />
+              <ColorField label="Cor de destaque" value={accent} onChange={setAccent} />
+              <ColorField label="Destaque (escuro)" value={accentDark} onChange={setAccentDark} />
+            </div>
           </div>
         </section>
 
@@ -433,17 +452,15 @@ export function PersonalizarEditor({
 
             {heroStyle === "image" && (
               <div>
-                <label htmlFor="hero_image" className={labelClass}>
-                  URL da imagem de fundo
-                </label>
-                <input
-                  id="hero_image"
-                  className={`mt-1 ${inputClass}`}
-                  value={heroImageUrl}
-                  onChange={(e) => setHeroImageUrl(e.target.value)}
-                  placeholder="https://..."
-                  disabled={!canEditLayout}
-                />
+                <span className={labelClass}>Imagem de fundo do hero</span>
+                <div className="mt-2">
+                  <ImageUpload
+                    kind="hero"
+                    value={heroImageUrl || null}
+                    onChange={(url) => setHeroImageUrl(url ?? "")}
+                    hint="Foto larga (recomendado 1600×900 ou maior). Até 8MB."
+                  />
+                </div>
               </div>
             )}
 

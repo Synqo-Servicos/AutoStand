@@ -196,7 +196,17 @@ export const tenantStorefrontSchema = z.object({
   youtube_url: optionalUrl,
   tiktok_url: optionalUrl,
   twitter_url: optionalUrl,
+  // identidade — URL devolvida pelo /api/upload ou null pra remover
+  logo_url: z
+    .union([z.string().max(2048), z.literal("")])
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .optional(),
 });
+
+/** Tipos de upload de branding (logo + imagem de hero). */
+export const UPLOAD_KINDS = ["logo", "hero"] as const;
+export type UploadKind = (typeof UPLOAD_KINDS)[number];
 
 // ---------- Vehicle photos ----------
 
