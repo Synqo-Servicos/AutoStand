@@ -1,30 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import {
-  Award,
-  BadgeCheck,
-  Clock,
-  CreditCard,
-  FileCheck,
-  Gauge,
-  GripVertical,
-  Handshake,
-  Heart,
-  MapPin,
-  MessageCircle,
-  PhoneCall,
-  Plus,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  ThumbsUp,
-  Trash2,
-  Truck,
-  Users,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react";
+import { GripVertical, Plus, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import {
   closestCenter,
   DndContext,
@@ -45,33 +22,13 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Button, Modal, toast } from "@/components/ui";
 import { cn } from "@/lib/cn";
+import { ABOUT_ICON_MAP, iconForSlug } from "@/lib/about-icons";
 import { ABOUT_ICONS, type AboutIcon } from "@/lib/schemas";
 import type { TenantAboutItemRow } from "@/lib/schema";
 
 const MAX_ITEMS = 6;
 const TITLE_MAX = 60;
 const DESC_MAX = 280;
-
-const ICON_MAP: Record<AboutIcon, LucideIcon> = {
-  ShieldCheck,
-  Handshake,
-  CreditCard,
-  MessageCircle,
-  Wrench,
-  Award,
-  Truck,
-  Clock,
-  PhoneCall,
-  Star,
-  Heart,
-  ThumbsUp,
-  Sparkles,
-  Gauge,
-  MapPin,
-  Users,
-  FileCheck,
-  BadgeCheck,
-};
 
 type EditState =
   | { mode: "closed" }
@@ -282,7 +239,7 @@ interface SortableRowProps {
 function SortableRow({ item, busy, onEdit, onAskDelete }: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
-  const Icon = ICON_MAP[item.icon_slug as AboutIcon] ?? ShieldCheck;
+  const Icon = iconForSlug(item.icon_slug);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -401,7 +358,7 @@ function ItemEditorModal({ state, onClose, onSave }: EditorModalProps) {
           <span className={labelClass}>Ícone</span>
           <div className="mt-2 grid grid-cols-6 gap-2 sm:grid-cols-9">
             {ABOUT_ICONS.map((slug) => {
-              const Icon = ICON_MAP[slug];
+              const Icon = ABOUT_ICON_MAP[slug];
               const selected = iconSlug === slug;
               return (
                 <button

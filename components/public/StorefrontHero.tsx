@@ -18,6 +18,8 @@ export function StorefrontHero({
   const heroSubtitle =
     tenant.hero_subtitle ??
     "Carros revisados, documentação em dia e financiamento facilitado. Encontre o carro certo para você.";
+  // Eyebrow: slogan editorial tem prioridade; cai pra cidade quando ausente.
+  const eyebrow = tenant.slogan?.trim() || tenant.city;
   const waHref = tenant.whatsapp_number ? `https://wa.me/${tenant.whatsapp_number}` : "#contato";
 
   const useImage = config.heroStyle === "image" && !!config.heroImageUrl;
@@ -48,9 +50,9 @@ export function StorefrontHero({
       {/* solid: sem camada extra — fica a cor chapada do <section> */}
 
       <div className="relative max-w-7xl mx-auto">
-        {tenant.city && (
+        {eyebrow && (
           <p className="text-[var(--brand-accent)] font-semibold text-sm uppercase tracking-widest mb-3">
-            {tenant.city}
+            {eyebrow}
           </p>
         )}
         <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight mb-6 uppercase">
