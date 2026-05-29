@@ -78,6 +78,13 @@
   viram no-op silencioso):
   - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (server)
   - `TURNSTILE_SECRET_KEY` (server), `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (client)
+  - ⚠️ **Turnstile: setar as DUAS ou NENHUMA.** Só a SECRET → widget não
+    renderiza mas servidor exige token → signup/lead públicos quebram.
+    Só a SITE_KEY → CAPTCHA é silenciosamente bypassado. (verificação
+    assimétrica conhecida em `lib/turnstile.ts` + `components/Turnstile.tsx`)
+  - ⚠️ **Rate limit / IP:** `getClientIp` (`lib/ratelimit.ts`) usa o 1º hop
+    do `x-forwarded-for` (spoofável) e cai em `"unknown"` sem header — todos
+    no mesmo bucket. Aceitável na Vercel; revisar se sair da Vercel.
 - **Migrations pendentes em prod (Turso)**:
   - `drizzle/0010_medical_xavin.sql` — índices em tenant_id
   - `drizzle/0011_new_invisible_woman.sql` — tenants colunas novas + tenant_about_items

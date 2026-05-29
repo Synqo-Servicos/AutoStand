@@ -26,7 +26,7 @@ export function Lightbox({ photos, index, onClose, onChange }: Props) {
   // Navegação por teclado — Radix já cuida do Escape, mas precisamos
   // mapear setas pra prev/next.
   useEffect(() => {
-    if (!open) return;
+    if (!open || total === 0) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "ArrowLeft") {
         e.preventDefault();

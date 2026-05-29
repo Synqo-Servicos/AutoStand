@@ -23,9 +23,15 @@ export const PATCH = withTenant(async (req, { tenantId }) => {
   const oldLogoUrl = tenant.logo_url;
   const oldHeroUrl = resolveLayoutConfig(tenant.layout_config).heroImageUrl;
 
-  // parseBody clona o request — precisamos ler o cru também pra acessar
-  // layout_config + partner_banks (fora do storefrontSchema).
-  const raw = (await req.json()) as Record<string, unknown>;
+  // Lemos o body cru (não dá pra usar parseBody) pra acessar layout_config
+  // + partner_banks, que ficam fora do storefrontSchema. JSON malformado
+  // vira 400, não 500.
+  let raw: Record<string, unknown>;
+  try {
+    raw = (await req.json()) as Record<string, unknown>;
+  } catch {
+    throw new ApiError("Body inválido — JSON esperado.", 400);
+  }
   const storefront = tenantStorefrontSchema.partial().parse(raw) as Partial<NewTenant>;
   const patch: Partial<NewTenant> = { ...storefront };
 

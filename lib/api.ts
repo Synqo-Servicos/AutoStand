@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import type { ZodSchema } from "zod";
+import { ZodError, type ZodSchema } from "zod";
 import { auth, getApiTenantId } from "@/lib/auth";
 
 /**
@@ -111,6 +111,16 @@ export function intParam(sp: URLSearchParams, key: string): number | null {
 function toErrorResponse(err: unknown): NextResponse {
   if (err instanceof ApiError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
+  }
+  // Validação zod feita via `.parse()` direto no handler (sem parseBody) —
+  // converte pra 400 com a primeira issue, em vez de vazar como 500.
+  if (err instanceof ZodError) {
+    const first = err.issues[0];
+    const path = first?.path.length ? first.path.join(".") : "body";
+    return NextResponse.json(
+      { error: `${path}: ${first?.message ?? "Dados inválidos."}` },
+      { status: 400 },
+    );
   }
   // Erro inesperado — logar pra Vercel + responder genérico.
   console.error("[api] uncaught:", err);
