@@ -1,0 +1,11 @@
+.git
+.github
+node_modules
+.next
+.env*
+local.db
+*.db-shm
+*.db-wal
+pedro-ivo.db
+public/uploads
+docs

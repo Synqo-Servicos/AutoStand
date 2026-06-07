@@ -6,12 +6,13 @@ import type { NextConfig } from "next";
 const PLATFORM_DOMAIN = (process.env.PLATFORM_DOMAIN ?? "autostand.com.br").trim();
 
 const config: NextConfig = {
+  output: "standalone",
   serverExternalPackages: ["@libsql/client", "libsql"],
   images: {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "*.public.blob.vercel-storage.com",
+        hostname: "cdn.autostand.com.br",
       },
       {
         protocol: "https",
