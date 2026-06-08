@@ -69,8 +69,8 @@ jobs:
           container-name: autostand
           image: ${{ steps.login-ecr.outputs.registry }}/autostand:${{ github.sha }}
           environment-variables: |
-            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
-            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+            AUTH_SECRET=${{ secrets.AUTH_SECRET }}
+            AUTH_TRUST_HOST=true
             PLATFORM_DOMAIN=${{ secrets.PLATFORM_DOMAIN }}
             PLATFORM_HOSTS=${{ secrets.PLATFORM_HOSTS }}
             TURSO_DATABASE_URL=${{ secrets.TURSO_DATABASE_URL }}
