@@ -1,7 +1,7 @@
 # Handoff — estado do projeto
 
-**Última atualização:** 2026-05-28
-**Último commit:** `d17ef07` (5d rate limit + CAPTCHA)
+**Última atualização:** 2026-06-08
+**Último commit:** `ff2298a` (ci: add workflow_dispatch trigger to deploy workflow)
 
 > Pega aqui pra retomar onde paramos sem precisar relembrar tudo.
 > Vê também `docs/SPEC-evolucao.md`, `docs/SPEC-design-system.md`,
@@ -9,145 +9,177 @@
 
 ---
 
-## O que ficou pronto recentemente
+## Migração Vercel → AWS — CONCLUÍDA
 
-### Onda 1-4 — Design system completo
-- Tokens: rampa neutra, radius, shadow, motion, z-index em `app/globals.css`
-- Camada 1 (`components/ui/`): Button, Card, Input/Textarea/Field, Skeleton, Badge
-- Camada 2: Select (Radix), Modal, Drawer, Toast (sonner), EmptyState
-- Polimento por superfície: hero editorial marketplace, stacked bar admin,
-  hero sóbrio console, scrolled navbar storefront
+A migração está completa. O DNS de `autostand.com.br` aponta 100% para o
+CloudFront/AWS. A Vercel pode ser deletada — não recebe mais tráfego.
 
-### Onda 5 — Robustez (completa)
-- 5a defesa em profundidade (ownership de vehicleId, sanitização rota
-  pública /api/vehicles/[id], allowlist superadmin, JWT 8h)
-- 5b índices em tenant_id (11 índices, migration 0010) + `lib/platform.ts`
-- 5c validação de upload (MIME + tamanho + magic bytes)
-- 5d rate limit + CAPTCHA via Upstash + Turnstile — código pronto,
-  no-op enquanto as 3 envs ficam vazias (`lib/ratelimit.ts`,
-  `lib/turnstile.ts`, `components/Turnstile.tsx`). Protege `/api/assinar`
-  e `/api/marketplace/lead`.
+### Arquitetura em produção
 
-### Onda 6 — Estrutura que escala (completa)
-- 6a wrappers `withTenant`/`withSuperAdmin` + zod — **todos os handlers
-  migrados** (`/api/assinar`, `/api/marketplace/lead`, `/api/superadmin/*`,
-  `/api/analise`, `/api/inteligencia`, `/api/personalizar` inclusos)
-- 6b split `lib/db.ts` (997 linhas → 9 módulos em `lib/db/`)
-- 6c smoke tests vitest (28 testes, ~840ms)
+```
+Usuário
+  └── CloudFront A (E2ZAXVU5GRBGKB) — autostand.com.br + *.autostand.com.br
+        └── ALB autostand-alb (sa-east-1)
+              └── ECS Fargate — cluster: autostand, service: autostand-web
 
-### Console super-admin
-- Subdomínio `console.autostand.com.br` (em dev: `console.localhost:3000`)
-- `requireConsoleHost()` em `lib/tenant.ts`
-- **DNS no Vercel pendente** — adicionar domínio no Project Settings
-
-### Gestão de fotos do veículo — completa (A, B, C, D)
-- A: toolbar sempre visível (corrige bug touch), Modal de confirmação,
-  pre-check client, grid responsivo 2/3/4 cols, limite 15 fotos
-- B: drag-and-drop com @dnd-kit (Pointer + Touch + Keyboard sensors),
-  DragOverlay, persistência otimista + rollback
-- C: compressão client (`browser-image-compression`) + lightbox
-  (`components/admin/Lightbox.tsx`)
-- D: upload de logo/hero via `components/admin/ImageUpload.tsx`
-- **Cleanup de blobs órfãos**: logo/hero ao trocar/remover, fotos+docs ao
-  deletar veículo, tudo ao deletar tenant inteiro. Restrito a URLs do
-  Vercel Blob (não apaga recursos externos).
-- Stub de filesystem em dev: `lib/blob.ts` salva em `public/uploads/dev/`
-  quando `BLOB_READ_WRITE_TOKEN` vazio
-
-### Storefront config — completa (A, B, C, D)
-- A: schema (migration 0011) — 10 colunas novas em tenants
-  (slogan, about_heading, contact_cta_title/body,
-  facebook/youtube/tiktok/twitter_url, address) + tabela
-  `tenant_about_items`. DB em `lib/db/about.ts`. zod: `ABOUT_ICONS`
-  (18 ícones Lucide), `aboutItemInputSchema`, `tenantStorefrontSchema`.
-  Endpoints `GET/POST/PATCH /api/about`, `PATCH/DELETE /api/about/[id]`.
-- B: UI no admin (`components/admin/PersonalizarEditor.tsx`) — forms de
-  slogan/about_heading/contato/redes/endereço + `<AboutEditor>` (lista
-  sortable de até 6 cards com palette de ícones Lucide)
-- C: Storefront consome (`components/public/Storefront.tsx`,
-  `StorefrontHero.tsx`, `Footer.tsx`) — `about_items` com fallback pros
-  defaults, redes sociais no footer, slogan/CTA/about_heading custom
-- D: upload de logo e hero via `/api/upload` (wrapper sobre `uploadToBlob`)
-
----
-
-## O que ainda falta
-
-### 1. Plumbing de produção (código pronto, falta só configurar)
-- **Envs de Upstash + Turnstile** em prod (sem elas, rate limit e CAPTCHA
-  viram no-op silencioso):
-  - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (server)
-  - `TURNSTILE_SECRET_KEY` (server), `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (client)
-  - ⚠️ **Turnstile: setar as DUAS ou NENHUMA.** Só a SECRET → widget não
-    renderiza mas servidor exige token → signup/lead públicos quebram.
-    Só a SITE_KEY → CAPTCHA é silenciosamente bypassado. (verificação
-    assimétrica conhecida em `lib/turnstile.ts` + `components/Turnstile.tsx`)
-  - ⚠️ **Rate limit / IP:** `getClientIp` (`lib/ratelimit.ts`) usa o 1º hop
-    do `x-forwarded-for` (spoofável) e cai em `"unknown"` sem header — todos
-    no mesmo bucket. Aceitável na Vercel; revisar se sair da Vercel.
-- **Migrations pendentes em prod (Turso)**:
-  - `drizzle/0010_medical_xavin.sql` — índices em tenant_id
-  - `drizzle/0011_new_invisible_woman.sql` — tenants colunas novas + tenant_about_items
-  - Aplicar via `npx drizzle-kit push` no Turso de prod ou SQL direto no painel
-- **Vercel DNS**: apontar `console.autostand.com.br` em Settings → Domains
-- **Vercel Blob**: configurar `BLOB_READ_WRITE_TOKEN` em prod
-
-### 2. Milestone 2 — Billing (a frente de produto que destrava receita)
-- Self-service, customização por plano e onboarding já existem.
-- **Falta só o pagamento (Stripe)** — checkout + webhook + gating por plano.
-  Ver `docs/Milestone 2.md` e `docs/Planos e Preços.md`.
-
-### 3. Backlog (futuro, ver `docs/Roadmap.md` + `docs/Ideias.md`)
-- Multi-usuário por concessionária (hoje 1 `tenant_admin` por tenant)
-- Automação do registro de domínio próprio via API da Vercel
-- Integração FIPE, simulador de financiamento
-- Milestone 3 (Automação): automação via WhatsApp Cloud API + histórico de contato
-
----
-
-## Como retomar (comandos)
-
-```bash
-# Dev server
-npm run dev
-# Testes (28 verde no momento)
-npm test
-# Build
-npx next build
-# Migration (se mexer em lib/schema.ts)
-npx drizzle-kit generate
+      CloudFront B (E1FMGN9TYY08T) — cdn.autostand.com.br
+        └── S3 bucket: autostand-uploads (sa-east-1)
 ```
 
-### Credenciais de teste
-- Tenants: `admin@autoprime.com`/`demo123`,
-  `admin@garagem082.com.br`/`garagem123`,
-  `admin@premiummotors.com.br`/`premium123`
-- Super-admin: `super@plataforma.com`/`super123`
-  (só em `console.localhost:3000/superadmin/login`)
+### AWS
+- **Profile local:** `autostand` | **Account:** `507099297746`
+- **ECR:** `507099297746.dkr.ecr.sa-east-1.amazonaws.com/autostand`
+- **IAM OIDC Role:** `arn:aws:iam::507099297746:role/github-actions-autostand`
+- **Certificado ACM:** `arn:aws:acm:us-east-1:507099297746:certificate/743a7113-ab36-434b-8e9e-3f0acf6a559e` — ISSUED, wildcard `*.autostand.com.br`
+- **Hosted Zone Route 53:** `Z0112278247WDT5RPBURR`
+
+### Rotas funcionando em produção
+| URL | Status |
+|-----|--------|
+| `https://autostand.com.br/` | 200 — landing page |
+| `https://autostand.com.br/assinar` | 200 — cadastro de tenants |
+| `https://console.autostand.com.br/` | 200 — painel admin |
+| `https://autostand.com.br/api/health` | 200 |
+| `https://cdn.autostand.com.br/` | CDN S3 |
+
+---
+
+## Banco de dados Turso
+
+- **URL prod:** `libsql://database-beige-bell-vercel-icfg-xfqaomkkq5ftkrxfe8fixajw.aws-us-east-1.turso.io`
+- **Migrations aplicadas:** 0000–0012 (todas — 0010/0011 foram aplicadas via HTTP API nesta sessão)
+- Para rodar migrations contra produção: `DATABASE_URL=<url> DATABASE_AUTH_TOKEN=<token> npx drizzle-kit migrate`
+  ⚠️ O drizzle.config.ts lê `DATABASE_URL`, não `TURSO_DATABASE_URL`
+
+---
+
+## CI/CD — GitHub Actions
+
+- **Repo:** `Ulpio/AutoStand`
+- **Workflow:** `.github/workflows/deploy.yml` — dispara em `push: main` e `workflow_dispatch`
+- **Environment:** `production` — todos os secrets aqui
+- **Fluxo:** test → build Docker → push ECR → render task def → deploy ECS (aguarda estabilidade)
+
+### Secrets no GitHub environment `production`
+| Secret | Estado |
+|--------|--------|
+| `AWS_ROLE_ARN` | ✅ configurado |
+| `AUTH_SECRET` | ✅ configurado |
+| `PLATFORM_DOMAIN` | ✅ `autostand.com.br` |
+| `PLATFORM_HOSTS` | ✅ `autostand.com.br` |
+| `TURSO_DATABASE_URL` | ✅ configurado |
+| `TURSO_AUTH_TOKEN` | ✅ configurado |
+| `ANTHROPIC_API_KEY` | ✅ configurado |
+| `AI_MODEL` | ✅ `claude-haiku-4-5` |
+| `AWS_S3_BUCKET` | ✅ `autostand-uploads` |
+| `AWS_S3_REGION` | ✅ `sa-east-1` |
+| `CDN_URL` | ✅ `https://cdn.autostand.com.br` |
+| `MERCADOPAGO_ACCESS_TOKEN` | ⚠️ **MOCK** — substituir pelo real |
+| `MERCADOPAGO_WEBHOOK_SECRET` | ⚠️ **MOCK** — substituir pelo real |
+| `MERCADOPAGO_PLAN_BASICO` | ⚠️ **MOCK** — substituir pelo ID real |
+| `MERCADOPAGO_PLAN_PRO` | ⚠️ **MOCK** — substituir pelo ID real |
+| `MERCADOPAGO_PLAN_PREMIUM` | ⚠️ **MOCK** — substituir pelo ID real |
+| `UPSTASH_REDIS_REST_URL` | vazio (rate limit desabilitado) |
+| `UPSTASH_REDIS_REST_TOKEN` | vazio |
+| `TURNSTILE_SECRET_KEY` | vazio (CAPTCHA desabilitado) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | vazio |
+
+---
+
+## Mercado Pago — implementado, credenciais mock
+
+O billing está implementado e testado. Faltam só as credenciais de produção.
+
+**Bloqueio atual:** criação de aplicação no painel MP falhando com erro de
+reCAPTCHA (score 0.5 abaixo do threshold). Tentativas:
+- Chrome sem extensões/VPN para melhorar o score
+- Suporte MP com trace ID `DXT400-UUYJNU1XQSUW`
+
+**Quando tiver `MERCADOPAGO_ACCESS_TOKEN` de produção:**
+
+1. Criar 3 planos via API:
+```bash
+MP_TOKEN="<access_token_producao>"
+
+# Básico — R$ 169,90/mês
+curl -X POST https://api.mercadopago.com/preapproval_plan \
+  -H "Authorization: Bearer $MP_TOKEN" -H "Content-Type: application/json" \
+  -d '{"reason":"AutoStand Básico","auto_recurring":{"frequency":1,"frequency_type":"months","transaction_amount":169.90,"currency_id":"BRL"},"back_url":"https://autostand.com.br/admin/assinatura","status":"active"}'
+
+# Pro — R$ 349,90/mês (transaction_amount: 349.90, reason: "AutoStand Pro")
+# Premium — R$ 499,90/mês (transaction_amount: 499.90, reason: "AutoStand Premium")
+```
+
+2. Atualizar secrets no GitHub: `MERCADOPAGO_PLAN_BASICO/PRO/PREMIUM` com os `id` retornados
+3. Atualizar `MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET`
+4. No painel MP: configurar webhook → `https://autostand.com.br/api/webhooks/mercadopago` — evento: `preapproval`
+5. Fazer push vazio para triggar redeploy: `git commit --allow-empty -m "chore: redeploy" && git push`
+
+---
+
+## O que estava pronto antes desta sessão
+
+### Onda 1-4 — Design system completo
+- Tokens, componentes UI, polimento por superfície
+
+### Onda 5 — Robustez
+- Defesa em profundidade, índices, validação de upload, rate limit + CAPTCHA (no-op sem envs)
+
+### Onda 6 — Estrutura
+- Wrappers `withTenant`/`withSuperAdmin`, split `lib/db/`, smoke tests (28 testes)
+
+### Storefront config — completa
+- Schema migration 0011, editor no admin, storefront consome tudo
+
+### Gestão de fotos — completa
+- Drag-and-drop, compressão, lightbox, upload logo/hero, cleanup de blobs
+
+### Mercado Pago (código completo)
+- `lib/checkout.ts` — cria PreApproval no MP
+- `app/api/webhooks/mercadopago/route.ts` — recebe eventos, ativa tenant
+- `app/api/assinatura/route.ts` — redireciona para gestão do cartão no MP
+- `/admin/assinatura` — mostra plano, status, botão "Gerenciar pagamento" (ativo quando mp_subscription_id existe)
+- Schema `mp_subscription_id` em tenants
+
+---
+
+## Próximos passos
+
+1. **Desbloqueio MP** — resolver acesso ao painel e criar planos reais
+2. **Teste E2E** — cadastrar tenant via `/assinar`, validar checkout → webhook → ativação
+3. **Upstash + Turnstile** — configurar em prod quando tiver usuários reais
+4. **Vercel** — pode deletar o projeto (opcional)
+5. **Milestone 3** — automação WhatsApp, integrações FIPE, multi-usuário por tenant
+
+---
+
+## Como retomar
+
+```bash
+npm run dev        # dev server
+npm test           # 28 testes
+npx next build     # build
+
+# Redeploy manual sem commit:
+gh workflow run deploy.yml --repo Ulpio/AutoStand --ref main
+```
+
+### Credenciais de teste (dev local)
+- Tenants: `admin@autoprime.com`/`demo123`, `admin@garagem082.com.br`/`garagem123`
+- Super-admin: `super@plataforma.com`/`super123` (em `console.localhost:3000/superadmin/login`)
 
 ### URLs locais
 - Marketplace: `http://localhost:3000`
-- Storefront: `http://<slug>.localhost:3000` (autoprime, garagem082, premiummotors)
-- Admin loja: `http://<slug>.localhost:3000/admin/login`
+- Storefront: `http://<slug>.localhost:3000`
+- Admin: `http://<slug>.localhost:3000/admin/login`
 - Console: `http://console.localhost:3000/superadmin/login`
-
-### Dev BLOB
-- Sem `BLOB_READ_WRITE_TOKEN` em `.env.local`, uploads vão pra
-  `public/uploads/dev/` (gitignored)
-- Pra plugar token local: `vercel env pull .env.local --environment=development`
 
 ---
 
-## Decisões importantes do design
+## Decisões de arquitetura relevantes
 
-- **Whitelabel storefront** usa `--brand-*` (cor da loja); estrutura,
-  tipografia, spacing, radius vêm do AutoStand
-- **Laranja `signal`** reservado a CTA primário e dado-destaque (regra
-  do 15%) — não é cor decorativa
-- **Console em subdomínio dedicado** (`console.autostand.com.br`) por
-  obscurity + separação de surface (padrão Stripe/Vercel)
-- **`order_idx`** vs `position`: vehicle_photos usa `order_idx`,
-  tenant_about_items usa `position`. Inconsistência por chegada em
-  momentos diferentes — não vale refator agora
-- **Cleanup de blob restrito a URLs do Vercel Blob** — nunca apaga
-  recursos externos passados por URL nos formulários
+- `PLATFORM_HOSTS` deve conter só `autostand.com.br` — `isPlatformHost()` já cobre `console.*` automaticamente
+- `drizzle.config.ts` usa `DATABASE_URL` (não `TURSO_DATABASE_URL`) — importante na hora de rodar migrations
+- Rate limit usa 1º hop do `x-forwarded-for` — aceitável atrás do CloudFront/ALB que já sanitiza o header
+- Blobs S3: upload via `lib/storage.ts`, CDN via `cdn.autostand.com.br`
+- O checkout MP usa `external_reference: String(tenant.id)` para vincular assinatura ao tenant
