@@ -1,6 +1,6 @@
 import "server-only";
-import { put, del } from "@vercel/blob";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { s3Put, s3Delete, keyFromCdnUrl, HAS_S3 } from "./s3";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
@@ -128,7 +128,6 @@ async function validateUpload(
 
 // — Storage backend ———————————————————————————————————————————————
 
-const HAS_BLOB_TOKEN = Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 const IS_PROD = process.env.NODE_ENV === "production";
 
 const LOCAL_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "dev");
@@ -164,32 +163,24 @@ export async function uploadToBlob(
 ): Promise<string> {
   const { buffer, mime, ext } = await validateUpload(file, options);
 
-  if (HAS_BLOB_TOKEN) {
-    const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const blob = await put(filename, buffer, { access: "public", contentType: mime });
-    return blob.url;
+  if (HAS_S3) {
+    const key = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    return s3Put(key, Buffer.from(buffer), mime);
   }
 
   if (IS_PROD) {
-    throw new Error(
-      "BLOB_READ_WRITE_TOKEN ausente em produção — configure o Vercel Blob.",
-    );
+    throw new Error("AWS_S3_BUCKET ausente em produção — configure o S3.");
   }
 
   return putLocal(buffer, folder, ext);
 }
 
-/** Detecta URLs servidas pelo Vercel Blob — só essas podem ser deletadas
- *  via @vercel/blob. Evita errors quando o caller passa URL externa
- *  (Unsplash, CDN colada por super-admin, etc) que não é nossa. */
-function isVercelBlobUrl(url: string): boolean {
-  return url.includes(".public.blob.vercel-storage.com");
-}
-
 export async function deleteFromBlob(url: string): Promise<void> {
   if (url.startsWith(LOCAL_URL_PREFIX + "/")) return delLocal(url);
-  if (HAS_BLOB_TOKEN && isVercelBlobUrl(url)) {
-    await del(url);
+
+  const key = keyFromCdnUrl(url);
+  if (HAS_S3 && key) {
+    await s3Delete(key);
   }
-  // URL externa ou sem token: best-effort silencioso.
+  // URL externa ou sem S3: best-effort silencioso.
 }

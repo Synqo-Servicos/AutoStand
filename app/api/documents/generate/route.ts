@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { addVehicleDocument, getTenantById, getVehicleWithPhotos } from "@/lib/db";
 import { getTemplate, type TemplateId } from "@/lib/document-templates";
 import { renderTemplate } from "@/lib/pdf";
-import { put } from "@vercel/blob";
+import { s3Put, HAS_S3 } from "@/lib/s3";
 
 // react-pdf precisa do runtime Node.js (deps nativas/fontes).
 export const runtime = "nodejs";
@@ -71,23 +71,27 @@ export async function POST(req: NextRequest) {
 
   // Se anexar ao veículo: sobe no Blob e cria registro em vehicle_documents.
   if (body.attachToVehicle && vehicle) {
-    const file = new File([new Uint8Array(pdf)], fileName, { type: "application/pdf" });
-    const blob = await put(
-      `tenants/${tenantId}/vehicles/${vehicle.id}/docs/${Date.now()}-${fileName}`,
-      file,
-      { access: "public" },
-    );
+    const key = `tenants/${tenantId}/vehicles/${vehicle.id}/docs/${Date.now()}-${fileName}`;
+    let url: string;
+    if (HAS_S3) {
+      url = await s3Put(key, Buffer.from(pdf), "application/pdf");
+    } else if (process.env.NODE_ENV === "production") {
+      throw new Error("AWS_S3_BUCKET ausente em produção — configure o S3.");
+    } else {
+      // Dev: devolve o PDF inline sem persistir
+      url = `/api/documents/generate?dev-preview=${encodeURIComponent(fileName)}`;
+    }
     const row = await addVehicleDocument({
       tenantId,
       vehicleId: vehicle.id,
       name: template.name,
       category: "contrato",
-      url: blob.url,
+      url,
       size: pdf.length,
       mimeType: "application/pdf",
       uploadedBy: userId,
     });
-    return NextResponse.json({ document: row, url: blob.url });
+    return NextResponse.json({ document: row, url });
   }
 
   // Caso default: devolve o PDF inline (download).
