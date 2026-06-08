@@ -3,7 +3,6 @@
  *
  * Os 3 tiers são diferenciados por funcionalidade — não há limite de veículos
  * (o mercado-alvo é homogêneo demais para a contagem segmentar planos).
- * Preços são ponto de partida, a validar com prospects.
  */
 
 export type PlanSlug = "basico" | "pro" | "premium";
@@ -28,8 +27,8 @@ export interface Plan {
   name: string;
   /** Preço mensal em centavos (BRL). */
   priceMonthly: number;
-  /** Price ID do Stripe — definido via env, consumido no Checkout (Fase 2). */
-  stripePriceId: string | undefined;
+  /** Plan ID do Mercado Pago (Preapproval) — definido via env após criar os planos no MP. */
+  mpPlanId: string | undefined;
   capabilities: PlanCapabilities;
 }
 
@@ -37,8 +36,8 @@ export const PLANS: Record<PlanSlug, Plan> = {
   basico: {
     slug: "basico",
     name: "Básico",
-    priceMonthly: 14900,
-    stripePriceId: process.env.STRIPE_PRICE_BASICO,
+    priceMonthly: 16990,   // R$ 169,90
+    mpPlanId: process.env.MERCADOPAGO_PLAN_BASICO,
     capabilities: {
       customColors: true,
       layoutConfig: false,
@@ -51,8 +50,8 @@ export const PLANS: Record<PlanSlug, Plan> = {
   pro: {
     slug: "pro",
     name: "Pro",
-    priceMonthly: 34900,
-    stripePriceId: process.env.STRIPE_PRICE_PRO,
+    priceMonthly: 34990,   // R$ 349,90
+    mpPlanId: process.env.MERCADOPAGO_PLAN_PRO,
     capabilities: {
       customColors: true,
       layoutConfig: true,
@@ -65,8 +64,8 @@ export const PLANS: Record<PlanSlug, Plan> = {
   premium: {
     slug: "premium",
     name: "Premium",
-    priceMonthly: 59900,
-    stripePriceId: process.env.STRIPE_PRICE_PREMIUM,
+    priceMonthly: 49990,   // R$ 499,90
+    mpPlanId: process.env.MERCADOPAGO_PLAN_PREMIUM,
     capabilities: {
       customColors: true,
       layoutConfig: true,
