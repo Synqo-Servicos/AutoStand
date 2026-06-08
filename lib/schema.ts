@@ -50,11 +50,13 @@ export const tenants = sqliteTable("tenants", {
   /** Subtítulo do bloco final. Null = default. */
   contact_cta_body: text("contact_cta_body"),
 
-  // Billing (Stripe). Null em tenants provisionados manualmente pelo super-admin.
+  // Billing. Null em tenants provisionados manualmente pelo super-admin.
   plan: text("plan"), // PlanSlug — 'basico' | 'pro' | 'premium'
   stripe_customer_id: text("stripe_customer_id"),
   stripe_subscription_id: text("stripe_subscription_id"),
-  /** 'incomplete' | 'active' | 'past_due' | 'canceled' */
+  /** ID da assinatura Mercado Pago (Preapproval). */
+  mp_subscription_id: text("mp_subscription_id"),
+  /** 'incomplete' | 'active' | 'past_due' | 'canceled' | 'cancelled' */
   subscription_status: text("subscription_status"),
   current_period_end: text("current_period_end"),
   /** Parceiro de origem da assinatura (atribuição). */
