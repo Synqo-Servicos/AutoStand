@@ -22,7 +22,7 @@ export async function createCheckoutSession(
       reason: `AutoStand ${plan.name}`,
       back_url: backUrl,
       status: "pending",
-      external_reference: tenant.id,
+      external_reference: String(tenant.id),
     },
   });
 

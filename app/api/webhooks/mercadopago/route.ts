@@ -16,6 +16,7 @@ function verifySignature(secret: string, xSignature: string, xRequestId: string,
   if (!ts || !v1) return false;
   const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
   const expected = createHmac("sha256", secret).update(manifest).digest("hex");
+  if (v1.length !== expected.length) return false;
   try {
     return timingSafeEqual(Buffer.from(v1), Buffer.from(expected));
   } catch {
@@ -34,9 +35,11 @@ export async function POST(req: NextRequest) {
   const xSignature = req.headers.get("x-signature") ?? "";
   const xRequestId = req.headers.get("x-request-id") ?? "";
   const dataId = body.data?.id ?? "";
-  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET ?? "";
-
-  if (secret && !verifySignature(secret, xSignature, xRequestId, dataId)) {
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  if (!secret) {
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
+  if (!verifySignature(secret, xSignature, xRequestId, dataId)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -50,11 +53,12 @@ export async function POST(req: NextRequest) {
   const tenantId = subscription.external_reference as string | undefined;
   const mpStatus = subscription.status as string;
   const update = STATUS_MAP[mpStatus];
+  const tenantIdNum = tenantId ? Number(tenantId) : NaN;
 
-  if (tenantId && update) {
+  if (tenantId && update && Number.isInteger(tenantIdNum) && tenantIdNum > 0) {
     await db.update(tenants)
       .set({ ...update, mp_subscription_id: dataId })
-      .where(eq(tenants.id, Number(tenantId)));
+      .where(eq(tenants.id, tenantIdNum));
   }
 
   return NextResponse.json({ received: true });

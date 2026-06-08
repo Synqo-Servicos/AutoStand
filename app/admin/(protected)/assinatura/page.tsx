@@ -93,19 +93,36 @@ export default async function AssinaturaPage() {
         )}
       </section>
 
-      {/* Pagamento — seam da Fase 2 */}
+      {/* Pagamento */}
       <section className="mt-5 rounded-xl border border-n200 bg-white p-5">
         <h2 className="font-display text-h3 font-semibold text-ink">Pagamento</h2>
-        <p className="mt-1 text-body-s text-n600">
-          A gestão de pagamento e a troca de plano estarão disponíveis em breve.
-        </p>
-        <button
-          type="button"
-          disabled
-          className="mt-3 cursor-not-allowed rounded-lg bg-n100 px-4 py-2 text-body-s font-semibold text-n400"
-        >
-          Gerenciar pagamento
-        </button>
+        {tenant.mp_subscription_id ? (
+          <>
+            <p className="mt-1 text-body-s text-n600">
+              Gerencie seu cartão e histórico de cobranças diretamente no Mercado Pago.
+            </p>
+            <a
+              href="/api/assinatura"
+              className="mt-3 inline-block rounded-lg bg-ink px-4 py-2 text-body-s font-semibold text-white hover:bg-n800"
+            >
+              Gerenciar pagamento
+            </a>
+          </>
+        ) : (
+          <>
+            <p className="mt-1 text-body-s text-n600">
+              A gestão de pagamento e a troca de plano estarão disponíveis após a ativação
+              da assinatura.
+            </p>
+            <button
+              type="button"
+              disabled
+              className="mt-3 cursor-not-allowed rounded-lg bg-n100 px-4 py-2 text-body-s font-semibold text-n400"
+            >
+              Gerenciar pagamento
+            </button>
+          </>
+        )}
       </section>
     </div>
   );
