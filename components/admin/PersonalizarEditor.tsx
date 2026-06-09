@@ -358,6 +358,7 @@ export function PersonalizarEditor({
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
                 placeholder="contato@sualoja.com.br"
+                maxLength={254}
               />
             </div>
             <div>
