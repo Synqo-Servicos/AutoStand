@@ -1,4 +1,4 @@
-import { and, desc, eq, getTableColumns, like, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, like, sql } from "drizzle-orm";
 import { sellers, transactions, vehicles } from "@/lib/schema";
 import type { TransactionRow } from "@/lib/schema";
 import type { Transaction, TransactionInput, TransactionWithVehicle } from "@/types/transaction";
@@ -31,7 +31,7 @@ export async function listTransactions(
   if (filters.vehicle_id) conditions.push(eq(transactions.vehicle_id, filters.vehicle_id));
   if (filters.type) conditions.push(eq(transactions.type, filters.type));
   if (filters.types && filters.types.length > 0) {
-    conditions.push(sql`${transactions.type} IN ${filters.types}`);
+    conditions.push(inArray(transactions.type, filters.types));
   }
   if (filters.year) conditions.push(like(transactions.date, `${filters.year}%`));
   if (filters.month) conditions.push(like(transactions.date, `${filters.month}%`));

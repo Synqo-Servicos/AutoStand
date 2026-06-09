@@ -68,7 +68,7 @@ export function withSuperAdmin<P extends Record<string, string> = Record<string,
     const params = await routeCtx.params;
     try {
       return await handler(req, {
-        userId: session.user.id ? Number(session.user.id) : 0,
+        userId: Number(session.user.id),
         params,
       });
     } catch (err) {

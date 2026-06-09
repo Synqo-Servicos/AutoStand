@@ -60,9 +60,11 @@ export async function getVehicleWithPhotos(
   tenantId: number,
   id: number,
 ): Promise<VehicleWithPhotos | null> {
-  const vehicle = await getVehicle(tenantId, id);
+  const [vehicle, photos] = await Promise.all([
+    getVehicle(tenantId, id),
+    getPhotosByVehicle(tenantId, id),
+  ]);
   if (!vehicle) return null;
-  const photos = await getPhotosByVehicle(tenantId, id);
   return { ...vehicle, photos };
 }
 
