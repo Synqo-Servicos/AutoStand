@@ -5,6 +5,19 @@ type Props = {
   waHref: string;
 };
 
+function SocialPill({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="border border-white/30 hover:border-white/80 text-white text-sm px-4 py-1.5 rounded-full transition-colors"
+    >
+      {label}
+    </a>
+  );
+}
+
 export function StorefrontFooter({ tenant, waHref }: Props) {
   const hasSocial =
     !!tenant.whatsapp_number ||
@@ -23,64 +36,22 @@ export function StorefrontFooter({ tenant, waHref }: Props) {
       {hasSocial && (
         <div className="flex flex-wrap justify-center gap-2 mb-4">
           {tenant.whatsapp_number && (
-            <a
-              href={waHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border border-white/30 hover:border-white/80 text-white text-sm px-4 py-1.5 rounded-full transition-colors"
-            >
-              WhatsApp
-            </a>
+            <SocialPill href={waHref} label="WhatsApp" />
           )}
           {tenant.instagram_url && (
-            <a
-              href={tenant.instagram_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border border-white/30 hover:border-white/80 text-white text-sm px-4 py-1.5 rounded-full transition-colors"
-            >
-              Instagram
-            </a>
+            <SocialPill href={tenant.instagram_url} label="Instagram" />
           )}
           {tenant.facebook_url && (
-            <a
-              href={tenant.facebook_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border border-white/30 hover:border-white/80 text-white text-sm px-4 py-1.5 rounded-full transition-colors"
-            >
-              Facebook
-            </a>
+            <SocialPill href={tenant.facebook_url} label="Facebook" />
           )}
           {tenant.youtube_url && (
-            <a
-              href={tenant.youtube_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border border-white/30 hover:border-white/80 text-white text-sm px-4 py-1.5 rounded-full transition-colors"
-            >
-              YouTube
-            </a>
+            <SocialPill href={tenant.youtube_url} label="YouTube" />
           )}
           {tenant.tiktok_url && (
-            <a
-              href={tenant.tiktok_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border border-white/30 hover:border-white/80 text-white text-sm px-4 py-1.5 rounded-full transition-colors"
-            >
-              TikTok
-            </a>
+            <SocialPill href={tenant.tiktok_url} label="TikTok" />
           )}
           {tenant.twitter_url && (
-            <a
-              href={tenant.twitter_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border border-white/30 hover:border-white/80 text-white text-sm px-4 py-1.5 rounded-full transition-colors"
-            >
-              Twitter / X
-            </a>
+            <SocialPill href={tenant.twitter_url} label="Twitter / X" />
           )}
         </div>
       )}
