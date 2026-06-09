@@ -73,6 +73,14 @@ export async function POST(req: NextRequest) {
     const coupon = couponCodeRaw ? await getCouponByCode(couponCodeRaw) : null;
     if (couponCodeRaw && !coupon) return bad("Cupom inválido ou expirado.");
 
+    // Reserva o uso do cupom atomicamente antes de criar qualquer registro.
+    // O UPDATE condicional (used_count < max_uses) garante que pedidos simultâneos
+    // não ultrapassem o limite — se retornar false, o cupom esgotou concorrentemente.
+    if (coupon) {
+      const reserved = await incrementCouponUse(coupon.id);
+      if (!reserved) return bad("Cupom inválido ou expirado.");
+    }
+
     const tenant = await createTenant({
       slug,
       name: dealershipName,
@@ -92,7 +100,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (partner) await incrementPartnerSignup(partner.id);
-    if (coupon) await incrementCouponUse(coupon.id);
 
     const checkoutUrl = await createCheckoutSession(tenant, getPlan(plan), partner, coupon);
 

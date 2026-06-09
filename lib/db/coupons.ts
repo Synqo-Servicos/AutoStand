@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { coupons } from "@/lib/schema";
 import type { CouponRow, NewCoupon } from "@/lib/schema";
 import { db } from "./client";
@@ -44,9 +44,11 @@ export async function createCoupon(input: NewCoupon): Promise<CouponRow> {
   return row;
 }
 
-export async function incrementCouponUse(id: number): Promise<void> {
-  await db
+export async function incrementCouponUse(id: number): Promise<boolean> {
+  const result = await db
     .update(coupons)
     .set({ used_count: sql`${coupons.used_count} + 1` })
-    .where(eq(coupons.id, id));
+    .where(and(eq(coupons.id, id), sql`${coupons.used_count} < ${coupons.max_uses}`))
+    .returning({ id: coupons.id });
+  return result.length > 0;
 }
