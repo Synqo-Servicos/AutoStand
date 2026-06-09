@@ -24,10 +24,10 @@ function verifySignature(secret: string, xSignature: string, xRequestId: string,
   }
 }
 
-const STATUS_MAP: Record<string, { subscription_status: string }> = {
-  authorized: { subscription_status: "active" },
-  paused:     { subscription_status: "past_due" },
-  cancelled:  { subscription_status: "cancelled" },
+const STATUS_MAP: Record<string, { subscription_status: string; status: string }> = {
+  authorized: { subscription_status: "active",    status: "active" },
+  paused:     { subscription_status: "past_due",  status: "suspended" },
+  cancelled:  { subscription_status: "cancelled", status: "suspended" },
 };
 
 export async function POST(req: NextRequest) {
