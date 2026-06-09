@@ -1,7 +1,7 @@
 # Handoff — estado do projeto
 
-**Última atualização:** 2026-06-09
-**Último commit:** `dd909fc` (fix(docker): revert curl install — health check migrated to wget in task def)
+**Última atualização:** 2026-06-09 (sessão 2)
+**Último commit:** `da6fbad` (fix(admin): add maxLength to contact_email input)
 
 > Pega aqui pra retomar onde paramos sem precisar relembrar tudo.
 > Vê também `docs/SPEC-evolucao.md`, `docs/SPEC-design-system.md`,
@@ -15,7 +15,17 @@ O billing com Mercado Pago está operacional em produção. O fluxo E2E foi vali
 em 2026-06-09: `/assinar` → cria tenant → redireciona para checkout MP de produção
 (plano real, preço real) → webhook ativa o tenant ao confirmar pagamento.
 
-### O que foi feito na sessão de 2026-06-09
+### O que foi feito na sessão 2 de 2026-06-09
+
+1. **Sistema de cupons — fix de segurança (TOCTOU)** — `incrementCouponUse` agora é UPDATE condicional (`WHERE used_count < max_uses`), retorna `boolean`, e é chamado *antes* de criar tenant/usuário. Dois pedidos simultâneos não conseguem mais ultrapassar o limite de usos. Commits: `fix(security): make coupon redemption atomic` + `fix(admin): add maxLength to contact_email input`.
+
+2. **Footer público com redes sociais** — criado `components/public/StorefrontFooter.tsx` com pills condicionais para WhatsApp, Instagram, Facebook, YouTube, TikTok, Twitter e e-mail de contato. Incluído em `Storefront.tsx` após `<ContactSection>`. Retorna null se loja não tiver nenhum link configurado.
+
+3. **Campos faltantes no PersonalizarEditor** — adicionados `city`, `contact_email` e `business_hours` ao formulário de personalização (`components/admin/PersonalizarEditor.tsx`) e `city` ao `tenantStorefrontSchema` (`lib/schemas.ts`). Sem migration — campos já existiam no banco.
+
+4. **Auditoria completa de segurança + qualidade** — dois agentes independentes varreram o codebase. Resultado documentado em `docs/superpowers/2026-06-09-auditoria.md`. Ver seção abaixo para ações priorizadas.
+
+### O que foi feito na sessão 1 de 2026-06-09
 
 1. **Credenciais MP de produção configuradas** — 3 planos criados via API e secrets
    atualizados no GitHub env `production`:
@@ -150,6 +160,56 @@ gh workflow run deploy.yml --repo Ulpio/AutoStand --ref main
 # 2. Rodar migration contra Turso produção
 DATABASE_URL=<url> DATABASE_AUTH_TOKEN=<token> npx drizzle-kit migrate
 ```
+
+---
+
+## Auditoria de Segurança + Qualidade — ações pendentes
+
+> Auditoria completa em `docs/superpowers/2026-06-09-auditoria.md`. Resumo executivo abaixo.
+
+### 🔴 Crítico
+
+| ID | Ação | Arquivo | Esforço |
+|----|------|---------|---------|
+| CRIT-1 | Rate limiting em `GET /api/cupons/validate` — endpoint público sem proteção, permite enumerar cupons válidos | `app/api/cupons/validate/route.ts` | ~15 min |
+| CRIT-2 | Rotacionar `AUTH_SECRET` na Vercel/GitHub Actions como medida preventiva (`.env.vercel.local` com secret real) | GitHub env `production` | Preventivo |
+
+### 🟠 Alto
+
+| ID | Ação | Arquivo | Esforço |
+|----|------|---------|---------|
+| HIGH-1 | Adicionar autenticação em `GET /api/assinatura` — hoje qualquer visitante obtém a URL de gestão de assinatura MP de qualquer loja | `app/api/assinatura/route.ts` | 5 linhas |
+| HIGH-2 | Guard de produção em `scripts/seed.ts` — cria super_admin com senha `super123` se rodar contra prod sem `SUPER_ADMIN_PASSWORD` | `scripts/seed.ts` | 5 linhas |
+| HIGH-3 | Rate limiting + Turnstile em `POST /api/leads` — hoje qualquer bot enche o CRM de leads falsos | `app/api/leads/route.ts` | ~30 min |
+
+### 🐛 Bugs P0 (provavelmente já afetando produção)
+
+| ID | Bug | Arquivo | Descrição |
+|----|-----|---------|-----------|
+| BUG-1 | `sql\`${transactions.type} IN ${filters.types}\`` gera SQL inválido | `lib/db/transactions.ts:34` | Filtro financeiro por múltiplos tipos retorna zero linhas silenciosamente |
+| BUG-2 | Fluxo de cadastro não atômico | `app/api/assinar/route.ts:79–103` | `createTenant` + `createUser` + `incrementPartnerSignup` fora de `db.transaction()` — falha parcial deixa registros órfãos |
+
+### 🟡 Médio
+
+| ID | Ação | Arquivo |
+|----|------|---------|
+| MED-1 | Stack trace vaza para o cliente no catch de `/api/assinar` | `app/api/assinar/route.ts:108` |
+| MED-2 | IP spoofing bypassa rate limiting (X-Forwarded-For não sanitizado no CloudFront) | `lib/ratelimit.ts:77` |
+| MED-3 | Sem headers HTTP de segurança (X-Frame-Options, HSTS, X-Content-Type-Options) | `next.config.ts` |
+| MED-4 | `/api/cupons/validate` expõe ID interno do cupom na resposta | `app/api/cupons/validate/route.ts:50` |
+
+### ⚡ Quick Wins de Performance + Qualidade
+
+| ID | Ação | Arquivo | Esforço |
+|----|------|---------|---------|
+| QW-1 | `getVehicleWithPhotos` — 2 queries sequenciais → `Promise.all` | `lib/db/vehicles.ts:59–66` | 1 linha |
+| QW-2 | `getFinanceiroResumo` — 3 queries sequenciais → `Promise.all` | `lib/db/transactions.ts:255–282` | 1 linha |
+| QW-3 | N+1 writes no reordenamento de fotos/itens — usar `db.batch()` | `lib/db/vehicles.ts:179–192` | ~20 min |
+| QW-4 | Cache 60s em `getCurrentTenant` via `unstable_cache` | `lib/tenant.ts:45–62` | ~10 linhas |
+| QW-5 | `formatBRL` duplicado em 3 arquivos — centralizar em `lib/money.ts` | Vários | 5 min |
+| QW-6 | `withSuperAdmin` usa `userId: 0` como fallback silencioso | `lib/api.ts:71` | 2 linhas |
+| QW-7 | POST cupons sem Zod — única rota que usa `req.json()` raw | `app/api/superadmin/cupons/route.ts` | ~20 min |
+| QW-8 | `zoom: 0.62` CSS não-padrão no preview — quebra no Firefox | `components/admin/PersonalizarEditor.tsx:571` | ~5 min |
 
 ---
 
