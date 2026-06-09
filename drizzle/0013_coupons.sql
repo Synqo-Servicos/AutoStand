@@ -7,7 +7,7 @@ CREATE TABLE `coupons` (
   `max_uses` integer NOT NULL DEFAULT 1,
   `used_count` integer NOT NULL DEFAULT 0,
   `expires_at` text,
-  `created_by` integer NOT NULL REFERENCES `users`(`id`) ON DELETE CASCADE,
+  `created_by` integer NOT NULL REFERENCES `users`(`id`) ON DELETE RESTRICT,
   `partner_id` integer REFERENCES `partners`(`id`) ON DELETE SET NULL,
   `created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
