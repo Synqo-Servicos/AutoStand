@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, slug: tenant.slug, checkoutUrl }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    console.error("[assinar] unexpected error:", err);
+    return NextResponse.json({ error: "Erro interno. Tente novamente." }, { status: 500 });
   }
 }

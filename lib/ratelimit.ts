@@ -44,6 +44,8 @@ export const limiters = {
   signup: makeLimiter(5, "1 h", "rl:signup"),
   /** Lead do marketplace. 5/min por IP cobre testes legítimos e barra spam. */
   lead: makeLimiter(5, "1 m", "rl:lead"),
+  /** Validação pública de cupom. Limite conservador para evitar enumeração. */
+  couponValidate: makeLimiter(10, "1 m", "rl:coupon"),
 } as const;
 
 export type LimiterName = keyof typeof limiters;

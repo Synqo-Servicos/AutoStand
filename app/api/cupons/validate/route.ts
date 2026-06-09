@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCouponByCode } from "@/lib/db";
 import { getPlan, isPlanSlug } from "@/lib/plans";
+import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 
 function formatBRL(centavos: number): string {
   return (centavos / 100).toLocaleString("pt-BR", {
@@ -11,6 +12,12 @@ function formatBRL(centavos: number): string {
 }
 
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rl = await checkRateLimit("couponValidate", ip);
+  if (!rl.ok) {
+    return NextResponse.json({ valid: false, error: "Muitas tentativas. Tente novamente em breve." }, { status: 429 });
+  }
+
   const { searchParams } = new URL(req.url);
   const code = (searchParams.get("code") ?? "").trim();
   const planSlug = searchParams.get("plan") ?? "";
@@ -47,10 +54,7 @@ export async function GET(req: NextRequest) {
     preview,
     discountedCents,
     coupon: {
-      id: coupon.id,
       code: coupon.code,
-      discount_type: coupon.discount_type,
-      discount_value: coupon.discount_value,
       description: coupon.description,
     },
   });

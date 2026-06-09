@@ -3,6 +3,7 @@ import { createLead, listLeads } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { ApiError, parseBody, withTenant } from "@/lib/api";
 import { publicLeadSchema } from "@/lib/schemas";
+import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 
 // Admin: list this tenant's leads.
 export const GET = withTenant(async (req, { tenantId }) => {
@@ -18,6 +19,15 @@ export const GET = withTenant(async (req, { tenantId }) => {
 // Public: a visitor submits an interest form. Tenant resolved by host.
 // Não usa withTenant porque o autor não tem sessão — tenant vem do host.
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rl = await checkRateLimit("lead", ip);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Muitas tentativas. Tente novamente em alguns minutos." },
+      { status: 429, headers: rl.retryAfter ? { "Retry-After": String(rl.retryAfter) } : undefined },
+    );
+  }
+
   const tenant = await getCurrentTenant();
   if (!tenant) {
     return NextResponse.json({ error: "Tenant não encontrado" }, { status: 404 });

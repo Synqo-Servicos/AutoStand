@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import MercadoPagoConfig, { PreApproval } from "mercadopago";
+import { auth } from "@/lib/auth";
 import { getAdminTenant } from "@/lib/tenant";
 
 function getMpClient() {
@@ -7,6 +8,11 @@ function getMpClient() {
 }
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const tenant = await getAdminTenant();
 
   if (!tenant.mp_subscription_id) {

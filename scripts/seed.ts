@@ -219,6 +219,11 @@ async function seedDealership(opts: {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    console.error("ABORT: seed.ts não deve rodar em produção.");
+    process.exit(1);
+  }
+
   // --- Super admin (platform owner) ---
   const superEmail = (process.env.SUPER_ADMIN_EMAIL ?? "super@plataforma.com").trim();
   const superPass = (process.env.SUPER_ADMIN_PASSWORD ?? "super123").trim();
