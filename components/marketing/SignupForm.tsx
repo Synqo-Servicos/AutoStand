@@ -38,9 +38,30 @@ export function SignupForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponState, setCouponState] = useState<
+    | { status: "idle" }
+    | { status: "validating" }
+    | { status: "valid"; preview: string }
+    | { status: "invalid"; error: string }
+  >({ status: "idle" });
 
   const liveSlugError = slug ? slugError(slug) : null;
   const onCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
+
+  async function validateCoupon(code: string, currentPlan: PlanSlug) {
+    if (!code.trim()) { setCouponState({ status: "idle" }); return; }
+    setCouponState({ status: "validating" });
+    try {
+      const res = await fetch(`/api/cupons/validate?code=${encodeURIComponent(code)}&plan=${currentPlan}`);
+      const data = await res.json();
+      setCouponState(data.valid
+        ? { status: "valid", preview: data.preview }
+        : { status: "invalid", error: data.error ?? "Cupom inválido." });
+    } catch {
+      setCouponState({ status: "invalid", error: "Erro ao validar cupom." });
+    }
+  }
   const captchaEnabled = isTurnstileEnabled();
   const canSubmit = !submitting && (!captchaEnabled || captchaToken !== null);
 
@@ -67,6 +88,7 @@ export function SignupForm({
           admin_email: adminEmail,
           admin_password: adminPassword,
           partner_code: partnerCode ?? "",
+          coupon_code: couponCode.trim().toUpperCase() || null,
           turnstile_token: captchaToken,
         }),
       });
@@ -210,6 +232,38 @@ export function SignupForm({
             required
           />
         </div>
+      </div>
+
+      {/* Cupom (opcional) */}
+      <div>
+        <label htmlFor="coupon_code" className={labelClass}>
+          Código de cupom <span className="text-n400 font-normal">(opcional)</span>
+        </label>
+        <input
+          id="coupon_code"
+          className={`mt-1 font-mono uppercase ${inputClass} ${
+            couponState.status === "valid" ? "border-green-500 focus:border-green-500 focus:ring-green-500/30" :
+            couponState.status === "invalid" ? "border-danger focus:border-danger focus:ring-danger/30" : ""
+          }`}
+          value={couponCode}
+          onChange={(e) => {
+            const val = e.target.value.toUpperCase().replace(/\s/g, "");
+            setCouponCode(val);
+            if (!val) setCouponState({ status: "idle" });
+          }}
+          onBlur={() => validateCoupon(couponCode, plan)}
+          placeholder="PROMO10"
+          autoComplete="off"
+        />
+        {couponState.status === "validating" && (
+          <p className="mt-1 text-body-s text-n400">Validando…</p>
+        )}
+        {couponState.status === "valid" && (
+          <p className="mt-1 text-body-s text-green-600">✓ {couponState.preview}</p>
+        )}
+        {couponState.status === "invalid" && (
+          <p className="mt-1 text-body-s text-danger">{couponState.error}</p>
+        )}
       </div>
 
       {captchaEnabled && <Turnstile onVerify={setCaptchaToken} onExpire={onCaptchaExpire} />}
