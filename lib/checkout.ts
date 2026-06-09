@@ -6,6 +6,12 @@ function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
 }
 
+/**
+ * Builds the MP plan checkout URL for plan-based subscriptions.
+ * MP requires the user to provide card details on their hosted page
+ * (creating a preapproval via API requires card_token_id upfront).
+ * external_reference links the subscription back to the tenant on webhook.
+ */
 export async function createCheckoutSession(
   tenant: TenantRow,
   plan: Plan,
@@ -13,22 +19,12 @@ export async function createCheckoutSession(
 ): Promise<string | null> {
   if (!plan.mpPlanId) return null;
 
-  const preApproval = new PreApproval(getMpClient());
-  const backUrl = `${process.env.AUTH_URL ?? "https://autostand.com.br"}/admin/assinatura`;
-
-  const result = await preApproval.create({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    body: {
-      preapproval_plan_id: plan.mpPlanId,
-      reason: `AutoStand ${plan.name}`,
-      back_url: backUrl,
-      notification_url: `https://${process.env.PLATFORM_DOMAIN}/api/webhooks/mercadopago`,
-      status: "pending",
-      external_reference: String(tenant.id),
-    } as any,
+  const params = new URLSearchParams({
+    preapproval_plan_id: plan.mpPlanId,
+    external_reference: String(tenant.id),
   });
 
-  return result.init_point ?? null;
+  return `https://www.mercadopago.com.br/subscriptions/checkout?${params.toString()}`;
 }
 
 export async function cancelMpSubscription(subscriptionId: string): Promise<void> {
