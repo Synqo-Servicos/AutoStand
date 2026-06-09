@@ -3,9 +3,11 @@ import bcrypt from "bcryptjs";
 import {
   createTenant,
   createUser,
+  getCouponByCode,
   getPartnerByCode,
   getTenantBySlug,
   getUserByEmail,
+  incrementCouponUse,
   incrementPartnerSignup,
 } from "@/lib/db";
 import { getPlan, isPlanSlug } from "@/lib/plans";
@@ -67,13 +69,18 @@ export async function POST(req: NextRequest) {
 
     const partner = partnerCode ? await getPartnerByCode(partnerCode) : null;
 
+    const couponCodeRaw = String(body.coupon_code ?? "").trim().toUpperCase();
+    const coupon = couponCodeRaw ? await getCouponByCode(couponCodeRaw) : null;
+    if (couponCodeRaw && !coupon) return bad("Cupom inválido ou expirado.");
+
     const tenant = await createTenant({
       slug,
       name: dealershipName,
       plan,
-      status: "suspended", // vai ao ar só após o 1º pagamento (Fase 2)
+      status: "suspended",
       subscription_status: "incomplete",
       referred_by: partner?.id ?? null,
+      coupon_id: coupon?.id ?? null,
     });
 
     await createUser({
@@ -85,9 +92,9 @@ export async function POST(req: NextRequest) {
     });
 
     if (partner) await incrementPartnerSignup(partner.id);
+    if (coupon) await incrementCouponUse(coupon.id);
 
-    // Seam da Fase 2 — hoje retorna null e o cliente segue para /assinar/sucesso.
-    const checkoutUrl = await createCheckoutSession(tenant, getPlan(plan), partner);
+    const checkoutUrl = await createCheckoutSession(tenant, getPlan(plan), partner, coupon);
 
     return NextResponse.json({ ok: true, slug: tenant.slug, checkoutUrl }, { status: 201 });
   } catch (err) {
