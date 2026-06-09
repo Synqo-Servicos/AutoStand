@@ -15,6 +15,7 @@ import { iconForSlug } from "@/lib/about-icons";
 import { StorefrontHero } from "@/components/public/StorefrontHero";
 import { VehicleCard } from "@/components/public/VehicleCard";
 import { VehicleFilters } from "@/components/public/VehicleFilters";
+import { StorefrontFooter } from "@/components/public/StorefrontFooter";
 import type { TenantRow } from "@/lib/schema";
 
 /**
@@ -112,6 +113,9 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
 
       {/* Contato */}
       <ContactSection tenant={tenant} waHref={waHref} />
+
+      {/* Footer */}
+      <StorefrontFooter tenant={tenant} waHref={waHref} />
     </>
   );
 }
