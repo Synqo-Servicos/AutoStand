@@ -73,6 +73,9 @@ export const tenants = sqliteTable("tenants", {
   /** Bancos parceiros — slugs de `lib/banks.ts`. Logos aparecem no site público. */
   partner_banks: text("partner_banks", { mode: "json" }).$type<string[]>().default([]),
 
+  /** Cupom de desconto aplicado na assinatura. */
+  coupon_id: integer("coupon_id").references(() => coupons.id, { onDelete: "set null" }),
+
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updated_at: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
@@ -314,6 +317,25 @@ export const partners = sqliteTable("partners", {
   created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+// --- Coupons (sistema de cupons de desconto) ---
+
+export const coupons = sqliteTable("coupons", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  code: text("code").notNull().unique(),
+  description: text("description"),
+  /** 'percentage' | 'fixed' | 'free_month' */
+  discount_type: text("discount_type").notNull(),
+  /** Null para free_month. Percentual inteiro (ex: 10) ou centavos (ex: 5000 = R$50). */
+  discount_value: integer("discount_value"),
+  max_uses: integer("max_uses").notNull().default(1),
+  used_count: integer("used_count").notNull().default(0),
+  expires_at: text("expires_at"),
+  /** FK para users.id — sem .references() para evitar referência circular tenants→coupons→users→tenants. */
+  created_by: integer("created_by").notNull(),
+  partner_id: integer("partner_id").references(() => partners.id, { onDelete: "set null" }),
+  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 // --- Demand events (inteligência de demanda — eventos anônimos) ---
 
 export const demand_events = sqliteTable("demand_events", {
@@ -363,3 +385,5 @@ export type DemandEventRow = typeof demand_events.$inferSelect;
 export type NewDemandEvent = typeof demand_events.$inferInsert;
 export type TenantAboutItemRow = typeof tenant_about_items.$inferSelect;
 export type NewTenantAboutItem = typeof tenant_about_items.$inferInsert;
+export type CouponRow = typeof coupons.$inferSelect;
+export type NewCoupon = typeof coupons.$inferInsert;
