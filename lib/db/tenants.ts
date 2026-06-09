@@ -47,6 +47,7 @@ const TENANT_WRITABLE_FIELDS = [
   "layout_config",
   "custom_domain", "plan", "status", "marketplace_opt_in",
   "partner_banks", "referred_by",
+  "coupon_id",
 ] as const;
 
 function pickTenantFields<T extends Record<string, unknown>>(input: T): Partial<T> {
