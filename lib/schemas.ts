@@ -182,6 +182,7 @@ export const tenantStorefrontSchema = z.object({
   contact_cta_title: trimmed(80).nullable().optional(),
   contact_cta_body: trimmed(280).nullable().optional(),
   // contato + endereço
+  city: trimmed(80).nullable().optional(),
   business_hours: trimmed(80).nullable().optional(),
   contact_email: z
     .union([z.string().email(), z.literal("")])

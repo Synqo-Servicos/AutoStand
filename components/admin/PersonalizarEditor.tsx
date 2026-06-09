@@ -83,6 +83,9 @@ export function PersonalizarEditor({
   const [contactCtaTitle, setContactCtaTitle] = useState(tenant.contact_cta_title ?? "");
   const [contactCtaBody, setContactCtaBody] = useState(tenant.contact_cta_body ?? "");
   const [address, setAddress] = useState(tenant.address ?? "");
+  const [city, setCity] = useState(tenant.city ?? "");
+  const [contactEmail, setContactEmail] = useState(tenant.contact_email ?? "");
+  const [businessHours, setBusinessHours] = useState(tenant.business_hours ?? "");
   const [facebookUrl, setFacebookUrl] = useState(tenant.facebook_url ?? "");
   const [youtubeUrl, setYoutubeUrl] = useState(tenant.youtube_url ?? "");
   const [tiktokUrl, setTiktokUrl] = useState(tenant.tiktok_url ?? "");
@@ -151,6 +154,9 @@ export function PersonalizarEditor({
           contact_cta_title: contactCtaTitle || null,
           contact_cta_body: contactCtaBody || null,
           address: address || null,
+          city: city || null,
+          contact_email: contactEmail || null,
+          business_hours: businessHours || null,
           facebook_url: facebookUrl || null,
           youtube_url: youtubeUrl || null,
           tiktok_url: tiktokUrl || null,
@@ -327,6 +333,45 @@ export function PersonalizarEditor({
                   maxLength={200}
                 />
               </div>
+            </div>
+            <div>
+              <label htmlFor="city" className={labelClass}>
+                Cidade
+              </label>
+              <input
+                id="city"
+                className={`mt-1 ${inputClass}`}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Brasília – DF"
+                maxLength={80}
+              />
+            </div>
+            <div>
+              <label htmlFor="contact_email" className={labelClass}>
+                E-mail de contato
+              </label>
+              <input
+                id="contact_email"
+                type="email"
+                className={`mt-1 ${inputClass}`}
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="contato@sualoja.com.br"
+              />
+            </div>
+            <div>
+              <label htmlFor="business_hours" className={labelClass}>
+                Horário de atendimento
+              </label>
+              <input
+                id="business_hours"
+                className={`mt-1 ${inputClass}`}
+                value={businessHours}
+                onChange={(e) => setBusinessHours(e.target.value)}
+                placeholder="Seg–Sáb, 8h–18h"
+                maxLength={80}
+              />
             </div>
           </div>
         </section>
