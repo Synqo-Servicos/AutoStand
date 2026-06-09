@@ -127,7 +127,33 @@ Usuário
 
 ---
 
-## Próxima feature: Sistema de Cupons
+## Sistema de Cupons — IMPLEMENTADO ✅
+
+Migration 0013 aplicada (pendente deploy). Commits: `feat(schema)` → `feat(db)` → `feat(checkout)` → `feat(api) ×3` → `feat(ui)`.
+
+### O que foi implementado
+- **`lib/schema.ts`** — tabela `coupons` + `tenants.coupon_id`
+- **`drizzle/0013_coupons.sql`** — migration pronta (rodar contra produção)
+- **`lib/db/coupons.ts`** — `getCouponByCode`, `createCoupon`, `incrementCouponUse`, `isCouponValid`
+- **`lib/checkout.ts`** — plano MP descontado on-the-fly via `PreApprovalPlan.create()`
+- **`GET /api/cupons/validate`** — validação pública com preview
+- **`GET+POST /api/superadmin/cupons`** — gestão de cupons
+- **`/superadmin/cupons`** + **`/superadmin/cupons/novo`** — UI superadmin
+- **`SignupForm`** — campo de cupom com validação on-blur e preview
+- **`POST /api/assinar`** — valida, usa, e salva `coupon_id` no tenant
+
+### Para ativar em produção
+```bash
+# 1. Deploy (já há commits novos no main)
+gh workflow run deploy.yml --repo Ulpio/AutoStand --ref main
+
+# 2. Rodar migration contra Turso produção
+DATABASE_URL=<url> DATABASE_AUTH_TOKEN=<token> npx drizzle-kit migrate
+```
+
+---
+
+## Próxima feature sugerida: Sistema de Cupons (spec original mantida para referência)
 
 ### Contexto
 Vendedores visitam concessionárias e podem negociar desconto na assinatura
