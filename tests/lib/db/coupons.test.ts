@@ -13,7 +13,7 @@ function makeCoupon(overrides: Partial<CouponRow> = {}): CouponRow {
     id: 1,
     code: "TEST10",
     description: null,
-    discount_type: "percent",
+    discount_type: "percentage",
     discount_value: 10,
     max_uses: 100,
     used_count: 0,
