@@ -1,11 +1,50 @@
 # Handoff — estado do projeto
 
-**Última atualização:** 2026-06-08
-**Último commit:** `ff2298a` (ci: add workflow_dispatch trigger to deploy workflow)
+**Última atualização:** 2026-06-09
+**Último commit:** `dd909fc` (fix(docker): revert curl install — health check migrated to wget in task def)
 
 > Pega aqui pra retomar onde paramos sem precisar relembrar tudo.
 > Vê também `docs/SPEC-evolucao.md`, `docs/SPEC-design-system.md`,
 > `docs/Ideias.md` (backlog completo).
+
+---
+
+## Estado atual — PRODUÇÃO FUNCIONANDO ✅
+
+O billing com Mercado Pago está operacional em produção. O fluxo E2E foi validado
+em 2026-06-09: `/assinar` → cria tenant → redireciona para checkout MP de produção
+(plano real, preço real) → webhook ativa o tenant ao confirmar pagamento.
+
+### O que foi feito na sessão de 2026-06-09
+
+1. **Credenciais MP de produção configuradas** — 3 planos criados via API e secrets
+   atualizados no GitHub env `production`:
+   - `MERCADOPAGO_ACCESS_TOKEN` ✅
+   - `MERCADOPAGO_WEBHOOK_SECRET` ✅
+   - `MERCADOPAGO_PLAN_BASICO` → `98e8b29d50a2420aa02aca094e6fd416` (R$ 169,90/mês)
+   - `MERCADOPAGO_PLAN_PRO` → `15d14d9dcad64b12a57460f0f404ee6d` (R$ 349,90/mês)
+   - `MERCADOPAGO_PLAN_PREMIUM` → `ee0413ecc552491ea392a23f90050844` (R$ 499,90/mês)
+
+2. **Fixes de checkout mergeados** (branch `homolog` → `main`):
+   - `lib/checkout.ts` — substituído criação de PreApproval via API (exigia `card_token_id`)
+     por redirect direto para `mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=...&external_reference=<tenant_id>`
+   - `app/api/webhooks/mercadopago/route.ts` — corrigido: evento `authorized` agora
+     também atualiza `status='active'` além de `subscription_status`. Sem isso o
+     tenant ficava suspenso mesmo com pagamento confirmado.
+
+3. **Fix de infra: health check do ECS** — a imagem Alpine não tem `curl` por padrão.
+   O health check foi migrado para `wget` diretamente na task definition (revisão :8),
+   que é herdada por todos os deploys futuros. O Dockerfile ficou sem curl.
+
+---
+
+## Mercado Pago — OPERACIONAL EM PRODUÇÃO
+
+- **Webhook URL:** `https://autostand.com.br/api/webhooks/mercadopago` — evento `preapproval`
+- **Checkout:** redirect para `mercadopago.com.br/subscriptions/checkout` com `preapproval_plan_id` + `external_reference`
+- **Ativação:** webhook recebe `authorized` → atualiza `status='active'` + `subscription_status='active'` + `mp_subscription_id`
+- **Suspensão:** `paused`/`cancelled` → `status='suspended'`
+- **Conta MP:** SYNQO SERVICOS LTDA (razão social da conta do usuário)
 
 ---
 
@@ -32,6 +71,7 @@ Usuário
 - **IAM OIDC Role:** `arn:aws:iam::507099297746:role/github-actions-autostand`
 - **Certificado ACM:** `arn:aws:acm:us-east-1:507099297746:certificate/743a7113-ab36-434b-8e9e-3f0acf6a559e` — ISSUED, wildcard `*.autostand.com.br`
 - **Hosted Zone Route 53:** `Z0112278247WDT5RPBURR`
+- **ECS task definition ativa:** `autostand:9` (health check: `wget -qO- http://localhost:3000/api/health`)
 
 ### Rotas funcionando em produção
 | URL | Status |
@@ -47,7 +87,7 @@ Usuário
 ## Banco de dados Turso
 
 - **URL prod:** `libsql://database-beige-bell-vercel-icfg-xfqaomkkq5ftkrxfe8fixajw.aws-us-east-1.turso.io`
-- **Migrations aplicadas:** 0000–0012 (todas — 0010/0011 foram aplicadas via HTTP API nesta sessão)
+- **Migrations aplicadas:** 0000–0012
 - Para rodar migrations contra produção: `DATABASE_URL=<url> DATABASE_AUTH_TOKEN=<token> npx drizzle-kit migrate`
   ⚠️ O drizzle.config.ts lê `DATABASE_URL`, não `TURSO_DATABASE_URL`
 
@@ -57,8 +97,9 @@ Usuário
 
 - **Repo:** `Ulpio/AutoStand`
 - **Workflow:** `.github/workflows/deploy.yml` — dispara em `push: main` e `workflow_dispatch`
+- **Workflow homolog:** `.github/workflows/deploy-homolog.yml` — dispara em `push: homolog`
 - **Environment:** `production` — todos os secrets aqui
-- **Fluxo:** test → build Docker → push ECR → render task def → deploy ECS (aguarda estabilidade)
+- **Fluxo:** test → build Docker → push ECR → render task def (herda a atual, só troca imagem) → deploy ECS
 
 ### Secrets no GitHub environment `production`
 | Secret | Estado |
@@ -74,11 +115,11 @@ Usuário
 | `AWS_S3_BUCKET` | ✅ `autostand-uploads` |
 | `AWS_S3_REGION` | ✅ `sa-east-1` |
 | `CDN_URL` | ✅ `https://cdn.autostand.com.br` |
-| `MERCADOPAGO_ACCESS_TOKEN` | ⚠️ **MOCK** — substituir pelo real |
-| `MERCADOPAGO_WEBHOOK_SECRET` | ⚠️ **MOCK** — substituir pelo real |
-| `MERCADOPAGO_PLAN_BASICO` | ⚠️ **MOCK** — substituir pelo ID real |
-| `MERCADOPAGO_PLAN_PRO` | ⚠️ **MOCK** — substituir pelo ID real |
-| `MERCADOPAGO_PLAN_PREMIUM` | ⚠️ **MOCK** — substituir pelo ID real |
+| `MERCADOPAGO_ACCESS_TOKEN` | ✅ produção |
+| `MERCADOPAGO_WEBHOOK_SECRET` | ✅ produção |
+| `MERCADOPAGO_PLAN_BASICO` | ✅ `98e8b29d50a2420aa02aca094e6fd416` |
+| `MERCADOPAGO_PLAN_PRO` | ✅ `15d14d9dcad64b12a57460f0f404ee6d` |
+| `MERCADOPAGO_PLAN_PREMIUM` | ✅ `ee0413ecc552491ea392a23f90050844` |
 | `UPSTASH_REDIS_REST_URL` | vazio (rate limit desabilitado) |
 | `UPSTASH_REDIS_REST_TOKEN` | vazio |
 | `TURNSTILE_SECRET_KEY` | vazio (CAPTCHA desabilitado) |
@@ -86,70 +127,71 @@ Usuário
 
 ---
 
-## Mercado Pago — implementado, credenciais mock
+## Próxima feature: Sistema de Cupons
 
-O billing está implementado e testado. Faltam só as credenciais de produção.
+### Contexto
+Vendedores visitam concessionárias e podem negociar desconto na assinatura
+(ex: primeiro mês grátis, 10% de desconto). O superadmin (ou parceiros vinculados)
+gera um cupom no console que o vendedor repassa ao prospect. O cupom é aplicado
+no momento do cadastro em `/assinar`.
 
-**Bloqueio atual:** criação de aplicação no painel MP falhando com erro de
-reCAPTCHA (score 0.5 abaixo do threshold). Tentativas:
-- Chrome sem extensões/VPN para melhorar o score
-- Suporte MP com trace ID `DXT400-UUYJNU1XQSUW`
+### Decisões tomadas
+- **MP gerencia o desconto:** criamos um plano MP com o preço já reduzido on-the-fly
+  ao usar o cupom. Não há controle manual.
+- **Quem gera:** superadmin + parceiros (superadmin pode associar cupom a um parceiro
+  para rastreamento de atribuição).
+- **Uso único por padrão** (`max_uses = 1`), configurável.
 
-**Quando tiver `MERCADOPAGO_ACCESS_TOKEN` de produção:**
+### Tipos de desconto suportados
+| Tipo | Comportamento no MP |
+|---|---|
+| `percentage` | Plano MP com `transaction_amount = preço × (1 - %)` recorrente |
+| `fixed` | Plano MP com `transaction_amount = preço - valor` recorrente |
+| `free_month` | Plano MP com `free_trial: { frequency: 1, frequency_type: "months" }` |
 
-1. Criar 3 planos via API:
-```bash
-MP_TOKEN="<access_token_producao>"
-
-# Básico — R$ 169,90/mês
-curl -X POST https://api.mercadopago.com/preapproval_plan \
-  -H "Authorization: Bearer $MP_TOKEN" -H "Content-Type: application/json" \
-  -d '{"reason":"AutoStand Básico","auto_recurring":{"frequency":1,"frequency_type":"months","transaction_amount":169.90,"currency_id":"BRL"},"back_url":"https://autostand.com.br/admin/assinatura","status":"active"}'
-
-# Pro — R$ 349,90/mês (transaction_amount: 349.90, reason: "AutoStand Pro")
-# Premium — R$ 499,90/mês (transaction_amount: 499.90, reason: "AutoStand Premium")
+### Schema (migration 0013 — ainda não implementada)
+```ts
+coupons: {
+  id, code (unique), description,
+  discount_type: 'percentage' | 'fixed' | 'free_month',
+  discount_value: number | null,  // null para free_month
+  max_uses: number,               // default 1
+  used_count: number,             // default 0
+  expires_at: string | null,
+  created_by: FK users.id,
+  partner_id: FK partners.id | null,  // atribuição opcional
+  created_at
+}
+// tenants ganha: coupon_id FK coupons.id | null
 ```
 
-2. Atualizar secrets no GitHub: `MERCADOPAGO_PLAN_BASICO/PRO/PREMIUM` com os `id` retornados
-3. Atualizar `MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET`
-4. No painel MP: configurar webhook → `https://autostand.com.br/api/webhooks/mercadopago` — evento: `preapproval`
-5. Fazer push vazio para triggar redeploy: `git commit --allow-empty -m "chore: redeploy" && git push`
+### O que implementar
+1. **Migration 0013** — tabela `coupons` + coluna `tenants.coupon_id`
+2. **`lib/db/coupons.ts`** — CRUD: `getCouponByCode`, `createCoupon`, `incrementCouponUse`, `listCoupons`
+3. **`lib/checkout.ts`** — `createCheckoutSession` recebe `coupon | null`, cria plano MP descontado on-the-fly via API quando há cupom
+4. **`GET /api/cupons/validate?code=XXX&plan=basico`** — valida cupom e retorna preview do desconto (público)
+5. **`/api/superadmin/cupons`** — GET (lista) + POST (cria)
+6. **`/superadmin/cupons`** — página: lista + modal "Novo cupom" (código auto/custom, tipo, valor, max usos, validade, parceiro opcional)
+7. **`/assinar`** — campo "Código de cupom" opcional com validação on-blur e preview do desconto antes do submit
+8. **`/api/assinar`** — validar cupom, passar para `createCheckoutSession`, incrementar uso, salvar `coupon_id` no tenant
+
+### Notas de implementação
+- Criar plano MP on-the-fly: mesma estrutura dos planos base, só com `transaction_amount` diferente ou `free_trial`
+- `back_url` do plano descontado = `https://autostand.com.br/admin/assinatura`
+- O `external_reference` continua sendo `String(tenant.id)` — o webhook funciona igual
+- Cupom é marcado como usado no momento do submit (não na confirmação do pagamento) para evitar reuso por abandono
+- Parceiros: página `/superadmin/parceiros/[id]` deve listar cupons do parceiro e suas conversões
 
 ---
 
-## O que estava pronto antes desta sessão
+## O que estava pronto antes da sessão de 2026-06-09
 
 ### Onda 1-4 — Design system completo
-- Tokens, componentes UI, polimento por superfície
-
-### Onda 5 — Robustez
-- Defesa em profundidade, índices, validação de upload, rate limit + CAPTCHA (no-op sem envs)
-
-### Onda 6 — Estrutura
-- Wrappers `withTenant`/`withSuperAdmin`, split `lib/db/`, smoke tests (28 testes)
-
-### Storefront config — completa
-- Schema migration 0011, editor no admin, storefront consome tudo
-
-### Gestão de fotos — completa
-- Drag-and-drop, compressão, lightbox, upload logo/hero, cleanup de blobs
-
-### Mercado Pago (código completo)
-- `lib/checkout.ts` — cria PreApproval no MP
-- `app/api/webhooks/mercadopago/route.ts` — recebe eventos, ativa tenant
-- `app/api/assinatura/route.ts` — redireciona para gestão do cartão no MP
-- `/admin/assinatura` — mostra plano, status, botão "Gerenciar pagamento" (ativo quando mp_subscription_id existe)
-- Schema `mp_subscription_id` em tenants
-
----
-
-## Próximos passos
-
-1. **Desbloqueio MP** — resolver acesso ao painel e criar planos reais
-2. **Teste E2E** — cadastrar tenant via `/assinar`, validar checkout → webhook → ativação
-3. **Upstash + Turnstile** — configurar em prod quando tiver usuários reais
-4. **Vercel** — pode deletar o projeto (opcional)
-5. **Milestone 3** — automação WhatsApp, integrações FIPE, multi-usuário por tenant
+### Onda 5 — Robustez (rate limit, CAPTCHA no-op, índices, validação upload)
+### Onda 6 — Estrutura (wrappers, split lib/db/, 28 smoke tests)
+### Storefront config — migration 0011, editor no admin
+### Gestão de fotos — drag-and-drop, compressão, lightbox, S3
+### Mercado Pago — checkout + webhook + schema (migration 0012)
 
 ---
 
@@ -183,3 +225,5 @@ gh workflow run deploy.yml --repo Ulpio/AutoStand --ref main
 - Rate limit usa 1º hop do `x-forwarded-for` — aceitável atrás do CloudFront/ALB que já sanitiza o header
 - Blobs S3: upload via `lib/storage.ts`, CDN via `cdn.autostand.com.br`
 - O checkout MP usa `external_reference: String(tenant.id)` para vincular assinatura ao tenant
+- ECS health check: `wget -qO- http://localhost:3000/api/health` — NÃO usar curl (não está no Alpine)
+- Task definition é baixada sem versão no CI (`--task-definition autostand`) → sempre pega a mais recente
