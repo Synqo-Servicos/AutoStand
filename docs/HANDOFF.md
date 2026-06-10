@@ -1,7 +1,7 @@
 # Handoff — estado do projeto
 
-**Última atualização:** 2026-06-09 (sessão 2)
-**Último commit:** `da6fbad` (fix(admin): add maxLength to contact_email input)
+**Última atualização:** 2026-06-10 (sessão 4)
+**Último commit:** `69c1df9` (fix: resolve remaining audit items)
 
 > Pega aqui pra retomar onde paramos sem precisar relembrar tudo.
 > Vê também `docs/SPEC-evolucao.md`, `docs/SPEC-design-system.md`,
@@ -14,6 +14,19 @@
 O billing com Mercado Pago está operacional em produção. O fluxo E2E foi validado
 em 2026-06-09: `/assinar` → cria tenant → redireciona para checkout MP de produção
 (plano real, preço real) → webhook ativa o tenant ao confirmar pagamento.
+
+### O que foi feito na sessão 4 de 2026-06-10
+
+1. **Auditoria — bugs e quick wins resolvidos** (commit `69c1df9`):
+   - **BUG-2**: `createTenant + createUser + incrementPartnerSignup` envolvidos em `db.transaction()` — tipo `Tx` exportado de `lib/db/client.ts`, parâmetro opcional adicionado nas 3 funções.
+   - **MED-2**: `getClientIp` em `lib/ratelimit.ts` agora pega `ips[n-2]` na cadeia CloudFront→ALB, prevenindo spoofing via `X-Forwarded-For`.
+   - **QW-2**: `getFinanceiroResumo` — 3 queries sequenciais → `Promise.all`.
+   - **QW-4**: `getCurrentTenant` usa `unstable_cache(60s)` nos lookups de slug e domínio.
+   - **QW-5**: `formatBRL` local removido de `cupons/validate`; adicionado `formatBRLFull` em `lib/money.ts`.
+   - **QW-7**: `POST /api/superadmin/cupons` valida body via schema Zod v4.
+   - **QW-8**: `zoom: 0.62` → `transform: scale(0.62) + transformOrigin: top left` no preview do PersonalizarEditor (cross-browser).
+
+2. **Deploy homolog + smoke test** — passou limpo. Deploy produção concluído em ~7 min.
 
 ### O que foi feito na sessão 2 de 2026-06-09
 
@@ -163,53 +176,15 @@ DATABASE_URL=<url> DATABASE_AUTH_TOKEN=<token> npx drizzle-kit migrate
 
 ---
 
-## Auditoria de Segurança + Qualidade — ações pendentes
+## Pendências técnicas
 
-> Auditoria completa em `docs/superpowers/2026-06-09-auditoria.md`. Resumo executivo abaixo.
+> Auditoria completa em `docs/superpowers/2026-06-09-auditoria.md`. Todos os itens críticos/altos/médios e a maioria dos quick wins foram resolvidos nas sessões 3 e 4. Só resta:
 
-### 🔴 Crítico
-
-| ID | Ação | Arquivo | Esforço |
+| ID | Ação | Detalhe | Esforço |
 |----|------|---------|---------|
-| CRIT-1 | Rate limiting em `GET /api/cupons/validate` — endpoint público sem proteção, permite enumerar cupons válidos | `app/api/cupons/validate/route.ts` | ~15 min |
-| CRIT-2 | Rotacionar `AUTH_SECRET` na Vercel/GitHub Actions como medida preventiva (`.env.vercel.local` com secret real) | GitHub env `production` | Preventivo |
-
-### 🟠 Alto
-
-| ID | Ação | Arquivo | Esforço |
-|----|------|---------|---------|
-| HIGH-1 | Adicionar autenticação em `GET /api/assinatura` — hoje qualquer visitante obtém a URL de gestão de assinatura MP de qualquer loja | `app/api/assinatura/route.ts` | 5 linhas |
-| HIGH-2 | Guard de produção em `scripts/seed.ts` — cria super_admin com senha `super123` se rodar contra prod sem `SUPER_ADMIN_PASSWORD` | `scripts/seed.ts` | 5 linhas |
-| HIGH-3 | Rate limiting + Turnstile em `POST /api/leads` — hoje qualquer bot enche o CRM de leads falsos | `app/api/leads/route.ts` | ~30 min |
-
-### 🐛 Bugs P0 (provavelmente já afetando produção)
-
-| ID | Bug | Arquivo | Descrição |
-|----|-----|---------|-----------|
-| BUG-1 | `sql\`${transactions.type} IN ${filters.types}\`` gera SQL inválido | `lib/db/transactions.ts:34` | Filtro financeiro por múltiplos tipos retorna zero linhas silenciosamente |
-| BUG-2 | Fluxo de cadastro não atômico | `app/api/assinar/route.ts:79–103` | `createTenant` + `createUser` + `incrementPartnerSignup` fora de `db.transaction()` — falha parcial deixa registros órfãos |
-
-### 🟡 Médio
-
-| ID | Ação | Arquivo |
-|----|------|---------|
-| MED-1 | Stack trace vaza para o cliente no catch de `/api/assinar` | `app/api/assinar/route.ts:108` |
-| MED-2 | IP spoofing bypassa rate limiting (X-Forwarded-For não sanitizado no CloudFront) | `lib/ratelimit.ts:77` |
-| MED-3 | Sem headers HTTP de segurança (X-Frame-Options, HSTS, X-Content-Type-Options) | `next.config.ts` |
-| MED-4 | `/api/cupons/validate` expõe ID interno do cupom na resposta | `app/api/cupons/validate/route.ts:50` |
-
-### ⚡ Quick Wins de Performance + Qualidade
-
-| ID | Ação | Arquivo | Esforço |
-|----|------|---------|---------|
-| QW-1 | `getVehicleWithPhotos` — 2 queries sequenciais → `Promise.all` | `lib/db/vehicles.ts:59–66` | 1 linha |
-| QW-2 | `getFinanceiroResumo` — 3 queries sequenciais → `Promise.all` | `lib/db/transactions.ts:255–282` | 1 linha |
-| QW-3 | N+1 writes no reordenamento de fotos/itens — usar `db.batch()` | `lib/db/vehicles.ts:179–192` | ~20 min |
-| QW-4 | Cache 60s em `getCurrentTenant` via `unstable_cache` | `lib/tenant.ts:45–62` | ~10 linhas |
-| QW-5 | `formatBRL` duplicado em 3 arquivos — centralizar em `lib/money.ts` | Vários | 5 min |
-| QW-6 | `withSuperAdmin` usa `userId: 0` como fallback silencioso | `lib/api.ts:71` | 2 linhas |
-| QW-7 | POST cupons sem Zod — única rota que usa `req.json()` raw | `app/api/superadmin/cupons/route.ts` | ~20 min |
-| QW-8 | `zoom: 0.62` CSS não-padrão no preview — quebra no Firefox | `components/admin/PersonalizarEditor.tsx:571` | ~5 min |
+| CRIT-2 | Rotacionar `AUTH_SECRET` no GitHub env `production` | Ação manual preventiva — entrar em Settings → Environments → production e gerar novo secret | 5 min |
+| QW-3 | N+1 no reordenamento de fotos — `lib/db/vehicles.ts:179` | `db.batch()` do Drizzle tem limitação de tipo com arrays dinâmicos; transação atual está correta, só menos eficiente. Aguardar Drizzle fix ou usar `client.batch()` direto | ~20 min |
+| INFRA | GitHub Actions Node.js 20 deprecation | `actions/checkout@v4` e `aws-actions/configure-aws-credentials@v4` precisam ir para v5 antes de 16/09/2026 | 5 min |
 
 ---
 
@@ -285,11 +260,66 @@ coupons: {
 
 ```bash
 npm run dev        # dev server
-npm test           # 28 testes
+npm test           # 42 testes
 npx next build     # build
+```
 
-# Redeploy manual sem commit:
-gh workflow run deploy.yml --repo Ulpio/AutoStand --ref main
+---
+
+## Fluxo de desenvolvimento
+
+### Política de branches
+
+```
+feature work → homolog branch → validar → PR homolog→main → produção
+```
+
+- Trabalho local acontece em qualquer branch/main local
+- Push para **homolog** para validar no ambiente de staging antes de subir para produção
+- Após validação, abrir **PR de homolog → main** para revisão e merge
+- Push em **main** dispara deploy automático de produção
+
+### Comandos do fluxo
+
+```bash
+# 1. Enviar para homolog (sem trocar de branch localmente)
+git push origin main:homolog          # ou: git push origin <feature-branch>:homolog
+
+# 2. Aguardar deploy (~3 min) — acompanhar em github.com/Ulpio/AutoStand/actions
+
+# 3. Rodar migration no banco de homolog (se houver nova migration)
+export $(grep -v '^#' .env.homolog.local | xargs)
+npx drizzle-kit migrate
+
+# 4. Validar em homologation.autostand.com.br
+
+# 5. Abrir PR de homolog → main
+gh pr create --base main --head homolog --title "..." --body "..."
+
+# 6. Após merge, rodar migration em produção (se houver)
+DATABASE_URL=<url-prod> DATABASE_AUTH_TOKEN=<token-prod> npx drizzle-kit migrate
+```
+
+### Credenciais locais por ambiente
+
+| Arquivo | Uso |
+|---------|-----|
+| `.env.local` | Dev local (SQLite) |
+| `.env.homolog.local` | Rodar migrations/seed contra homolog |
+| `.env.production.local` | Referência (Vercel vars) — **não usar para migrations** |
+
+Para migrations de produção, passar `DATABASE_URL` e `DATABASE_AUTH_TOKEN` inline (ver HANDOFF para URLs).
+
+### Problema conhecido: drizzle-kit migrate em produção
+
+`npx drizzle-kit migrate` pode falhar silenciosamente contra o Turso de produção (exit 1 sem mensagem). Workaround: aplicar o SQL das migrations diretamente via `@libsql/client`. Ver sessão 3 de 2026-06-10 para o script de aplicação direta.
+
+### Seed de dados mock
+
+```bash
+# Homolog apenas — seed.ts tem guard que bloqueia em NODE_ENV=production
+export $(grep -v '^#' .env.homolog.local | xargs)
+npx tsx scripts/seed.ts
 ```
 
 ### Credenciais de teste (dev local)
