@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { vehicle_documents, vehicle_photos, vehicles } from "@/lib/schema";
 import type { VehicleDocumentRow, VehiclePhotoRow, VehicleRow } from "@/lib/schema";
 import type { VehicleInput, VehicleWithPhotos } from "@/types/vehicle";
@@ -178,20 +178,20 @@ export async function reorderVehiclePhotos(
   orderedUrls: string[],
 ): Promise<void> {
   if (orderedUrls.length === 0) return;
-  await db.transaction(async (tx) => {
-    for (let i = 0; i < orderedUrls.length; i++) {
-      await tx
-        .update(vehicle_photos)
-        .set({ order_idx: i })
-        .where(
-          and(
-            eq(vehicle_photos.tenant_id, tenantId),
-            eq(vehicle_photos.vehicle_id, vehicleId),
-            eq(vehicle_photos.url, orderedUrls[i]),
-          ),
-        );
-    }
-  });
+  const caseExpr = sql`CASE ${vehicle_photos.url} ${sql.join(
+    orderedUrls.map((url, i) => sql`WHEN ${url} THEN ${i}`),
+    sql` `,
+  )} END`;
+  await db
+    .update(vehicle_photos)
+    .set({ order_idx: caseExpr })
+    .where(
+      and(
+        eq(vehicle_photos.tenant_id, tenantId),
+        eq(vehicle_photos.vehicle_id, vehicleId),
+        inArray(vehicle_photos.url, orderedUrls),
+      ),
+    );
 }
 
 // — Documents (anexos internos do veículo) ———————————————————————
