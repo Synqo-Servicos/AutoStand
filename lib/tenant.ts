@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import { getTenantByDomain, getTenantBySlug } from "@/lib/db";
 import { PLATFORM_DOMAIN_LC } from "@/lib/platform";
 import type { TenantRow } from "@/lib/schema";
@@ -41,6 +42,18 @@ export async function getRequestHost(): Promise<string> {
   return stripPort(h.get("host") ?? "");
 }
 
+const cachedGetTenantBySlug = unstable_cache(
+  (slug: string) => getTenantBySlug(slug),
+  ["tenant-slug"],
+  { revalidate: 60 },
+);
+
+const cachedGetTenantByDomain = unstable_cache(
+  (domain: string) => getTenantByDomain(domain),
+  ["tenant-domain"],
+  { revalidate: 60 },
+);
+
 /** Resolves the tenant for the current request, or null on a platform host. */
 export async function getCurrentTenant(): Promise<TenantRow | null> {
   const host = await getRequestHost();
@@ -49,17 +62,17 @@ export async function getCurrentTenant(): Promise<TenantRow | null> {
   // Dev convenience: pedro-ivo.localhost:3000
   if (host.endsWith(".localhost")) {
     const slug = host.slice(0, -".localhost".length);
-    return getTenantBySlug(slug);
+    return cachedGetTenantBySlug(slug);
   }
 
   // Subdomínio da plataforma: <slug>.autostand.com.br → resolve por slug.
   if (host.endsWith(`.${PLATFORM_DOMAIN}`)) {
     const slug = host.slice(0, -(PLATFORM_DOMAIN.length + 1));
-    return slug ? getTenantBySlug(slug) : null;
+    return slug ? cachedGetTenantBySlug(slug) : null;
   }
 
   // Qualquer outro host → domínio próprio configurado pelo tenant.
-  return getTenantByDomain(host);
+  return cachedGetTenantByDomain(host);
 }
 
 /** Like getCurrentTenant, but triggers a 404 when there is no active tenant. */

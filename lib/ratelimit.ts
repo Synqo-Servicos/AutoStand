@@ -74,10 +74,18 @@ export async function checkRateLimit(
   }
 }
 
-/** Extrai o IP do cliente a partir dos headers do request — Vercel popula
- *  `x-forwarded-for` com o IP real do edge. */
+/** Extrai o IP do cliente a partir dos headers do request.
+ *
+ *  Infraestrutura: CloudFront → ALB → ECS. A cadeia X-Forwarded-For é
+ *  `[spoofed?, real-client, cloudfront-edge]` — CloudFront acrescenta o
+ *  IP real do viewer; ALB acrescenta o edge do CloudFront. Pegar o
+ *  segundo-ao-último dá o IP real do viewer sem permitir spoofing pelo
+ *  primeiro campo controlado pelo cliente. */
 export function getClientIp(req: NextRequest): string {
   const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim();
+  if (xff) {
+    const ips = xff.split(",").map((s) => s.trim()).filter(Boolean);
+    return ips.length >= 2 ? ips[ips.length - 2] : ips[0];
+  }
   return req.headers.get("x-real-ip") ?? "unknown";
 }

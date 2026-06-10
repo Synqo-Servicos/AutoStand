@@ -14,3 +14,5 @@ const _client = createClient({
 
 export const db = drizzle(_client, { schema });
 export const client = _client;
+
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];

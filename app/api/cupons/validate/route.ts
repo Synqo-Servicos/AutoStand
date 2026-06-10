@@ -2,14 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCouponByCode } from "@/lib/db";
 import { getPlan, isPlanSlug } from "@/lib/plans";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
-
-function formatBRL(centavos: number): string {
-  return (centavos / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 2,
-  });
-}
+import { formatBRLFull } from "@/lib/money";
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
@@ -40,10 +33,10 @@ export async function GET(req: NextRequest) {
 
   if (coupon.discount_type === "percentage") {
     discountedCents = Math.round(plan.priceMonthly * (1 - (coupon.discount_value ?? 0) / 100));
-    preview = `${coupon.discount_value}% de desconto — ${formatBRL(discountedCents)}/mês`;
+    preview = `${coupon.discount_value}% de desconto — ${formatBRLFull(discountedCents)}/mês`;
   } else if (coupon.discount_type === "fixed") {
     discountedCents = Math.max(0, plan.priceMonthly - (coupon.discount_value ?? 0));
-    preview = `${formatBRL(coupon.discount_value ?? 0)} de desconto — ${formatBRL(discountedCents)}/mês`;
+    preview = `${formatBRLFull(coupon.discount_value ?? 0)} de desconto — ${formatBRLFull(discountedCents)}/mês`;
   } else {
     discountedCents = plan.priceMonthly;
     preview = "Primeiro mês grátis!";

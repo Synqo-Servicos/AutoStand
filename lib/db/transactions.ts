@@ -252,33 +252,33 @@ export async function getFinanceiroResumo(
   const period = periodWhere(filters);
   const likePattern = period ? `${period}%` : "%";
 
-  const vendas = (await db.get(sql`
-    SELECT
-      COALESCE(SUM(t.amount), 0)        AS receita,
-      COALESCE(SUM(v.cost_price), 0)    AS custos,
-      COUNT(*)                          AS units
-    FROM transactions t
-    LEFT JOIN vehicles v ON v.id = t.vehicle_id
-    WHERE t.tenant_id = ${tenantId}
-      AND t.type      = 'saida'
-      AND t.date LIKE ${likePattern}
-  `)) as { receita: number; custos: number; units: number };
-
-  const despesasDir = (await db.get(sql`
-    SELECT COALESCE(SUM(amount), 0) AS total
-    FROM transactions
-    WHERE tenant_id = ${tenantId}
-      AND type      = 'despesa_direta'
-      AND date LIKE ${likePattern}
-  `)) as { total: number };
-
-  const despesasOp = (await db.get(sql`
-    SELECT COALESCE(SUM(amount), 0) AS total
-    FROM transactions
-    WHERE tenant_id = ${tenantId}
-      AND type IN ('despesa_fixa', 'despesa_var', 'comissao')
-      AND date LIKE ${likePattern}
-  `)) as { total: number };
+  const [vendas, despesasDir, despesasOp] = await Promise.all([
+    db.get(sql`
+      SELECT
+        COALESCE(SUM(t.amount), 0)        AS receita,
+        COALESCE(SUM(v.cost_price), 0)    AS custos,
+        COUNT(*)                          AS units
+      FROM transactions t
+      LEFT JOIN vehicles v ON v.id = t.vehicle_id
+      WHERE t.tenant_id = ${tenantId}
+        AND t.type      = 'saida'
+        AND t.date LIKE ${likePattern}
+    `) as Promise<{ receita: number; custos: number; units: number }>,
+    db.get(sql`
+      SELECT COALESCE(SUM(amount), 0) AS total
+      FROM transactions
+      WHERE tenant_id = ${tenantId}
+        AND type      = 'despesa_direta'
+        AND date LIKE ${likePattern}
+    `) as Promise<{ total: number }>,
+    db.get(sql`
+      SELECT COALESCE(SUM(amount), 0) AS total
+      FROM transactions
+      WHERE tenant_id = ${tenantId}
+        AND type IN ('despesa_fixa', 'despesa_var', 'comissao')
+        AND date LIKE ${likePattern}
+    `) as Promise<{ total: number }>,
+  ]);
 
   const lucroBruto = vendas.receita - vendas.custos;
   const lucroLiquido = lucroBruto - despesasDir.total - despesasOp.total;

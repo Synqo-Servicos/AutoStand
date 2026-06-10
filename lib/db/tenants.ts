@@ -4,7 +4,7 @@ import {
   vehicle_documents, vehicle_photos, vehicles,
 } from "@/lib/schema";
 import type { NewTenant, TenantRow } from "@/lib/schema";
-import { db } from "./client";
+import { db, type Tx } from "./client";
 
 // — CRUD ———————————————————————————————————————————————————————
 
@@ -58,12 +58,13 @@ function pickTenantFields<T extends Record<string, unknown>>(input: T): Partial<
   return safe as Partial<T>;
 }
 
-export async function createTenant(input: NewTenant): Promise<TenantRow> {
+export async function createTenant(input: NewTenant, tx?: Tx): Promise<TenantRow> {
+  const orm = tx ?? db;
   const safe = pickTenantFields(input);
   if (!safe.slug || !safe.name) {
     throw new Error("Slug e nome são obrigatórios");
   }
-  const [row] = await db.insert(tenants).values(safe as NewTenant).returning();
+  const [row] = await orm.insert(tenants).values(safe as NewTenant).returning();
   return row;
 }
 

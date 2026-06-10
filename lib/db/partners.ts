@@ -1,7 +1,7 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { partners, tenants } from "@/lib/schema";
 import type { NewPartner, PartnerRow, TenantRow } from "@/lib/schema";
-import { db } from "./client";
+import { db, type Tx } from "./client";
 
 export async function listPartners(): Promise<PartnerRow[]> {
   return db.select().from(partners).orderBy(desc(partners.created_at));
@@ -66,8 +66,9 @@ export async function getTenantsReferredBy(partnerId: number): Promise<TenantRow
 }
 
 /** Soma 1 ao contador de cadastros atribuídos a um parceiro. */
-export async function incrementPartnerSignup(id: number): Promise<void> {
-  await db
+export async function incrementPartnerSignup(id: number, tx?: Tx): Promise<void> {
+  const orm = tx ?? db;
+  await orm
     .update(partners)
     .set({ signup_count: sql`${partners.signup_count} + 1` })
     .where(eq(partners.id, id));

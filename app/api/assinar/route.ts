@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import {
+  db,
   createTenant,
   createUser,
   getCouponByCode,
@@ -81,25 +82,32 @@ export async function POST(req: NextRequest) {
       if (!reserved) return bad("Cupom inválido ou expirado.");
     }
 
-    const tenant = await createTenant({
-      slug,
-      name: dealershipName,
-      plan,
-      status: "suspended",
-      subscription_status: "incomplete",
-      referred_by: partner?.id ?? null,
-      coupon_id: coupon?.id ?? null,
+    const tenant = await db.transaction(async (tx) => {
+      const t = await createTenant(
+        {
+          slug,
+          name: dealershipName,
+          plan,
+          status: "suspended",
+          subscription_status: "incomplete",
+          referred_by: partner?.id ?? null,
+          coupon_id: coupon?.id ?? null,
+        },
+        tx,
+      );
+      await createUser(
+        {
+          email: adminEmail,
+          password: await bcrypt.hash(adminPassword, 12),
+          name: adminName,
+          role: "tenant_admin",
+          tenant_id: t.id,
+        },
+        tx,
+      );
+      if (partner) await incrementPartnerSignup(partner.id, tx);
+      return t;
     });
-
-    await createUser({
-      email: adminEmail,
-      password: await bcrypt.hash(adminPassword, 12),
-      name: adminName,
-      role: "tenant_admin",
-      tenant_id: tenant.id,
-    });
-
-    if (partner) await incrementPartnerSignup(partner.id);
 
     const checkoutUrl = await createCheckoutSession(tenant, getPlan(plan), partner, coupon);
 

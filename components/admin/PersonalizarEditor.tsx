@@ -568,15 +568,18 @@ export function PersonalizarEditor({
             Pré-visualização do site
           </div>
           <div style={brandVars}>
-            <div style={{ zoom: 0.62 }}>
-              <StorefrontHero tenant={previewTenant} config={previewConfig} />
-              <div className="bg-slate-50 p-5">
-                <div
-                  className={`grid gap-4 ${cardsPerRow === 4 ? "grid-cols-4" : "grid-cols-3"}`}
-                >
-                  {previewVehicles.map((v) => (
-                    <VehicleCard key={v.id} vehicle={v} cardStyle={cardStyle} />
-                  ))}
+            {/* zoom não é padrão CSS — substituído por transform:scale para suporte cross-browser */}
+            <div style={{ overflow: "hidden" }}>
+              <div style={{ transform: "scale(0.62)", transformOrigin: "top left", width: "161.3%" }}>
+                <StorefrontHero tenant={previewTenant} config={previewConfig} />
+                <div className="bg-slate-50 p-5">
+                  <div
+                    className={`grid gap-4 ${cardsPerRow === 4 ? "grid-cols-4" : "grid-cols-3"}`}
+                  >
+                    {previewVehicles.map((v) => (
+                      <VehicleCard key={v.id} vehicle={v} cardStyle={cardStyle} />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
