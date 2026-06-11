@@ -72,8 +72,7 @@ jobs:
             AUTH_TRUST_HOST=true
             PLATFORM_DOMAIN=${{ secrets.PLATFORM_DOMAIN }}
             PLATFORM_HOSTS=${{ secrets.PLATFORM_HOSTS }}
-            TURSO_DATABASE_URL=${{ secrets.TURSO_DATABASE_URL }}
-            TURSO_AUTH_TOKEN=${{ secrets.TURSO_AUTH_TOKEN }}
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
             AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
             AWS_S3_REGION=${{ secrets.AWS_S3_REGION }}
             CDN_URL=${{ secrets.CDN_URL }}
