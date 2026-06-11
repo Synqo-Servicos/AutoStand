@@ -4,22 +4,7 @@ import { useState } from "react";
 import { Phone, Mail, MessageCircle, Trash2, Clock, ChevronDown } from "lucide-react";
 import type { LeadRow } from "@/lib/schema";
 import type { Vehicle } from "@/types/vehicle";
-
-/** Estágios do funil de leads, na ordem. */
-export const LEAD_STAGES = [
-  { key: "novo",        label: "Novo",          color: "bg-signal/10 text-signal ring-signal/40" },
-  { key: "contatado",   label: "Contatado",     color: "bg-warning/15 text-ink ring-warning/40" },
-  { key: "negociando",  label: "Em negociação", color: "bg-sky-100 text-ink ring-sky-300" },
-  { key: "convertido",  label: "Convertido",    color: "bg-success/15 text-ink ring-success/40" },
-  { key: "perdido",     label: "Perdido",       color: "bg-n100 text-n600 ring-n200" },
-] as const;
-
-const SOURCE_LABEL: Record<string, string> = {
-  site: "Site",
-  whatsapp: "WhatsApp",
-  manual: "Manual",
-  marketplace: "Marketplace",
-};
+import { LEAD_STAGES, LEAD_SOURCE_LABELS } from "@/lib/constants";
 
 /** Telefone digitado pelo visitante → número para o wa.me (com DDI 55). */
 function waNumber(raw: string): string {
@@ -105,7 +90,7 @@ export function LeadCard({ lead, vehicle, stale, onStatusChange, onContacted, on
       )}
 
       <div className="mt-2 flex items-center gap-2 text-[11px] text-n400">
-        <span>{SOURCE_LABEL[lead.source] ?? lead.source}</span>
+        <span>{LEAD_SOURCE_LABELS[lead.source as keyof typeof LEAD_SOURCE_LABELS] ?? lead.source}</span>
         <span>·</span>
         <span>{lead.created_at.slice(0, 10)}</span>
       </div>

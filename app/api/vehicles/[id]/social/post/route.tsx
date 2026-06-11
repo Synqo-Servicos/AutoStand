@@ -45,10 +45,10 @@ function formatPhone(raw: string | null): string | null {
 }
 
 const FONT_FILES = {
-  sora600: new URL("../../../../../lib/fonts/sora-latin-600-normal.woff", import.meta.url),
-  sora700: new URL("../../../../../lib/fonts/sora-latin-700-normal.woff", import.meta.url),
-  inter400: new URL("../../../../../lib/fonts/inter-latin-400-normal.woff", import.meta.url),
-  inter600: new URL("../../../../../lib/fonts/inter-latin-600-normal.woff", import.meta.url),
+  sora600: new URL("../../../../../../lib/fonts/sora-latin-600-normal.woff", import.meta.url),
+  sora700: new URL("../../../../../../lib/fonts/sora-latin-700-normal.woff", import.meta.url),
+  inter400: new URL("../../../../../../lib/fonts/inter-latin-400-normal.woff", import.meta.url),
+  inter600: new URL("../../../../../../lib/fonts/inter-latin-600-normal.woff", import.meta.url),
 };
 
 async function loadFont(url: URL): Promise<Buffer> {

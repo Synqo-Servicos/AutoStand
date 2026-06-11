@@ -6,7 +6,7 @@ import {
   UploadValidationError,
   uploadToBlob,
 } from "@/lib/blob";
-import { UPLOAD_KINDS, type UploadKind } from "@/lib/schemas";
+import { UPLOAD_KINDS, type UploadKind } from "@/lib/validation";
 
 /** Limites por tipo — logo é menor (otimização de bandwidth no rodapé). */
 const LIMITS: Record<UploadKind, number> = {

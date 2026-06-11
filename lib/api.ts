@@ -97,17 +97,6 @@ export async function parseBody<T>(req: NextRequest, schema: ZodSchema<T>): Prom
   return result.data;
 }
 
-/** Lê um inteiro positivo de um SearchParams, ou null. Throws em formato errado. */
-export function intParam(sp: URLSearchParams, key: string): number | null {
-  const raw = sp.get(key);
-  if (!raw) return null;
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
-    throw new ApiError(`Parâmetro ${key} inválido: esperado inteiro positivo.`);
-  }
-  return n;
-}
-
 function toErrorResponse(err: unknown): NextResponse {
   if (err instanceof ApiError) {
     return NextResponse.json({ error: err.message }, { status: err.status });

@@ -11,7 +11,7 @@ aliases:
 # Onboarding — Playbook de campo
 
 > [!abstract] O que é
-> O passo a passo para visitar uma multimarca, fechar e colocar a loja no ar. Enquanto o pagamento é manual (cobrança direta + mês grátis), todo o onboarding é feito pelo `/superadmin` — sem Stripe.
+> O passo a passo para visitar uma multimarca, fechar e colocar a loja no ar. Enquanto o pagamento é manual (cobrança direta + mês grátis), todo o onboarding é feito pelo `/superadmin` — sem billing automático.
 
 ## O movimento que fecha
 
@@ -54,4 +54,4 @@ Junte do Instagram/OLX da loja, ou ligue pedindo:
 ## Pendências de plataforma
 
 - Deploy precisa estar feito antes das visitas — ver [[Desenvolvimento#Deploy (Vercel)]].
-- Billing automático (Stripe) é [[Milestone 2]] Fase 2 — adiado até haver volume que justifique.
+- Billing automático (Mercado Pago) é [[Milestone 2]] Fase 2 — adiado até haver volume que justifique.

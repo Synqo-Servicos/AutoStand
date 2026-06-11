@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createVehicle, listVehicles, type VehicleFilters } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { parseBody, withTenant } from "@/lib/api";
-import { vehicleInputSchema } from "@/lib/schemas";
+import { vehicleInputSchema } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
   // Listagem é pública pelo storefront (resolve tenant pelo host), por isso

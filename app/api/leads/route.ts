@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createLead, listLeads } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { ApiError, parseBody, withTenant } from "@/lib/api";
-import { publicLeadSchema } from "@/lib/schemas";
+import { publicLeadSchema } from "@/lib/validation";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 
 // Admin: list this tenant's leads.

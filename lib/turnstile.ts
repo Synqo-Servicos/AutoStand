@@ -20,10 +20,6 @@ interface TurnstileResponse {
   "error-codes"?: string[];
 }
 
-export function turnstileEnabled(): boolean {
-  return Boolean(SECRET);
-}
-
 /**
  * Verifica o token devolvido pelo widget. Retorna `true` quando:
  *  - Turnstile está desabilitado (no-op)

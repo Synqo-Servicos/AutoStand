@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import type { LeadRow } from "@/lib/schema";
 import type { Vehicle } from "@/types/vehicle";
-import { LeadCard, LEAD_STAGES } from "@/components/admin/LeadCard";
+import { LeadCard } from "@/components/admin/LeadCard";
+import { LEAD_STAGES } from "@/lib/constants";
 
 type StageKey = (typeof LEAD_STAGES)[number]["key"];
 

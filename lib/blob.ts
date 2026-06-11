@@ -23,8 +23,8 @@ export {
  *  4) MIME declarado bate com o detectado (proteção extra)
  *
  * Storage:
- *  - Em prod (Vercel) com BLOB_READ_WRITE_TOKEN setado: @vercel/blob
- *  - Em dev sem token: filesystem stub em public/uploads/dev/
+ *  - Com S3 configurado (HAS_S3): bucket S3 via s3Put/s3Delete
+ *  - Em dev sem S3: filesystem stub em public/uploads/dev/
  *    (Next serve /public direto)
  */
 

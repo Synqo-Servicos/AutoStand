@@ -5,14 +5,7 @@ import { useRouter } from "next/navigation";
 import { PLAN_SLUGS, PLANS, type PlanSlug } from "@/lib/plans";
 import { normalizeSlug, slugError } from "@/lib/slug";
 import { Turnstile, isTurnstileEnabled } from "@/components/Turnstile";
-
-function formatBRL(cents: number): string {
-  return (cents / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  });
-}
+import { formatBRL } from "@/lib/money";
 
 const inputClass =
   "w-full rounded-lg border border-n200 bg-white px-3 py-2 text-body text-ink " +

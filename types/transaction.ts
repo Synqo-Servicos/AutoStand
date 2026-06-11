@@ -1,10 +1,5 @@
-export type TransactionType =
-  | "entrada"
-  | "saida"
-  | "despesa_direta"
-  | "despesa_fixa"
-  | "despesa_var"
-  | "comissao";
+import type { TransactionType } from "@/lib/constants";
+export type { TransactionType };
 
 export interface Transaction {
   id: number;
@@ -28,18 +23,3 @@ export interface TransactionWithVehicle extends Transaction {
   vehicle_model: string | null;
   vehicle_year: number | null;
 }
-
-/** Tipos que requerem vehicle_id obrigatório. */
-export const VEHICLE_TYPES = new Set<TransactionType>([
-  "entrada",
-  "saida",
-  "despesa_direta",
-]);
-
-/** Tipos que são "despesa" (saem do caixa). */
-export const EXPENSE_TYPES = new Set<TransactionType>([
-  "despesa_direta",
-  "despesa_fixa",
-  "despesa_var",
-  "comissao",
-]);

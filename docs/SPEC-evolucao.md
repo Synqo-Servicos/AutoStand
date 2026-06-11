@@ -20,7 +20,7 @@ Existe ainda um console super-admin para a operação da plataforma (cadastrar t
 
 ### 1.2 Mapa arquitetural
 
-**Stack:** Next.js 15 (App Router), Drizzle ORM sobre libSQL/Turso, NextAuth v5 (JWT + Credentials), Tailwind v4 com tokens semânticos, deploy Vercel, IA via Anthropic SDK, storage via `@vercel/blob`, billing via Stripe.
+**Stack:** Next.js 15 (App Router), Drizzle ORM sobre libSQL/Turso, NextAuth v5 (JWT + Credentials), Tailwind v4 com tokens semânticos, deploy Vercel, IA via Anthropic SDK, storage via `@vercel/blob`, billing via Mercado Pago.
 
 **Modelo de tenancy:** "shared database, `tenant_id` em toda linha de domínio". Resolução por host (`lib/tenant.ts`):
 

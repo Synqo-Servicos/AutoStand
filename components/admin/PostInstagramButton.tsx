@@ -65,13 +65,13 @@ function PostSlideOver({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const imgUrl = `/api/veiculos/${vehicleId}/post?v=${imgVersion}`;
+  const imgUrl = `/api/vehicles/${vehicleId}/social/post?v=${imgVersion}`;
 
   const gerarLegenda = useCallback(async () => {
     setLoadingLegenda(true);
     setError(null);
     try {
-      const res = await fetch(`/api/veiculos/${vehicleId}/legenda`, { method: "POST" });
+      const res = await fetch(`/api/vehicles/${vehicleId}/social/caption`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erro ao gerar a legenda");
       setLegenda(data.legenda);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createTransaction, listTransactions } from "@/lib/db";
 import { parseBody, withTenant } from "@/lib/api";
-import { transactionInputSchema } from "@/lib/schemas";
+import { transactionInputSchema } from "@/lib/validation";
 
 export const GET = withTenant(async (req, { tenantId }) => {
   const sp = (req as NextRequest).nextUrl.searchParams;

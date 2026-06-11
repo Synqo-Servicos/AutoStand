@@ -5,7 +5,7 @@ import { deleteFromBlob } from "@/lib/blob";
 import { getTenantById, updateTenant } from "@/lib/db";
 import { capabilitiesFor } from "@/lib/plans";
 import { resolveLayoutConfig, sanitizeLayoutConfig } from "@/lib/layout";
-import { tenantStorefrontSchema } from "@/lib/schemas";
+import { tenantStorefrontSchema } from "@/lib/validation";
 import type { NewTenant } from "@/lib/schema";
 
 /**

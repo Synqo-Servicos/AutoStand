@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
 import type { TenantRow } from "@/lib/schema";
 import { PLAN_SLUGS, PLANS } from "@/lib/plans";
+import { normalizeSlug } from "@/lib/slug";
 
 interface Props {
   tenant?: TenantRow;
@@ -15,15 +16,6 @@ const OPTIONAL_FIELDS = [
   "city", "whatsapp_number", "instagram_url", "business_hours", "contact_email",
   "plan",
 ] as const;
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 export function TenantForm({ tenant }: Props) {
   const router = useRouter();
@@ -60,7 +52,7 @@ export function TenantForm({ tenant }: Props) {
     setForm((f) => ({
       ...f,
       name: value,
-      slug: slugTouched ? f.slug : slugify(value),
+      slug: slugTouched ? f.slug : normalizeSlug(value),
     }));
   }
 
@@ -134,7 +126,7 @@ export function TenantForm({ tenant }: Props) {
               value={form.slug}
               onChange={(e) => {
                 setSlugTouched(true);
-                set("slug", slugify(e.target.value));
+                set("slug", normalizeSlug(e.target.value));
               }}
               className={inputClass}
               placeholder="pedro-ivo"

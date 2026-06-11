@@ -39,7 +39,7 @@ graph LR
 ## Milestones
 
 - [[Milestone 1]] — **Multi-tenancy** ✅ — transformou o site single-tenant num SaaS whitelabel multi-tenant.
-- [[Milestone 2]] — **Self-service + Billing** 🔨 — cadastro automático, Stripe, customização escalonada por plano. Falta só o pagamento.
+- [[Milestone 2]] — **Self-service + Billing** 🔨 — cadastro automático, Mercado Pago, customização escalonada por plano. Falta só o pagamento.
 - [[Milestone 4]] — **Distribuição & Marketplace** 🔨 — post de Instagram, marketplace multimarca AutoStand, feeds para portais. Fases 1–3 concluídas.
 - [[Milestone 3]] — **Automação** 🔨 — o motor de retenção: funil de leads e WhatsApp assistido concluídos; automação via Cloud API e histórico de contato pendentes.
 - [[Milestone 5]] — **Inteligência de Demanda** 🔨 — o que o mercado procura: captura anônima de buscas/visualizações, painel de demanda e dicas por IA. Fases 1–3 concluídas.

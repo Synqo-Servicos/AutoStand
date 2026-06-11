@@ -6,7 +6,7 @@ import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
 import { Button, toast } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { IMAGE_MIMES, MB } from "@/lib/blob-constants";
-import type { UploadKind } from "@/lib/schemas";
+import type { UploadKind } from "@/lib/validation";
 
 const ACCEPT = IMAGE_MIMES.join(",");
 

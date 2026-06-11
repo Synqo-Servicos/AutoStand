@@ -99,6 +99,13 @@
       "when": 1781052410664,
       "tag": "0013_sweet_chameleon",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1781147460015,
+      "tag": "0014_drop_stripe_columns",
+      "breakpoints": true
     }
   ]
 }

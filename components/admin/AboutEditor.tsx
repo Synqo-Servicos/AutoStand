@@ -23,7 +23,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Button, Modal, toast } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { ABOUT_ICON_MAP, iconForSlug } from "@/lib/about-icons";
-import { ABOUT_ICONS, type AboutIcon } from "@/lib/schemas";
+import { ABOUT_ICONS, type AboutIcon } from "@/lib/validation";
 import type { TenantAboutItemRow } from "@/lib/schema";
 
 const MAX_ITEMS = 6;

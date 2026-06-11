@@ -11,6 +11,10 @@
  */
 
 import { z } from "zod";
+import {
+  CONDITIONS, FUELS, LEAD_SOURCES, LEAD_STATUS,
+  TRANSACTION_TYPES, TRANSMISSIONS, TX_REQUIRES_VEHICLE, VEHICLE_STATUS,
+} from "@/lib/constants";
 
 const positiveInt = z.number().int().positive();
 const nonNegativeInt = z.number().int().min(0);
@@ -19,11 +23,8 @@ const trimmed = (max: number) => z.string().trim().max(max);
 const required = (max: number) => z.string().trim().min(1).max(max);
 
 // ---------- Vehicles ----------
-
-const TRANSMISSIONS = ["automatico", "manual", "cvt", "semi_automatico"] as const;
-const FUELS = ["flex", "gasolina", "diesel", "etanol", "hibrido", "eletrico", "gnv"] as const;
-const CONDITIONS = ["novo", "seminovo", "usado"] as const;
-const VEHICLE_STATUS = ["disponivel", "reservado", "vendido"] as const;
+// Enums de domínio vêm de lib/constants.ts (fonte única) — importados, não
+// redeclarados, pra não divergir dos labels da UI.
 
 export const vehicleInputSchema = z.object({
   brand: required(80),
@@ -54,14 +55,9 @@ export const vehicleUpdateSchema = vehicleInputSchema.partial();
 
 // ---------- Transactions ----------
 
-const TX_TYPES = [
-  "entrada", "saida", "despesa_direta", "despesa_fixa", "despesa_var", "comissao",
-] as const;
-const TX_REQUIRES_VEHICLE = new Set(["entrada", "saida", "despesa_direta"]);
-
 export const transactionInputSchema = z
   .object({
-    type: z.enum(TX_TYPES),
+    type: z.enum(TRANSACTION_TYPES),
     amount: nonNegativeInt,
     date: isoDate,
     vehicle_id: positiveInt.nullable().optional(),
@@ -89,7 +85,7 @@ export const transactionInputSchema = z
   });
 
 export const transactionUpdateSchema = z.object({
-  type: z.enum(TX_TYPES).optional(),
+  type: z.enum(TRANSACTION_TYPES).optional(),
   amount: nonNegativeInt.optional(),
   date: isoDate.optional(),
   vehicle_id: positiveInt.nullable().optional(),
@@ -112,7 +108,8 @@ export const sellerInputSchema = z.object({
     .optional(),
   document: trimmed(20).nullable().optional(),
   photo_url: z.string().url().nullable().optional(),
-  commission_pct: z.number().int().min(0).max(100).nullable().optional(),
+  // centésimos de % (basis points): 10000 = 100%. Ver types/seller.ts.
+  commission_pct: z.number().int().min(0).max(10000).nullable().optional(),
   commission_fixed_cents: nonNegativeInt.nullable().optional(),
   status: z.enum(["ativo", "desligado"]).optional(),
 });
@@ -120,9 +117,6 @@ export const sellerInputSchema = z.object({
 export const sellerUpdateSchema = sellerInputSchema.partial();
 
 // ---------- Leads ----------
-
-const LEAD_SOURCES = ["site", "whatsapp", "manual"] as const;
-const LEAD_STATUS = ["novo", "contatado", "negociando", "convertido", "perdido"] as const;
 
 /** Form público do storefront ou marketplace — sem autenticação. */
 export const publicLeadSchema = z.object({
@@ -227,4 +221,30 @@ export const leadUpdateSchema = z.object({
     .transform((v) => (v === "" ? null : v))
     .nullable()
     .optional(),
+});
+
+// ---------- Superadmin: cupons & marketplace ----------
+
+export const createCouponSchema = z.object({
+  code: z.string().trim().min(3, "O código precisa de ao menos 3 caracteres.").max(50).transform((s) => s.toUpperCase()),
+  description: z.string().trim().max(200).optional().nullable().transform((v) => v || null),
+  discount_type: z.enum(["percentage", "fixed", "free_month"], {
+    error: "Tipo de desconto inválido.",
+  }),
+  discount_value: z.number().optional(),
+  max_uses: z.number().int().min(1).default(1),
+  expires_at: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida — use YYYY-MM-DD.")
+    .optional()
+    .nullable()
+    .transform((v) => v || null),
+  partner_id: z
+    .union([z.number().int().positive(), z.literal(""), z.null()])
+    .optional()
+    .transform((v) => (v == null || v === "" ? null : Number(v))),
+});
+
+export const marketplaceOptInSchema = z.object({
+  marketplace_opt_in: z.boolean(),
 });

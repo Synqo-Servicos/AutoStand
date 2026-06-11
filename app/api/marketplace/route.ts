@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { ApiError, parseBody, withTenant } from "@/lib/api";
 import { updateTenant } from "@/lib/db";
-
-const marketplaceOptInSchema = z.object({
-  marketplace_opt_in: z.boolean(),
-});
+import { marketplaceOptInSchema } from "@/lib/validation";
 
 /**
  * Adesão da concessionária ao marketplace AutoStand.
