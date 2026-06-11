@@ -2,7 +2,7 @@ name: Deploy Homologation
 
 on:
   push:
-    branches: [homolog]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
