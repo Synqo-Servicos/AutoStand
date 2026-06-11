@@ -2,7 +2,7 @@ import { and, desc, eq, getTableColumns, inArray, like, sql } from "drizzle-orm"
 import { sellers, transactions, vehicles } from "@/lib/schema";
 import type { TransactionRow } from "@/lib/schema";
 import type { Transaction, TransactionInput, TransactionWithVehicle } from "@/types/transaction";
-import { db } from "./client";
+import { db, dbAll, dbGet } from "./client";
 import { computeCommission } from "./sellers";
 
 // — Filters / listing ———————————————————————————————————————————
@@ -253,7 +253,7 @@ export async function getFinanceiroResumo(
   const likePattern = period ? `${period}%` : "%";
 
   const [vendas, despesasDir, despesasOp] = await Promise.all([
-    db.get(sql`
+    dbGet(sql`
       SELECT
         COALESCE(SUM(t.amount), 0)        AS receita,
         COALESCE(SUM(v.cost_price), 0)    AS custos,
@@ -264,14 +264,14 @@ export async function getFinanceiroResumo(
         AND t.type      = 'saida'
         AND t.date LIKE ${likePattern}
     `) as Promise<{ receita: number; custos: number; units: number }>,
-    db.get(sql`
+    dbGet(sql`
       SELECT COALESCE(SUM(amount), 0) AS total
       FROM transactions
       WHERE tenant_id = ${tenantId}
         AND type      = 'despesa_direta'
         AND date LIKE ${likePattern}
     `) as Promise<{ total: number }>,
-    db.get(sql`
+    dbGet(sql`
       SELECT COALESCE(SUM(amount), 0) AS total
       FROM transactions
       WHERE tenant_id = ${tenantId}
@@ -301,7 +301,7 @@ export async function getFinanceiroPorVeiculo(
   const period = periodWhere(filters);
   const likePattern = period ? `${period}%` : "%";
 
-  return (await db.all(sql`
+  return (await dbAll(sql`
     SELECT
       v.id                          AS vehicle_id,
       v.brand                       AS brand,
@@ -338,7 +338,7 @@ export async function getOperationalExpenses(
   const period = periodWhere(filters);
   const likePattern = period ? `${period}%` : "%";
 
-  return (await db.all(sql`
+  return (await dbAll(sql`
     SELECT id, type, category, amount, date, notes, seller_id
     FROM transactions
     WHERE tenant_id = ${tenantId}

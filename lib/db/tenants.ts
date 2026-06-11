@@ -4,7 +4,7 @@ import {
   vehicle_documents, vehicle_photos, vehicles,
 } from "@/lib/schema";
 import type { NewTenant, TenantRow } from "@/lib/schema";
-import { db, type Tx } from "./client";
+import { db, dbAll, dbGet, type Tx } from "./client";
 
 // — CRUD ———————————————————————————————————————————————————————
 
@@ -154,11 +154,11 @@ export interface PlatformStats {
 }
 
 export async function getPlatformStats(): Promise<PlatformStats> {
-  const byStatus = (await db.all(sql`
+  const byStatus = (await dbAll(sql`
     SELECT status, COUNT(*) as count FROM tenants GROUP BY status
   `)) as { status: string; count: number }[];
-  const vehicleCount = (await db.get(sql`SELECT COUNT(*) as c FROM vehicles`)) as { c: number };
-  const leadCount = (await db.get(sql`SELECT COUNT(*) as c FROM leads`)) as { c: number };
+  const vehicleCount = (await dbGet(sql`SELECT COUNT(*) as c FROM vehicles`)) as { c: number };
+  const leadCount = (await dbGet(sql`SELECT COUNT(*) as c FROM leads`)) as { c: number };
 
   const active = byStatus.find((r) => r.status === "active")?.count ?? 0;
   const suspended = byStatus.find((r) => r.status === "suspended")?.count ?? 0;
@@ -178,7 +178,7 @@ export interface TenantWithStats extends TenantRow {
 }
 
 export async function listTenantsWithStats(): Promise<TenantWithStats[]> {
-  return (await db.all(sql`
+  return (await dbAll(sql`
     SELECT t.*,
       (SELECT COUNT(*) FROM vehicles v WHERE v.tenant_id = t.id) as vehicle_count,
       (SELECT COUNT(*) FROM leads l WHERE l.tenant_id = t.id) as lead_count

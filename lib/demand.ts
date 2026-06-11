@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import { demand_events } from "@/lib/schema";
 
@@ -125,7 +125,7 @@ export async function getDemandSnapshot(scope: Scope): Promise<DemandSnapshot> {
   const base = (type: "search" | "view") =>
     and(scopeCond, gte(demand_events.created_at, since), eq(demand_events.event_type, type));
 
-  async function rankBy(column: SQLiteColumn, type: "search" | "view"): Promise<RankItem[]> {
+  async function rankBy(column: PgColumn, type: "search" | "view"): Promise<RankItem[]> {
     const rows = await db
       .select({ label: column, count: sql<number>`count(*)` })
       .from(demand_events)

@@ -1,1 +1,0 @@
-ALTER TABLE `tenants` ADD `mp_subscription_id` text;

@@ -347,7 +347,7 @@ async function main() {
   console.log("  AutoPrime (Prem)  admin@autoprime.com / demo123             → autoprime.localhost:3000");
   console.log("  Garagem 082 (Pro) admin@garagem082.com.br / garagem123      → garagem082.localhost:3000");
   console.log("  Premium Motors    admin@premiummotors.com.br / premium123   → premiummotors.localhost:3000");
-  client.close();
+  client.end();
 }
 
 main().catch((err) => {

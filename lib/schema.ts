@@ -1,5 +1,4 @@
-import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { boolean, index, integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import type { LayoutConfig } from "./layout";
 
 /**
@@ -14,8 +13,8 @@ import type { LayoutConfig } from "./layout";
 
 // --- Tenants (dealership clients) ---
 
-export const tenants = sqliteTable("tenants", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const tenants = pgTable("tenants", {
+  id: serial("id").primaryKey(),
   /** Stable identifier — used for the platform subdomain and dev override. */
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
@@ -61,27 +60,27 @@ export const tenants = sqliteTable("tenants", {
   referred_by: integer("referred_by").references(() => partners.id, { onDelete: "set null" }),
 
   /** Customização de layout (Fase 4). JSON; null = usar DEFAULT_LAYOUT_CONFIG. */
-  layout_config: text("layout_config", { mode: "json" }).$type<LayoutConfig>(),
+  layout_config: jsonb("layout_config").$type<LayoutConfig>(),
 
   /** Concessionária optou por aparecer no marketplace AutoStand. */
-  marketplace_opt_in: integer("marketplace_opt_in", { mode: "boolean" })
+  marketplace_opt_in: boolean("marketplace_opt_in")
     .notNull()
     .default(false),
 
   /** Bancos parceiros — slugs de `lib/banks.ts`. Logos aparecem no site público. */
-  partner_banks: text("partner_banks", { mode: "json" }).$type<string[]>().default([]),
+  partner_banks: jsonb("partner_banks").$type<string[]>().default([]),
 
   /** Cupom de desconto aplicado na assinatura. */
   coupon_id: integer("coupon_id").references(() => coupons.id, { onDelete: "set null" }),
 
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updated_at: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updated_at: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 });
 
 // --- Users (staff only — no consumer accounts) ---
 
-export const users = sqliteTable("users", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
   /** Null for super_admin (platform owner); set for tenant staff. */
   tenant_id: integer("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
   email: text("email").notNull().unique(),
@@ -89,13 +88,13 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   /** 'super_admin' | 'tenant_admin' */
   role: text("role").notNull().default("tenant_admin"),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 });
 
 // --- Tenant about items (CRUD da seção "Sobre" do storefront) ---
 
-export const tenant_about_items = sqliteTable("tenant_about_items", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const tenant_about_items = pgTable("tenant_about_items", {
+  id: serial("id").primaryKey(),
   tenant_id: integer("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
@@ -105,15 +104,15 @@ export const tenant_about_items = sqliteTable("tenant_about_items", {
   icon_slug: text("icon_slug").notNull().default("ShieldCheck"),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   byTenantPosition: index("idx_about_tenant_position").on(table.tenant_id, table.position),
 }));
 
 // --- Vehicles ---
 
-export const vehicles = sqliteTable("vehicles", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const vehicles = pgTable("vehicles", {
+  id: serial("id").primaryKey(),
   tenant_id: integer("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
@@ -137,11 +136,11 @@ export const vehicles = sqliteTable("vehicles", {
   /** 'novo' | 'seminovo' | 'usado' */
   condition: text("condition").notNull().default("seminovo"),
   /** Opcionais — JSON array de strings (ar-condicionado, multimídia, ...). */
-  optionals: text("optionals", { mode: "json" }).$type<string[]>(),
+  optionals: jsonb("optionals").$type<string[]>(),
   /** Blindado. */
-  armored: integer("armored", { mode: "boolean" }).notNull().default(false),
+  armored: boolean("armored").notNull().default(false),
   /** Único dono — argumento de venda exibido no post. */
-  single_owner: integer("single_owner", { mode: "boolean" }).notNull().default(false),
+  single_owner: boolean("single_owner").notNull().default(false),
   /** Placa Mercosul/antiga. Permite consulta automática de dados. */
   plate: text("plate"),
   /** Código FIPE — ajuda a casar com a taxonomia dos portais. */
@@ -149,8 +148,8 @@ export const vehicles = sqliteTable("vehicles", {
   description: text("description"),
   status: text("status").notNull().default("disponivel"),
   primary_photo_url: text("primary_photo_url"),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updated_at: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+  updated_at: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   // Listagens do admin filtram por (tenant_id, status) e ordenam por
   // updated_at. Sem índice, cada chamada do dashboard/listagem é
@@ -161,8 +160,8 @@ export const vehicles = sqliteTable("vehicles", {
 
 // --- Vehicle photos ---
 
-export const vehicle_photos = sqliteTable("vehicle_photos", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const vehicle_photos = pgTable("vehicle_photos", {
+  id: serial("id").primaryKey(),
   tenant_id: integer("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
@@ -171,7 +170,7 @@ export const vehicle_photos = sqliteTable("vehicle_photos", {
     .references(() => vehicles.id, { onDelete: "cascade" }),
   url: text("url").notNull(),
   order_idx: integer("order_idx").notNull().default(0),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   // Toda leitura é "fotos do veículo X do tenant Y, ordem N".
   byTenantVehicle: index("idx_photos_tenant_vehicle").on(table.tenant_id, table.vehicle_id),
@@ -179,8 +178,8 @@ export const vehicle_photos = sqliteTable("vehicle_photos", {
 
 // --- Vehicle documents (anexos do estoque — controle interno) ---
 
-export const vehicle_documents = sqliteTable("vehicle_documents", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const vehicle_documents = pgTable("vehicle_documents", {
+  id: serial("id").primaryKey(),
   tenant_id: integer("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
@@ -199,15 +198,15 @@ export const vehicle_documents = sqliteTable("vehicle_documents", {
   mime_type: text("mime_type"),
   /** Usuário que fez o upload. */
   uploaded_by: integer("uploaded_by").references(() => users.id, { onDelete: "set null" }),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   byTenantVehicle: index("idx_docs_tenant_vehicle").on(table.tenant_id, table.vehicle_id),
 }));
 
 // --- Transactions ---
 
-export const transactions = sqliteTable("transactions", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
   tenant_id: integer("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
@@ -234,7 +233,7 @@ export const transactions = sqliteTable("transactions", {
   buyer_name: text("buyer_name"),
   buyer_phone: text("buyer_phone"),
   notes: text("notes"),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   // Relatório financeiro filtra por (tenant_id, date) num intervalo.
   byTenantDate: index("idx_tx_tenant_date").on(table.tenant_id, table.date),
@@ -244,8 +243,8 @@ export const transactions = sqliteTable("transactions", {
 
 // --- Sellers (vendedores da concessionária) ---
 
-export const sellers = sqliteTable("sellers", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const sellers = pgTable("sellers", {
+  id: serial("id").primaryKey(),
   tenant_id: integer("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
@@ -262,15 +261,15 @@ export const sellers = sqliteTable("sellers", {
   commission_fixed_cents: integer("commission_fixed_cents"),
   /** 'ativo' | 'desligado' */
   status: text("status").notNull().default("ativo"),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   byTenantStatus: index("idx_sellers_tenant_status").on(table.tenant_id, table.status),
 }));
 
 // --- Leads (lightweight CRM — feeds email/WhatsApp campaigns) ---
 
-export const leads = sqliteTable("leads", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const leads = pgTable("leads", {
+  id: serial("id").primaryKey(),
   tenant_id: integer("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
@@ -284,7 +283,7 @@ export const leads = sqliteTable("leads", {
   source: text("source").notNull().default("site"),
   /** 'novo' | 'contatado' | 'negociando' | 'convertido' | 'perdido' */
   status: text("status").notNull().default("novo"),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   // Kanban do CRM filtra por status; timeline ordena por created_at desc.
   byTenantStatus: index("idx_leads_tenant_status").on(table.tenant_id, table.status),
@@ -293,8 +292,8 @@ export const leads = sqliteTable("leads", {
 
 // --- Partners (links de desconto / atribuição) ---
 
-export const partners = sqliteTable("partners", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const partners = pgTable("partners", {
+  id: serial("id").primaryKey(),
   name: text("name").notNull(),
   /** Código usado no link de cadastro: ?parceiro=CODE */
   code: text("code").notNull().unique(),
@@ -310,13 +309,13 @@ export const partners = sqliteTable("partners", {
   max_uses: integer("max_uses"),
   /** Validade do código (data ISO YYYY-MM-DD). Null = sem validade. */
   expires_at: text("expires_at"),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 });
 
 // --- Coupons (sistema de cupons de desconto) ---
 
-export const coupons = sqliteTable("coupons", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const coupons = pgTable("coupons", {
+  id: serial("id").primaryKey(),
   code: text("code").notNull().unique(),
   description: text("description"),
   /** 'percentage' | 'fixed' | 'free_month' */
@@ -329,13 +328,13 @@ export const coupons = sqliteTable("coupons", {
   /** FK para users.id — sem .references() para evitar referência circular tenants→coupons→users→tenants. */
   created_by: integer("created_by").notNull(),
   partner_id: integer("partner_id").references(() => partners.id, { onDelete: "set null" }),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 });
 
 // --- Demand events (inteligência de demanda — eventos anônimos) ---
 
-export const demand_events = sqliteTable("demand_events", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const demand_events = pgTable("demand_events", {
+  id: serial("id").primaryKey(),
   /** Loja onde o evento ocorreu. Null = busca no marketplace AutoStand. */
   tenant_id: integer("tenant_id").references(() => tenants.id, { onDelete: "set null" }),
   /** 'search' | 'view' */
@@ -354,7 +353,7 @@ export const demand_events = sqliteTable("demand_events", {
   search_term: text("search_term"),
   /** Visualização: id do veículo visto. */
   vehicle_id: integer("vehicle_id"),
-  created_at: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   // Inteligência de demanda agrega por janela temporal e tipo de evento.
   byTenantCreated: index("idx_demand_tenant_created").on(table.tenant_id, table.created_at),

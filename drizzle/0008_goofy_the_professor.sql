@@ -1,1 +1,0 @@
-ALTER TABLE `tenants` ADD `partner_banks` text DEFAULT '[]';
