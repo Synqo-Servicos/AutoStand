@@ -13,12 +13,12 @@ async function main() {
   const tenant = await getTenantBySlug(slug);
   if (!tenant) {
     console.log(`Concessionária "${slug}" não encontrada — nada a fazer.`);
-    client.close();
+    client.end();
     return;
   }
   await deleteTenant(tenant.id);
   console.log(`✓ Concessionária "${tenant.name}" (${slug}) e seus dados foram removidos.`);
-  client.close();
+  client.end();
 }
 
 main().catch((err) => {

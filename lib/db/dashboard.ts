@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DashboardStats, MonthlyData, StockByStatus } from "@/types/dashboard";
-import { db } from "./client";
+import { db, dbAll, dbGet } from "./client";
 
 /**
  * KPIs do dashboard admin (single tenant). Cinco queries paralelizáveis,
@@ -12,34 +12,34 @@ export async function getDashboardStats(tenantId: number): Promise<DashboardStat
   const now = new Date();
   const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-  const stockByStatus = (await db.all(sql`
+  const stockByStatus = (await dbAll(sql`
     SELECT status, COUNT(*) as count
     FROM vehicles
     WHERE tenant_id = ${tenantId}
     GROUP BY status
   `)) as StockByStatus[];
 
-  const monthlySales = (await db.get(sql`
+  const monthlySales = (await dbGet(sql`
     SELECT COUNT(*) as units, COALESCE(SUM(amount), 0) as revenue
     FROM transactions
     WHERE tenant_id = ${tenantId} AND type = 'saida' AND date LIKE ${`${monthStr}%`}
   `)) as { units: number; revenue: number };
 
-  const totalCostValue = (await db.get(sql`
+  const totalCostValue = (await dbGet(sql`
     SELECT COALESCE(SUM(cost_price), 0) as total
     FROM vehicles
     WHERE tenant_id = ${tenantId} AND status != 'vendido'
   `)) as { total: number };
 
-  const monthlyProfit = (await db.get(sql`
+  const monthlyProfit = (await dbGet(sql`
     SELECT COALESCE(SUM(t.amount - v.cost_price), 0) as profit
     FROM transactions t
     JOIN vehicles v ON v.id = t.vehicle_id
     WHERE t.tenant_id = ${tenantId} AND t.type = 'saida' AND t.date LIKE ${`${monthStr}%`}
   `)) as { profit: number };
 
-  const monthly = (await db.all(sql`
-    SELECT strftime('%Y-%m', t.date) as month,
+  const monthly = (await dbAll(sql`
+    SELECT left(t.date, 7) as month,
            SUM(t.amount) as revenue,
            SUM(t.amount - v.cost_price) as profit,
            COUNT(*) as units

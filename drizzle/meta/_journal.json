@@ -1,110 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1778885659293,
-      "tag": "0000_known_ikaris",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1778906363036,
-      "tag": "0001_overjoyed_the_renegades",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1778971887743,
-      "tag": "0002_glamorous_mercury",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1778990830499,
-      "tag": "0003_boring_zzzax",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1779074089828,
-      "tag": "0004_awesome_exiles",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1779105724110,
-      "tag": "0005_romantic_doctor_strange",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1779389095710,
-      "tag": "0006_chief_tinkerer",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1779390222025,
-      "tag": "0007_early_hardball",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1779393104627,
-      "tag": "0008_goofy_the_professor",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1779399283139,
-      "tag": "0009_lush_orphan",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1779856950732,
-      "tag": "0010_medical_xavin",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "6",
-      "when": 1779917608600,
-      "tag": "0011_new_invisible_woman",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "6",
-      "when": 1780890544722,
-      "tag": "0012_flashy_naoko",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "6",
-      "when": 1781052410664,
-      "tag": "0013_sweet_chameleon",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "6",
-      "when": 1781147460015,
-      "tag": "0014_drop_stripe_columns",
+      "version": "7",
+      "when": 1781198461135,
+      "tag": "0000_init_postgres",
       "breakpoints": true
     }
   ]

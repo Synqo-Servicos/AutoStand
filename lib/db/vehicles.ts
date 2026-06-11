@@ -36,7 +36,7 @@ export async function listVehicles(
   if (filters.price_max) conditions.push(sql`${vehicles.sale_price} <= ${filters.price_max}`);
   if (filters.search) {
     conditions.push(
-      sql`(${vehicles.brand} LIKE ${`%${filters.search}%`} OR ${vehicles.model} LIKE ${`%${filters.search}%`})`,
+      sql`(${vehicles.brand} ILIKE ${`%${filters.search}%`} OR ${vehicles.model} ILIKE ${`%${filters.search}%`})`,
     );
   }
 
