@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import imageCompression from "browser-image-compression";
 import {
@@ -499,24 +499,3 @@ function PhotoAction({
     </button>
   );
 }
-
-// Mantém efeito de "primary segue a primeira posição" quando reordena —
-// hook isolado pra não poluir o componente principal e pra rodar uma
-// vez quando o primeiro item muda.
-function useSyncPrimaryWithFirst(
-  photos: UploadedPhoto[],
-  setPhotos: (next: UploadedPhoto[]) => void,
-) {
-  const firstUrl = photos[0]?.url;
-  useEffect(() => {
-    if (!firstUrl) return;
-    if (photos[0]?.isPrimary) return;
-    setPhotos(photos.map((p, i) => ({ ...p, isPrimary: i === 0 })));
-  }, [firstUrl, photos, setPhotos]);
-}
-
-// Helper exportado pra ser explícito sobre o comportamento, mas não
-// estamos usando-o ainda — a regra atual é: "primária" é independente
-// da ordem. Se quiser ativar, basta chamar useSyncPrimaryWithFirst()
-// dentro do PhotoUploader.
-export { useSyncPrimaryWithFirst };

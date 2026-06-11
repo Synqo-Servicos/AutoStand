@@ -19,7 +19,7 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import type { AboutIcon } from "@/lib/schemas";
+import type { AboutIcon } from "@/lib/validation";
 
 /**
  * Map de slug → componente Lucide pra seção "Sobre" da vitrine pública.

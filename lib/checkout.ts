@@ -1,31 +1,23 @@
 import MercadoPagoConfig, { PreApproval, PreApprovalPlan } from "mercadopago";
 import type { Plan } from "@/lib/plans";
 import type { CouponRow, PartnerRow, TenantRow } from "@/lib/schema";
+import { discountedPriceCents } from "@/lib/coupon-pricing";
 
 function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
 }
 
 async function createDiscountedMpPlan(plan: Plan, coupon: CouponRow): Promise<string> {
-  const baseBRL = plan.priceMonthly / 100;
+  // Valor cobrado em centavos — fonte única compartilhada com a prévia pública
+  // (/api/cupons/validate). MP exige valor positivo, então o piso é 1 centavo.
+  const amount = Math.max(1, discountedPriceCents(plan, coupon)) / 100;
 
-  let amount: number;
-  let reason: string;
-
-  if (coupon.discount_type === "percentage") {
-    amount = Math.round(plan.priceMonthly * (1 - (coupon.discount_value ?? 0) / 100)) / 100;
-    reason = `AutoStand ${plan.name} — ${coupon.discount_value}% de desconto`;
-  } else if (coupon.discount_type === "fixed") {
-    amount = Math.max(0.01, (plan.priceMonthly - (coupon.discount_value ?? 0)) / 100);
-    reason = `AutoStand ${plan.name} — desconto especial`;
-  } else {
-    // free_month — base price + free trial of 1 month
-    amount = baseBRL;
-    reason = `AutoStand ${plan.name} — 1º mês grátis`;
-  }
-
-  // Round to 2 decimal places (MP requires centavo precision)
-  amount = Math.round(amount * 100) / 100;
+  const reason =
+    coupon.discount_type === "percentage"
+      ? `AutoStand ${plan.name} — ${coupon.discount_value}% de desconto`
+      : coupon.discount_type === "free_month"
+        ? `AutoStand ${plan.name} — 1º mês grátis`
+        : `AutoStand ${plan.name} — desconto especial`;
 
   const autoRecurring: Record<string, unknown> = {
     frequency: 1,

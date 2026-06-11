@@ -3,6 +3,7 @@ import { getCouponByCode } from "@/lib/db";
 import { getPlan, isPlanSlug } from "@/lib/plans";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 import { formatBRLFull } from "@/lib/money";
+import { discountedPriceCents } from "@/lib/coupon-pricing";
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
@@ -28,17 +29,14 @@ export async function GET(req: NextRequest) {
   }
 
   const plan = getPlan(planSlug);
-  let discountedCents: number;
+  const discountedCents = discountedPriceCents(plan, coupon);
   let preview: string;
 
   if (coupon.discount_type === "percentage") {
-    discountedCents = Math.round(plan.priceMonthly * (1 - (coupon.discount_value ?? 0) / 100));
     preview = `${coupon.discount_value}% de desconto — ${formatBRLFull(discountedCents)}/mês`;
   } else if (coupon.discount_type === "fixed") {
-    discountedCents = Math.max(0, plan.priceMonthly - (coupon.discount_value ?? 0));
     preview = `${formatBRLFull(coupon.discount_value ?? 0)} de desconto — ${formatBRLFull(discountedCents)}/mês`;
   } else {
-    discountedCents = plan.priceMonthly;
     preview = "Primeiro mês grátis!";
   }
 

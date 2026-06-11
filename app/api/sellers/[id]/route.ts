@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { deleteSeller, updateSeller } from "@/lib/db";
 import { ApiError, parseBody, withTenant } from "@/lib/api";
-import { sellerUpdateSchema } from "@/lib/schemas";
+import { sellerUpdateSchema } from "@/lib/validation";
 
 export const PUT = withTenant<{ id: string }>(async (req, { tenantId, params }) => {
   const input = await parseBody(req, sellerUpdateSchema);

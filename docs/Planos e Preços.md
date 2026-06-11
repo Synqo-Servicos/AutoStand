@@ -18,7 +18,7 @@ aliases:
 
 | | **Básico** | **Pro** ⭐ | **Premium** |
 |---|---|---|---|
-| Preço/mês | R$149 | R$349 | R$599 |
+| Preço/mês | R$ 169,90 | R$ 349,90 | R$ 499,90 |
 | Site + vitrine + CRM de leads | ✓ | ✓ | ✓ |
 | Cores da marca | ✓ | ✓ | ✓ |
 | Subdomínio `loja.autostand.com.br` | ✓ | ✓ | ✓ |

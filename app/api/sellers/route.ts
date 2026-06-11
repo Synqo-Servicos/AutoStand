@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSeller, listSellers } from "@/lib/db";
 import { parseBody, withTenant } from "@/lib/api";
-import { sellerInputSchema } from "@/lib/schemas";
+import { sellerInputSchema } from "@/lib/validation";
 
 export const GET = withTenant(async (_req, { tenantId }) => {
   const rows = await listSellers(tenantId);

@@ -42,10 +42,10 @@ Dashboard, **Veículos** (CRUD + fotos), **Transações** (entradas/saídas), **
 
 ## Modelo de negócio
 
-Hoje o super-admin cadastra concessionárias manualmente. O [[Milestone 2]] transforma isso em **self-service com cobrança recorrente via Stripe**:
+Hoje o super-admin cadastra concessionárias manualmente. O [[Milestone 2]] transforma isso em **self-service com cobrança recorrente via Mercado Pago**:
 
 1. O dono da concessionária chega na landing em `autostand.com.br`.
-2. Escolhe um plano e assina via Stripe — **sem trial**: paga a 1ª mensalidade no cadastro.
+2. Escolhe um plano e assina via Mercado Pago — **sem trial**: paga a 1ª mensalidade no cadastro.
 3. O site é **provisionado automaticamente** e vai ao ar num subdomínio `*.autostand.com.br`.
 4. Ele **personaliza o próprio site** (profundidade conforme o plano).
 5. Assinatura vencida → site **suspenso** automaticamente.

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAboutItem, listAboutItems } from "@/lib/db";
 import { parseBody, withTenant } from "@/lib/api";
-import { aboutItemInputSchema } from "@/lib/schemas";
+import { aboutItemInputSchema } from "@/lib/validation";
 
 export const GET = withTenant(async (_req, { tenantId }) => {
   return NextResponse.json(await listAboutItems(tenantId));
@@ -26,7 +26,7 @@ export const POST = withTenant(async (req, { tenantId }) => {
 });
 
 export const PATCH = withTenant(async (req, { tenantId }) => {
-  const { aboutReorderSchema } = await import("@/lib/schemas");
+  const { aboutReorderSchema } = await import("@/lib/validation");
   const { reorderAboutItems } = await import("@/lib/db");
   const { order } = await parseBody(req, aboutReorderSchema);
   await reorderAboutItems(tenantId, order);

@@ -9,7 +9,7 @@ import {
 } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { ApiError, parseBody, withTenant } from "@/lib/api";
-import { vehicleUpdateSchema } from "@/lib/schemas";
+import { vehicleUpdateSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
 

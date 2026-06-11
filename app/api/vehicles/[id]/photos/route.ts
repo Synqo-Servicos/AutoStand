@@ -9,7 +9,7 @@ import {
   deleteFromBlob, uploadToBlob,
 } from "@/lib/blob";
 import { ApiError, parseBody, withTenant } from "@/lib/api";
-import { photoReorderSchema } from "@/lib/schemas";
+import { photoReorderSchema } from "@/lib/validation";
 
 const PHOTO_UPLOAD_OPTIONS = {
   allowedMimes: IMAGE_MIMES,

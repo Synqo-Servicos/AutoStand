@@ -1,19 +1,14 @@
 import Link from "next/link";
 import { Plus, Tag } from "lucide-react";
 import { listCoupons } from "@/lib/db";
+import { formatBRL } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
 function formatDesconto(type: string, value: number | null): string {
   if (type === "free_month") return "1º mês grátis";
   if (type === "fixed") {
-    return (
-      ((value ?? 0) / 100).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-        maximumFractionDigits: 0,
-      }) + " off"
-    );
+    return `${formatBRL(value ?? 0)} off`;
   }
   return `${value ?? 0}% off`;
 }

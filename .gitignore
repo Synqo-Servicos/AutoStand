@@ -44,3 +44,9 @@ next-env.d.ts
 
 # uploads do stub de dev (BLOB_READ_WRITE_TOKEN vazio em local)
 /public/uploads/
+
+# IDE and AI agent runtime files
+.agents/
+.claude/
+.cursor/
+.windsurf/

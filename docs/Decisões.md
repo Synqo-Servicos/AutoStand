@@ -34,7 +34,7 @@ aliases:
 > Pagou → site no ar, sem aprovação manual do super-admin.
 
 > [!success] Links de parceiro: desconto + atribuição
-> Cada parceiro tem um cupom Stripe e um link `?parceiro=`. Registra-se de qual parceiro veio cada concessionária (relatório de atribuição).
+> Cada parceiro tem um cupom de desconto e um link `?parceiro=`. Registra-se de qual parceiro veio cada concessionária (relatório de atribuição).
 
 > [!success] Inteligência de demanda — eventos anônimos, Premium
 > O [[Milestone 5]] registra o comportamento de quem compra (buscas e visualizações) para virar dica de estoque. Decidiu-se registrar **só o comportamento** — filtros usados, atributos dos veículos vistos — **nunca dado pessoal**: não é audit-log de segurança, é analítico. O agregado do marketplace (a demanda da rede toda) é o dado que só a plataforma vê — daí ser recurso do **Premium**. Captura no servidor, fire-and-forget.
@@ -44,7 +44,7 @@ aliases:
 
 ## Precificação
 
-Tiers a **R$149 / R$349 / R$599** (revisado mai/2026 — agressivo p/ destravar entrada e bater AutoConf no Pro; a validar com prospects). Racional:
+Tiers a **R$ 169,90 / R$ 349,90 / R$ 499,90** (vigente jun/2026 — fonte: `lib/plans.ts`; valores anteriores R$149/349/599 ajustados). Racional:
 
 - Precificar **pelo valor**, não pelo custo — uma concessionária que vende 1 carro a mais por causa do site já pagou o ano.
 - Custo marginal de infra por tenant é baixo (~R$10–30/mês); o custo real que escala é o **tempo de suporte** — daí a importância da customização self-service.
@@ -58,8 +58,8 @@ Tiers a **R$149 / R$349 / R$599** (revisado mai/2026 — agressivo p/ destravar 
 > [!success] Banco: Turso (libSQL) + Drizzle ORM
 > Migrado de SQLite local (`better-sqlite3`), que não funciona em serverless. libSQL mantém o dialeto SQLite; Drizzle dá type-safety e migrations.
 
-> [!success] Stripe para billing
-> Checkout + Webhooks + Customer Portal. Ver [[Milestone 2]].
+> [!success] Mercado Pago para billing
+> Assinatura recorrente (Preapproval) + webhooks. **Substituiu o Stripe** (decisão original de mai/2026) na migração para AWS + Mercado Pago de jun/2026. Ver [[Milestone 2]].
 
 ## Processo
 

@@ -43,7 +43,3 @@ export function slugError(slug: string): string | null {
   if (RESERVED_SLUGS.has(slug)) return "Este endereço é reservado. Escolha outro.";
   return null;
 }
-
-export function isValidSlug(slug: string): boolean {
-  return slugError(slug) === null;
-}

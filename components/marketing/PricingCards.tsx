@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PLAN_SLUGS, PLANS, type PlanSlug } from "@/lib/plans";
+import { formatBRL } from "@/lib/money";
 
 /** Texto de venda de cada plano (a fonte da verdade das capabilities é lib/plans.ts). */
 const PLAN_COPY: Record<PlanSlug, { tagline: string; features: string[] }> = {
@@ -30,14 +31,6 @@ const PLAN_COPY: Record<PlanSlug, { tagline: string; features: string[] }> = {
     ],
   },
 };
-
-function formatBRL(cents: number): string {
-  return (cents / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  });
-}
 
 function assinarHref(plan: PlanSlug, partnerCode?: string): string {
   const params = new URLSearchParams({ plano: plan });

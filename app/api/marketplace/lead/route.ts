@@ -3,6 +3,7 @@ import { createLead } from "@/lib/db";
 import { getMarketplaceVehicleOwner } from "@/lib/marketplace";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { publicLeadSchema } from "@/lib/validation";
 
 /**
  * Lead originado no marketplace. Atribuído ao tenant dono do veículo,
@@ -20,44 +21,53 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let body: unknown;
   try {
-    const body = await req.json();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Body inválido — JSON esperado." }, { status: 400 });
+  }
 
-    const captchaOk = await verifyTurnstile(body.turnstile_token, ip);
-    if (!captchaOk) {
-      return NextResponse.json(
-        { error: "Verificação de segurança falhou. Recarregue a página e tente novamente." },
-        { status: 400 },
-      );
-    }
+  const captchaOk = await verifyTurnstile(
+    (body as { turnstile_token?: string }).turnstile_token,
+    ip,
+  );
+  if (!captchaOk) {
+    return NextResponse.json(
+      { error: "Verificação de segurança falhou. Recarregue a página e tente novamente." },
+      { status: 400 },
+    );
+  }
 
-    const vehicleId = Number(body.vehicle_id);
-    const name = String(body.name ?? "").trim();
-    const phone = String(body.phone ?? "").trim();
+  const parsed = publicLeadSchema.safeParse(body);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    const path = first.path.length ? first.path.join(".") : "body";
+    return NextResponse.json({ error: `${path}: ${first.message}` }, { status: 400 });
+  }
+  const input = parsed.data;
+  if (!input.vehicle_id) {
+    return NextResponse.json({ error: "vehicle_id: obrigatório" }, { status: 400 });
+  }
 
-    if (!vehicleId || !name || !phone) {
-      return NextResponse.json(
-        { error: "Nome, telefone e veículo são obrigatórios" },
-        { status: 400 },
-      );
-    }
-
-    const tenantId = await getMarketplaceVehicleOwner(vehicleId);
+  try {
+    const tenantId = await getMarketplaceVehicleOwner(input.vehicle_id);
     if (!tenantId) {
       return NextResponse.json({ error: "Veículo indisponível" }, { status: 404 });
     }
 
     const lead = await createLead(tenantId, {
-      name,
-      phone,
-      email: body.email ? String(body.email).trim() : null,
-      vehicle_id: vehicleId,
-      message: body.message ? String(body.message) : null,
+      name: input.name,
+      phone: input.phone,
+      email: input.email ?? null,
+      vehicle_id: input.vehicle_id,
+      message: input.message ?? null,
       source: "marketplace",
       status: "novo",
     });
     return NextResponse.json({ ok: true, id: lead.id }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    console.error("[api/marketplace/lead] uncaught:", err);
+    return NextResponse.json({ error: "Erro interno do servidor." }, { status: 500 });
   }
 }

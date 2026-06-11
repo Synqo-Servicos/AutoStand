@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import MercadoPagoConfig, { PreApproval } from "mercadopago";
-import { db } from "@/lib/db";
-import { tenants } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { setTenantSubscriptionState } from "@/lib/db";
 
 function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
@@ -23,12 +21,6 @@ function verifySignature(secret: string, xSignature: string, xRequestId: string,
     return false;
   }
 }
-
-const STATUS_MAP: Record<string, { subscription_status: string; status: string }> = {
-  authorized: { subscription_status: "active",    status: "active" },
-  paused:     { subscription_status: "past_due",  status: "suspended" },
-  cancelled:  { subscription_status: "cancelled", status: "suspended" },
-};
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -52,13 +44,10 @@ export async function POST(req: NextRequest) {
 
   const tenantId = subscription.external_reference as string | undefined;
   const mpStatus = subscription.status as string;
-  const update = STATUS_MAP[mpStatus];
   const tenantIdNum = tenantId ? Number(tenantId) : NaN;
 
-  if (tenantId && update && Number.isInteger(tenantIdNum) && tenantIdNum > 0) {
-    await db.update(tenants)
-      .set({ ...update, mp_subscription_id: dataId })
-      .where(eq(tenants.id, tenantIdNum));
+  if (tenantId && Number.isInteger(tenantIdNum) && tenantIdNum > 0) {
+    await setTenantSubscriptionState(tenantIdNum, mpStatus, dataId);
   }
 
   return NextResponse.json({ received: true });

@@ -34,7 +34,7 @@ export async function getTenantByDomain(domain: string): Promise<TenantRow | nul
 /**
  * Allowlist dos campos editáveis em createTenant/updateTenant.
  * Bloqueia mass-assignment: o handler pode receber um body com chaves
- * extras (stripe_subscription_id, subscription_status, current_period_end…)
+ * extras (mp_subscription_id, subscription_status, current_period_end…)
  * e elas não passam pra query.
  */
 const TENANT_WRITABLE_FIELDS = [
@@ -80,6 +80,33 @@ export async function updateTenant(
       .where(eq(tenants.id, id));
   }
   return getTenantById(id);
+}
+
+/** Status do preapproval do Mercado Pago → estado interno do tenant. */
+const MP_STATUS_MAP: Record<string, { subscription_status: string; status: string }> = {
+  authorized: { subscription_status: "active",    status: "active" },
+  paused:     { subscription_status: "past_due",  status: "suspended" },
+  cancelled:  { subscription_status: "cancelled", status: "suspended" },
+};
+
+/**
+ * Sincroniza o estado de assinatura do tenant a partir de um evento de
+ * preapproval do Mercado Pago. Retorna `false` (no-op) se o status do MP
+ * não for reconhecido. Centraliza a regra de billing que antes vivia inline
+ * na rota do webhook.
+ */
+export async function setTenantSubscriptionState(
+  tenantId: number,
+  mpStatus: string,
+  mpSubscriptionId: string,
+): Promise<boolean> {
+  const mapped = MP_STATUS_MAP[mpStatus];
+  if (!mapped) return false;
+  await db
+    .update(tenants)
+    .set({ ...mapped, mp_subscription_id: mpSubscriptionId, updated_at: sql`CURRENT_TIMESTAMP` })
+    .where(eq(tenants.id, tenantId));
+  return true;
 }
 
 /**

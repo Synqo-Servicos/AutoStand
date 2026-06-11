@@ -39,7 +39,7 @@ Identificação (`slug`, `name`, `custom_domain`, `status`), branding (`primary_
 | Campo | Uso |
 |---|---|
 | `plan` | `basico` / `pro` / `premium` (ver [[Planos e Preços]]). Null = tenant manual. |
-| `stripe_customer_id`, `stripe_subscription_id` | Vínculo com o Stripe. |
+| `mp_subscription_id` | Vínculo com a assinatura no Mercado Pago (Preapproval). As colunas legadas `stripe_customer_id` / `stripe_subscription_id` continuam no schema, sem uso. |
 | `subscription_status` | `incomplete` / `active` / `past_due` / `canceled`. |
 | `current_period_end` | Fim do ciclo de cobrança. |
 | `referred_by` | FK → `partners` (atribuição). |
@@ -75,7 +75,7 @@ O `/admin/leads` exibe os leads como **funil** por `status` — ver [[Milestone 
 
 ## `partners` — links de desconto / atribuição
 
-`name`, `code` (do link `?parceiro=`), `stripe_coupon_id`, `discount_type` (`percent` | `amount`), `discount_value`, `status`, `signup_count`. Criada na Fase 1 do [[Milestone 2]]; consumida na Fase 7.
+`name`, `code` (do link `?parceiro=`), `discount_type` (`percent` | `amount`), `discount_value`, `status`, `signup_count`. (A coluna legada `stripe_coupon_id` permanece sem uso; o desconto é aplicado via cupom no checkout do Mercado Pago — ver tabela `coupons`.) Criada na Fase 1 do [[Milestone 2]]; consumida na Fase 7.
 
 ## `demand_events` — inteligência de demanda
 

@@ -2,6 +2,7 @@ import { Check, Lock } from "lucide-react";
 import { getAdminTenant } from "@/lib/tenant";
 import { getPlan } from "@/lib/plans";
 import type { PlanCapabilities } from "@/lib/plans";
+import { formatBRL } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -13,14 +14,6 @@ const CAP_LABELS: Record<keyof PlanCapabilities, string> = {
   aiAnalysis: "Análises de IA da vitrine",
   marketInsights: "Inteligência de demanda",
 };
-
-function formatBRL(cents: number): string {
-  return (cents / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  });
-}
 
 export default async function AssinaturaPage() {
   const tenant = await getAdminTenant();

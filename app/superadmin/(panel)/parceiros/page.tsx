@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { Pencil, Plus } from "lucide-react";
 import { listPartners } from "@/lib/db";
+import { formatBRL } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
 function formatDesconto(type: string, value: number): string {
   if (type === "amount") {
-    return (value / 100).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      maximumFractionDigits: 0,
-    });
+    return formatBRL(value);
   }
   return `${value}%`;
 }

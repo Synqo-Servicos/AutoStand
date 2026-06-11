@@ -75,13 +75,6 @@ export async function getCurrentTenant(): Promise<TenantRow | null> {
   return cachedGetTenantByDomain(host);
 }
 
-/** Like getCurrentTenant, but triggers a 404 when there is no active tenant. */
-export async function requireTenant(): Promise<TenantRow> {
-  const tenant = await getCurrentTenant();
-  if (!tenant || tenant.status !== "active") notFound();
-  return tenant;
-}
-
 /**
  * Resolve o tenant para o painel administrativo — aceita **qualquer status**.
  * Uma loja `suspended` continua usando o /admin (decisão da Fase 6: o lojista

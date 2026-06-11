@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { deleteLead, updateLead } from "@/lib/db";
 import { ApiError, parseBody, withTenant } from "@/lib/api";
-import { leadUpdateSchema } from "@/lib/schemas";
+import { leadUpdateSchema } from "@/lib/validation";
 
 export const PATCH = withTenant<{ id: string }>(async (req, { tenantId, params }) => {
   const input = await parseBody(req, leadUpdateSchema);

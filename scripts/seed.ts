@@ -9,7 +9,7 @@ import {
   getUserByEmail,
   updateTenant,
 } from "@/lib/db";
-import { DEALERSHIPS, type DealershipSeed, MOCK_VEHICLES } from "@/lib/mock-data";
+import { DEALERSHIPS, type DealershipSeed, MOCK_VEHICLES } from "./mock-data";
 import type { NewDemandEvent, NewTenant } from "@/lib/schema";
 import { demand_events, leads, transactions, vehicle_photos, vehicles } from "@/lib/schema";
 
