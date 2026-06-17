@@ -2,12 +2,13 @@ import MercadoPagoConfig, { PreApproval, PreApprovalPlan } from "mercadopago";
 import type { Plan } from "@/lib/plans";
 import type { CouponRow, PartnerRow, TenantRow } from "@/lib/schema";
 import { discountedPriceCents } from "@/lib/coupon-pricing";
+import { tenantSiteUrl } from "@/lib/marketplace";
 
 function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
 }
 
-async function createDiscountedMpPlan(plan: Plan, coupon: CouponRow): Promise<string> {
+async function createDiscountedMpPlan(tenant: TenantRow, plan: Plan, coupon: CouponRow): Promise<string> {
   // Valor cobrado em centavos — fonte única compartilhada com a prévia pública
   // (/api/cupons/validate). MP exige valor positivo, então o piso é 1 centavo.
   const amount = Math.max(1, discountedPriceCents(plan, coupon)) / 100;
@@ -36,7 +37,10 @@ async function createDiscountedMpPlan(plan: Plan, coupon: CouponRow): Promise<st
       reason,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       auto_recurring: autoRecurring as any,
-      back_url: `https://${process.env.PLATFORM_DOMAIN ?? "autostand.com.br"}/admin/assinatura`,
+      // Volta pro painel da PRÓPRIA loja (subdomínio ou custom_domain).
+      // Usar o domínio da plataforma levaria a /admin num host sem tenant
+      // (404 + sessão perdida, pois o cookie é host-only do subdomínio).
+      back_url: `${tenantSiteUrl(tenant)}/admin/assinatura`,
     },
   });
 
@@ -55,7 +59,7 @@ export async function createCheckoutSession(
   coupon?: CouponRow | null,
 ): Promise<string | null> {
   const mpPlanId = coupon
-    ? await createDiscountedMpPlan(plan, coupon)
+    ? await createDiscountedMpPlan(tenant, plan, coupon)
     : plan.mpPlanId;
 
   if (!mpPlanId) return null;

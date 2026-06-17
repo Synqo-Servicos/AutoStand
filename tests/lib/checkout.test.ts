@@ -77,6 +77,9 @@ describe("createCheckoutSession with coupon", () => {
     const callBody = mockPlanCreate.mock.calls[0][0].body;
     expect(callBody.reason).toContain("10%");
     expect(callBody.auto_recurring.transaction_amount).toBeCloseTo(152.91, 1);
+    // back_url volta pro painel da PRÓPRIA loja (subdomínio), não pro
+    // host da plataforma — senão dá 404 + sessão perdida após pagar.
+    expect(callBody.back_url).toMatch(/^https:\/\/autoprime\..+\/admin\/assinatura$/);
     expect(result).toContain("plan_discounted_123");
   });
 
