@@ -2,21 +2,29 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 export function LoginForm() {
-  const sp = useSearchParams();
-  const hasError = sp.get("error") === "CredentialsSignin";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await signIn("credentials", { email, password, callbackUrl: "/admin/dashboard" });
-    setLoading(false);
+    setHasError(false);
+    // redirect: false — o redirect server-side do Auth.js monta a URL a
+    // partir do x-forwarded-host, que o Next standalone repõe com o
+    // hostname interno do ECS atrás do ALB. Navegando no cliente, o
+    // destino usa a origin real do navegador (domínio público da loja).
+    const res = await signIn("credentials", { email, password, redirect: false });
+    if (res?.error) {
+      setHasError(true);
+      setLoading(false);
+      return;
+    }
+    window.location.href = "/admin/dashboard";
   }
 
   return (
