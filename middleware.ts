@@ -30,15 +30,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Atrás do CloudFront→ALB, o Next.js standalone reescreve o
-  // `x-forwarded-host` com o hostname interno do container ECS
-  // (ex.: ip-172-31-11-41.sa-east-1.compute.internal:3000). O Auth.js
-  // monta as URLs de redirect a partir de `x-forwarded-host ?? host`,
-  // então o login saía para esse host interno. O header `host` original
-  // chega correto (a resolução de tenant depende dele), então o tornamos
-  // a fonte de verdade para downstream (Auth.js e demais URLs absolutas).
+  // CloudFront→ALB falam HTTP (porta 80) com a origem, então o
+  // `x-forwarded-proto` chega como "http" e o Auth.js emitia os cookies
+  // de sessão sem a flag Secure. Normalizamos para "https" (o esquema
+  // público) para que os cookies usem o prefixo `__Secure-`.
+  //
+  // Obs.: o `x-forwarded-host` NÃO pode ser corrigido aqui — o Next.js
+  // standalone o reescreve com o hostname interno do container (ECS)
+  // depois do middleware. Por isso o redirect de login é resolvido no
+  // cliente (`redirect: false`), ver app/admin/login/LoginForm.tsx.
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-forwarded-host", host);
   requestHeaders.set("x-forwarded-proto", isLocalHost(host) ? "http" : "https");
 
   return NextResponse.next({ request: { headers: requestHeaders } });

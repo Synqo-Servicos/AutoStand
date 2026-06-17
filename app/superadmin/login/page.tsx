@@ -2,21 +2,27 @@
 
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
 import { Building2, Loader2 } from "lucide-react";
 
 function LoginForm() {
-  const sp = useSearchParams();
-  const hasError = sp.get("error") === "CredentialsSignin";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await signIn("credentials", { email, password, callbackUrl: "/superadmin/dashboard" });
-    setLoading(false);
+    setHasError(false);
+    // redirect: false — ver nota em app/admin/login/LoginForm.tsx: evita o
+    // redirect server-side do Auth.js que sai para o hostname interno do ECS.
+    const res = await signIn("credentials", { email, password, redirect: false });
+    if (res?.error) {
+      setHasError(true);
+      setLoading(false);
+      return;
+    }
+    window.location.href = "/superadmin/dashboard";
   }
 
   return (
