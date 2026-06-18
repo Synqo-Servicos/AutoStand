@@ -8,13 +8,16 @@ function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
 }
 
-async function createDiscountedMpPlan(tenant: TenantRow, plan: Plan, coupon: CouponRow): Promise<string> {
-  // Valor cobrado em centavos — fonte única compartilhada com a prévia pública
-  // (/api/cupons/validate). MP exige valor positivo, então o piso é 1 centavo.
-  const amount = Math.max(1, discountedPriceCents(plan, coupon)) / 100;
+async function createMpPlan(tenant: TenantRow, plan: Plan, coupon: CouponRow | null): Promise<string> {
+  // Valor cobrado em centavos — sem cupom é a mensalidade cheia; com cupom usa
+  // a fonte única compartilhada com a prévia pública (/api/cupons/validate).
+  // MP exige valor positivo, então o piso é 1 centavo.
+  const priceCents = coupon ? discountedPriceCents(plan, coupon) : plan.priceMonthly;
+  const amount = Math.max(1, priceCents) / 100;
 
-  const reason =
-    coupon.discount_type === "percentage"
+  const reason = !coupon
+    ? `AutoStand ${plan.name}`
+    : coupon.discount_type === "percentage"
       ? `AutoStand ${plan.name} — ${coupon.discount_value}% de desconto`
       : coupon.discount_type === "free_month"
         ? `AutoStand ${plan.name} — 1º mês grátis`
@@ -27,7 +30,7 @@ async function createDiscountedMpPlan(tenant: TenantRow, plan: Plan, coupon: Cou
     currency_id: "BRL",
   };
 
-  if (coupon.discount_type === "free_month") {
+  if (coupon?.discount_type === "free_month") {
     autoRecurring.free_trial = { frequency: 1, frequency_type: "months" };
   }
 
@@ -49,8 +52,11 @@ async function createDiscountedMpPlan(tenant: TenantRow, plan: Plan, coupon: Cou
 }
 
 /**
- * Builds the MP plan checkout URL.
- * If a coupon is provided, creates a discounted plan on-the-fly via PreApprovalPlan API.
+ * Monta a URL de checkout de assinatura do Mercado Pago. SEMPRE cria um
+ * PreApprovalPlan dedicado ao tenant (preço cheio ou com cupom) para que o
+ * `back_url` aponte pro painel da própria loja. Os planos pré-criados
+ * (`MERCADOPAGO_PLAN_*`) não são mais usados aqui — um plano compartilhado
+ * teria back_url fixo, caindo num host sem tenant após o pagamento.
  */
 export async function createCheckoutSession(
   tenant: TenantRow,
@@ -58,11 +64,7 @@ export async function createCheckoutSession(
   _partner: PartnerRow | null,
   coupon?: CouponRow | null,
 ): Promise<string | null> {
-  const mpPlanId = coupon
-    ? await createDiscountedMpPlan(tenant, plan, coupon)
-    : plan.mpPlanId;
-
-  if (!mpPlanId) return null;
+  const mpPlanId = await createMpPlan(tenant, plan, coupon ?? null);
 
   const params = new URLSearchParams({
     preapproval_plan_id: mpPlanId,
