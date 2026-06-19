@@ -72,7 +72,10 @@ jobs:
             AUTH_TRUST_HOST=true
             PLATFORM_DOMAIN=${{ secrets.PLATFORM_DOMAIN }}
             PLATFORM_HOSTS=${{ secrets.PLATFORM_HOSTS }}
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            DB_HOST=autostand-postgres.cvm00qaemt5n.sa-east-1.rds.amazonaws.com
+            DB_PORT=5432
+            DB_USER=autostand
+            DB_NAME=autostand_prod
             AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
             AWS_S3_REGION=${{ secrets.AWS_S3_REGION }}
             CDN_URL=${{ secrets.CDN_URL }}
@@ -88,10 +91,24 @@ jobs:
             ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
             AI_MODEL=${{ secrets.AI_MODEL }}
 
+      # DB_PASSWORD vem do Secrets Manager (senha gerenciada do RDS) e é
+      # resolvido pelo ECS no start da task — sempre a senha ATUAL. Também
+      # removemos qualquer DATABASE_URL herdada do task def anterior.
+      - name: Inject DB_PASSWORD secret + drop legacy DATABASE_URL
+        id: final-task-def
+        env:
+          RENDERED: ${{ steps.task-def.outputs.task-definition }}
+        run: |
+          jq '(.containerDefinitions[0].environment) |= map(select(.name != "DATABASE_URL"))
+              | (.containerDefinitions[0].secrets) = [
+                  {"name": "DB_PASSWORD", "valueFrom": "arn:aws:secretsmanager:sa-east-1:507099297746:secret:rds!db-72a3e592-94b9-4b22-a105-10a65262ee9b-EGH0WV:password::"}
+                ]' "$RENDERED" > final-task-def.json
+          echo "task-definition=final-task-def.json" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          task-definition: ${{ steps.final-task-def.outputs.task-definition }}
           service: autostand-web
           cluster: autostand
           wait-for-service-stability: true
