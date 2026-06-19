@@ -151,3 +151,79 @@ sequenceDiagram
 ## Posição no roadmap
 
 Vem depois do [[Milestone 2]] (billing). O **Eixo A é o candidato natural a um 4º tier / add-on Premium** — é o recurso de maior valor percebido e reforça a justificativa do plano Premium (ver [[Planos e Preços]]). O **Eixo C (histórico)** pode ser baseline, já que é CRM básico.
+
+---
+
+## Vale a pena? — validação do esforço (WhatsApp Cloud API)
+
+> [!question] A pergunta honesta
+> O **Eixo A** assume que a automação real via **WhatsApp Business Cloud API** é o motor de retenção ([[Roadmap#Posicionamento]]). Antes de gastar semanas de engenharia + burocracia da Meta, vale separar o que é **convicção de posicionamento** do que é **retorno comprovado**. Esta seção é uma análise de decisão balanceada — não um plano de execução (o plano está acima, em Eixo A).
+
+### 1. Valor — o que destrava, e quanto disso é incremental
+
+O argumento de retenção é real ([[Roadmap#Posicionamento]], modelo Anota.ai). A Cloud API destrava três coisas que o `wa.me` não faz: **resposta automática pelo servidor**, **caixa de entrada no painel** (a conversa vive no `/admin`, costurada ao histórico do Eixo C) e **campanhas proativas** (disparo de template a um segmento — impossível com `wa.me`).
+
+> [!warning] O teto do incremental é menor do que parece
+> O **WhatsApp assistido (`wa.me`) já está entregue, custa zero e resolve ~70% da dor**. O delta real da Cloud API é (a) automação sem humano e (b) campanhas proativas. Para uma revenda independente com 1 vendedor e 30 carros, "responder do painel em vez do celular" pode ter **valor percebido baixo**. O valor de campanha depende de **base opt-in** e **giro de estoque**, que nem toda loja pequena tem. O valor é **real mas concentrado** nas lojas maiores/mais ativas — o perfil de quem pagaria um tier mais caro.
+
+### 2. Esforço — magnitude realista
+
+Não é uma feature, é uma **integração regulada com onboarding externo**. As fases A.1–A.4 escondem dois custos diferentes:
+
+| Fase | Engenharia | Custo "invisível" (externo) |
+|---|---|---|
+| **A.1 — Conectar + Receber** | Médio: Embedded Signup (Tech Provider), webhook verify+inbound, roteamento por `phone_number_id`→tenant | **Alto, fora do nosso controle:** App Meta, verificação de negócio, app review. Semanas. |
+| **A.2 — Responder do painel** | Médio: `lib/whatsapp.ts`, caixa de entrada, status | Aprovação de **templates HSM** (review da Meta) |
+| **A.3 — Automações** | Baixo-médio: regras + rascunho IA (reusa `lib/ai.ts`) | Qualidade do número / moderação |
+| **A.4 — Campanhas + billing** | **Alto:** segmentação, opt-in, medição de custo por tenant | Limites de qualidade / conciliação de custo |
+
+**Reuso real no código:** o webhook reaproveita o **mesmo padrão HMAC** já em produção no Mercado Pago (`createHmac("sha256")` + `timingSafeEqual` em `app/api/webhooks/mercadopago/route.ts:10`); rate limit reusa `lib/ratelimit.ts`; rascunho assistido reusa `lib/ai.ts`; lead por canal já tem `source` (`lib/db/leads.ts:8`). A **engenharia é tratável** — o gargalo é A.1 (onboarding Meta) e A.4 (billing), por **dependência externa e operação contínua**, não por dificuldade técnica.
+
+### 3. Custo — modelo de cobrança da Meta
+
+> [!warning] Os valores exatos mudam — sempre conferir a tabela atual da Meta
+> A Meta **aposentou a cobrança por "conversa" de 24h** e migrou para **preço por mensagem (template)** ao longo de 2025. As faixas abaixo são **ordem de grandeza para o Brasil** — não use para faturar sem reconferir na tabela oficial vigente.
+
+| Categoria | Quando | Faixa BR (≈, **verificar**) | Quem dispara |
+|---|---|---|---|
+| **Marketing** | Promoção, reativação | ~R$0,30–0,40 / msg | Campanhas (A.4) — **o custo que come margem** |
+| **Utility** | Pós-venda, lembrete | ~R$0,04–0,06 / msg | Automações utilitárias |
+| **Service** (iniciada pelo cliente) | Resposta ≤24h do inbound | **Grátis** | A.1/A.2 |
+
+**Leitura prática:** o uso operacional (cliente manda → loja responde em 24h) é **basicamente de graça**. O custo nasce em **campanhas marketing** — 500 msgs/mês ≈ **R$150–200/mês** só de mídia, número que **rivaliza com a própria mensalidade** ([[Planos e Preços]]).
+
+> [!danger] Quem paga
+> Se a AutoStand **absorver** o custo de mensagem, uma loja que abusa de campanha **destrói a margem** de um tier de R$ 169–499. Decisão obrigatória antes de A.4: **a loja paga a mídia da Meta** (repasse/créditos) e a AutoStand cobra a **plataforma** como add-on. Ver [[Decisões]].
+
+### 4. Alternativas
+
+| | (a) Só `wa.me` assistido | (b) BSP (Z-API/360dialog/Twilio) | (c) Cloud API direto |
+|---|---|---|---|
+| Status | **Já entregue** | A construir | A construir |
+| Setup/burocracia | Zero | Baixo (BSP cuida da Meta) | **Alto** |
+| Custo recorrente | **R$ 0** | Mídia Meta + fee do BSP + lock-in | Mídia Meta (mais barato em escala) |
+| Automação/inbox | Não | Sim | Sim |
+| Campanhas | Não | Sim | Sim |
+| Time-to-market | — | **Rápido** | Lento |
+| Margem em escala | Total | Menor | **Maior** |
+
+> [!tip] O ponto cego do plano
+> A decisão D1 recomenda **Cloud API direto** e trata BSP como "MVP rápido". Para **validar willingness-to-pay**, o MVP rápido é exatamente o que se quer: um **BSP no piloto** corta o onboarding de semanas para dias, prova a feature com 3–5 lojas reais, e **só então** justifica migrar para Cloud API direto. BSP não é o plano B — é o **instrumento de validação barato**.
+
+### 5. Veredito e recomendação
+
+> [!success] Veredito: **vale a pena — mas faseado, gated e validado por demanda, não construído por convicção.**
+> Coerente com o posicionamento e candidato natural a **4º tier / add-on Premium** ([[Planos e Preços]]). Mas o incremental sobre o `wa.me` gratuito é **concentrado**, o custo de marketing **ameaça a margem**, e o gargalo é **externo (Meta)**. Logo: **não é prioridade sobre o que já gera receita** — entra **depois** do billing ([[Milestone 2]]) e **depois do Eixo C**.
+
+**Sequência (menor risco → maior):**
+1. **Eixo C primeiro** (histórico) — barato, sem dependência externa, costura os dois eixos. Fazer já.
+2. **Validar willingness-to-pay antes de qualquer código de API** — sem ≥3 lojas dizendo "sim e pago", não começar A.1.
+3. **Piloto via BSP** com essas lojas — prova em dias.
+4. **Migrar para Cloud API direto** só quando o volume amortizar o setup e a margem fechar com repasse de mídia.
+
+> [!example] Critérios de go/no-go
+> **GO** se *todos*: ≥3 lojas confirmam que **pagariam** o add-on; modelo de cobrança da mídia **definido** (loja paga a Meta); Eixo C entregue; billing do [[Milestone 2]] concluído.
+> **NO-GO / adiar** se *qualquer*: demanda morna ("`wa.me` já basta"); sem dono para a operação contínua; custo de marketing sem repasse claro; verificação Meta travada.
+
+> [!note] Resumo de uma linha
+> Construa — **por etapas, como add-on Premium pago com mídia repassada à loja, validando demanda antes do código e usando BSP no piloto**. Comece pelo Eixo C. O `wa.me` gratuito segue como baseline válido até os critérios de GO baterem.
