@@ -2,6 +2,14 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { getUserByEmail } from "@/lib/db";
+import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
+
+// Hash bcrypt (cost 12) usado só para equalizar o tempo de resposta quando
+// o e-mail não tem conta — roda um compare "de mentira" para o timing não
+// revelar quais e-mails existem. O texto em claro é irrelevante; nenhuma
+// senha real bate com ele.
+const TIMING_EQUALIZER_HASH =
+  "$2a$12$mvenv.mQmd87gcnFxDdOC.xi8skthvlvW7UvnryDTh1Ufb2/zBG6e";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // Em multi-tenant (loja.autostand.com.br, console.autostand.com.br),
@@ -15,12 +23,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Senha", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
-        const user = await getUserByEmail(credentials.email as string);
-        if (!user) return null;
-        const valid = await bcrypt.compare(credentials.password as string, user.password);
-        if (!valid) return null;
+      async authorize(credentials, request) {
+        const email = credentials?.email as string | undefined;
+        const password = credentials?.password as string | undefined;
+        if (!email || !password) return null;
+
+        // Anti-brute-force: limita tentativas por IP+email. Best-effort —
+        // se o Upstash não estiver configurado, vira no-op (ver lib/ratelimit).
+        const ip = getClientIp(request);
+        const rl = await checkRateLimit("login", `${ip}:${email.toLowerCase()}`);
+        if (!rl.ok) return null;
+
+        const user = await getUserByEmail(email);
+        // Sempre roda um bcrypt.compare — contra a senha real ou um hash
+        // dummy — para o tempo de resposta não revelar se o e-mail tem conta.
+        const valid = await bcrypt.compare(password, user?.password ?? TIMING_EQUALIZER_HASH);
+        if (!user || !valid) return null;
+
         return {
           id: String(user.id),
           email: user.email,

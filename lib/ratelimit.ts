@@ -1,7 +1,6 @@
 import "server-only";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import type { NextRequest } from "next/server";
 
 /**
  * Rate limit por IP em endpoints públicos. Usa Upstash Redis (sliding
@@ -46,6 +45,8 @@ export const limiters = {
   lead: makeLimiter(5, "1 m", "rl:lead"),
   /** Validação pública de cupom. Limite conservador para evitar enumeração. */
   couponValidate: makeLimiter(10, "1 m", "rl:coupon"),
+  /** Login (Credentials). Anti-brute-force: 10 tentativas / 10 min por IP+email. */
+  login: makeLimiter(10, "10 m", "rl:login"),
 } as const;
 
 export type LimiterName = keyof typeof limiters;
@@ -81,7 +82,7 @@ export async function checkRateLimit(
  *  IP real do viewer; ALB acrescenta o edge do CloudFront. Pegar o
  *  segundo-ao-último dá o IP real do viewer sem permitir spoofing pelo
  *  primeiro campo controlado pelo cliente. */
-export function getClientIp(req: NextRequest): string {
+export function getClientIp(req: { headers: Headers }): string {
   const xff = req.headers.get("x-forwarded-for");
   if (xff) {
     const ips = xff.split(",").map((s) => s.trim()).filter(Boolean);
