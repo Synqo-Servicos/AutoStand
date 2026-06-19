@@ -1,0 +1,104 @@
+name: Run DB Migrations
+
+# Migrations rodam de DENTRO da VPC (o RDS é privado) como um ECS RunTask
+# one-off, usando a imagem `migrator` do Dockerfile. Manual, por ambiente.
+# Rodar ANTES do deploy quando uma migration nova precisa existir no banco.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Ambiente alvo
+        type: choice
+        required: true
+        options:
+          - homologation
+          - production
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: sa-east-1
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push migrator image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          SHA: ${{ github.sha }}
+        run: |
+          docker build --target migrator -t "$REGISTRY/autostand:migrate-$SHA" .
+          docker push "$REGISTRY/autostand:migrate-$SHA"
+
+      - name: Run migrations (ECS RunTask in VPC)
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          SHA: ${{ github.sha }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          CLUSTER=autostand
+          REGION=sa-east-1
+          if [ "$ENVIRONMENT" = "production" ]; then FAMILY=autostand; else FAMILY=autostand-homolog; fi
+          IMAGE="$REGISTRY/autostand:migrate-$SHA"
+
+          # Task def de migração = a task def da app (carrega DB_*, o secret
+          # DB_PASSWORD e a execution role), com a imagem trocada pela migrator
+          # e uma família própria. Remove os campos read-only do describe.
+          aws ecs describe-task-definition --task-definition "$FAMILY" --region "$REGION" \
+            --query taskDefinition > app-td.json
+          jq --arg img "$IMAGE" --arg fam "${FAMILY}-migrate" '
+            .family = $fam
+            | .containerDefinitions[0].image = $img
+            | .containerDefinitions[0].healthCheck = null
+            | del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
+                  .compatibilities, .registeredAt, .registeredBy)
+          ' app-td.json > migrate-td.json
+
+          MIGRATE_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://migrate-td.json --region "$REGION" \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "Task definition: $MIGRATE_ARN"
+
+          TASK_ARN=$(aws ecs run-task --cluster "$CLUSTER" --region "$REGION" \
+            --task-definition "$MIGRATE_ARN" --launch-type FARGATE \
+            --network-configuration 'awsvpcConfiguration={subnets=[subnet-044e90e6bf3adc1a7,subnet-06b877a62eb18e6cf,subnet-069dfd061f90b5660],securityGroups=[sg-01e9e2ec9a6929544],assignPublicIp=ENABLED}' \
+            --started-by "gha-migrate-${ENVIRONMENT}" \
+            --query 'tasks[0].taskArn' --output text)
+          echo "Task: $TASK_ARN"
+
+          echo "Aguardando a task de migração terminar..."
+          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION"
+
+          EXIT=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+          REASON=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION" \
+            --query 'tasks[0].stoppedReason' --output text)
+          echo "Exit code: $EXIT — $REASON"
+
+          # Logs da task de migração (best-effort)
+          TASK_ID="${TASK_ARN##*/}"
+          echo "----- logs da migração -----"
+          aws logs get-log-events --region "$REGION" --log-group-name /ecs/autostand \
+            --log-stream-name "ecs/autostand/$TASK_ID" \
+            --query 'events[*].message' --output text 2>/dev/null || echo "(sem logs)"
+          echo "----------------------------"
+
+          if [ "$EXIT" != "0" ]; then
+            echo "❌ Migração falhou em $ENVIRONMENT"; exit 1
+          fi
+          echo "✅ Migrações aplicadas em $ENVIRONMENT"
