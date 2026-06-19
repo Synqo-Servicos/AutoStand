@@ -11,7 +11,7 @@ aliases:
 # Milestone 2 — Self-service + Billing
 
 > [!info] Status: em andamento
-> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Mercado Pago**, e tornar a customização do site um recurso escalonado por plano. **Fases 1 e 3–9 concluídas; falta só a Fase 2 (pagamento).**
+> Transformar o cadastro manual de concessionárias em **auto-serviço com cobrança recorrente via Mercado Pago**, e tornar a customização do site um recurso escalonado por plano. **Fases 1–9 concluídas no código** (a Fase 2 / pagamento foi implementada com Mercado Pago na migração AWS); resta **validar uma assinatura real ponta-a-ponta em produção**.
 
 ## Decisões que orientam o milestone
 
@@ -28,8 +28,8 @@ Ver [[Decisões]] para o racional completo. Em resumo:
 > [!success] Fase 1 — Modelo de dados ✅ CONCLUÍDA
 > `tenants` ganhou campos de billing (`plan`, `stripe_*`, `subscription_status`, `current_period_end`, `referred_by`, `layout_config`). Nova tabela `partners`. `lib/plans.ts` (tiers + capabilities) e `lib/layout.ts` (`LayoutConfig`). Migration aplicada, seed atualizado. Ver [[Modelo de Dados]] e [[Planos e Preços]].
 
-> [!todo] Fase 2 — Pagamento: Checkout + Webhooks
-> **Atualização (jun/2026):** implementado com **Mercado Pago** (Preapproval) na migração AWS + Mercado Pago — `lib/checkout.ts` e `POST /api/webhooks/mercadopago`. O plano original (Stripe) abaixo fica como registro histórico.
+> [!success] Fase 2 — Pagamento: Checkout + Webhooks ✅ CONCLUÍDA (código) — pendente validação em prod
+> **Atualização (jun/2026):** implementado com **Mercado Pago** (Preapproval) na migração AWS + Mercado Pago — `lib/checkout.ts`, `POST /api/assinar`, `POST /api/webhooks/mercadopago` (verificação HMAC-SHA256) e cupons (`lib/coupon-pricing.ts`). Falta apenas **validar uma transação/assinatura real em produção** e confirmar o ciclo `authorized → active`. O plano original (Stripe) abaixo fica como registro histórico.
 > Plano original: `lib/stripe.ts`; `POST /api/checkout` (subscription, cobrança imediata da 1ª mensalidade); `POST /api/webhooks/stripe` (provisiona o tenant, sincroniza status, suspende). **Dependia de:** conta Stripe + chaves.
 
 > [!success] Fase 3 — Landing page + cadastro ✅ CONCLUÍDA
@@ -60,5 +60,5 @@ Ver [[Decisões]] para o racional completo. Em resumo:
 
 ## Pendências de negócio
 
-- Conta Stripe + chaves de API (modo teste serve para desenvolver).
+- ~~Conta Stripe + chaves de API~~ → migrado para **Mercado Pago**; credenciais (`MERCADOPAGO_*`) já configuradas nos GitHub Environments. Falta **validar uma assinatura real ponta-a-ponta em prod**.
 - Validar os preços (R$ 169,90 / R$ 349,90 / R$ 499,90) com prospects reais.
