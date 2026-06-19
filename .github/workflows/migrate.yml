@@ -64,7 +64,7 @@ jobs:
           jq --arg img "$IMAGE" --arg fam "${FAMILY}-migrate" '
             .family = $fam
             | .containerDefinitions[0].image = $img
-            | .containerDefinitions[0].healthCheck = null
+            | del(.containerDefinitions[0].healthCheck)
             | del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
                   .compatibilities, .registeredAt, .registeredBy)
           ' app-td.json > migrate-td.json
