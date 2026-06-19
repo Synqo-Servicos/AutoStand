@@ -154,4 +154,26 @@ export const LEAD_STAGES = [
   { key: "perdido",     label: "Perdido",       color: "bg-n100 text-n600 ring-n200" },
 ] as const;
 
+/** Tipos de interação no histórico de um lead. `mudanca_status` é gerado
+ *  pelo sistema; os demais o lojista registra (ou vêm do WhatsApp). */
+export const LEAD_INTERACTION_TYPES = [
+  "nota", "ligacao", "whatsapp", "email", "visita", "proposta", "mudanca_status",
+] as const;
+export type LeadInteractionType = (typeof LEAD_INTERACTION_TYPES)[number];
+
+/** Subconjunto que o admin pode registrar manualmente (exclui o auto-logado). */
+export const LEAD_INTERACTION_MANUAL_TYPES = [
+  "nota", "ligacao", "whatsapp", "email", "visita", "proposta",
+] as const;
+
+export const LEAD_INTERACTION_LABELS: Record<LeadInteractionType, string> = {
+  nota: "Nota",
+  ligacao: "Ligação",
+  whatsapp: "WhatsApp",
+  email: "E-mail",
+  visita: "Visita",
+  proposta: "Proposta",
+  mudanca_status: "Mudança de estágio",
+};
+
 // Branding (nome, contatos, cores) vem do tenant — ver tabela `tenants` em lib/schema.ts.

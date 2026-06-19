@@ -91,3 +91,10 @@ export async function isSuperAdmin(): Promise<boolean> {
   const session = await auth();
   return session?.user?.role === "super_admin";
 }
+
+/** Id do usuário autenticado (para atribuir autoria de ações), ou null. */
+export async function getApiUserId(): Promise<number | null> {
+  const session = await auth();
+  const id = session?.user?.id;
+  return id ? Number(id) : null;
+}

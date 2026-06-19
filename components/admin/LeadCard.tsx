@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, Mail, MessageCircle, Trash2, Clock, ChevronDown } from "lucide-react";
+import { Phone, Mail, MessageCircle, Trash2, Clock, ChevronDown, History } from "lucide-react";
 import type { LeadRow } from "@/lib/schema";
 import type { Vehicle } from "@/types/vehicle";
 import { LEAD_STAGES, LEAD_SOURCE_LABELS } from "@/lib/constants";
+import { LeadHistoryDrawer } from "@/components/admin/LeadHistoryDrawer";
 
 /** Telefone digitado pelo visitante → número para o wa.me (com DDI 55). */
 function waNumber(raw: string): string {
@@ -47,13 +48,20 @@ interface Props {
 /** Card de lead no funil — dados do contato + ações (WhatsApp, estágio). */
 export function LeadCard({ lead, vehicle, stale, onStatusChange, onContacted, onDelete }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const vehicleLabel = vehicle ? `${vehicle.brand} ${vehicle.model} ${vehicle.year}` : null;
   const templates = buildTemplates(lead.name, vehicleLabel);
   const wa = waNumber(lead.phone);
 
-  function sendWhatsApp(text: string) {
+  function sendWhatsApp(text: string, label: string) {
     window.open(`https://wa.me/${wa}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
     setMenuOpen(false);
+    // Registra no histórico do lead (best-effort — não bloqueia o envio).
+    fetch(`/api/leads/${lead.id}/interactions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "whatsapp", body: `Mensagem enviada (${label})` }),
+    }).catch(() => {});
     if (lead.status === "novo") onContacted(lead.id);
   }
 
@@ -93,6 +101,14 @@ export function LeadCard({ lead, vehicle, stale, onStatusChange, onContacted, on
         <span>{LEAD_SOURCE_LABELS[lead.source as keyof typeof LEAD_SOURCE_LABELS] ?? lead.source}</span>
         <span>·</span>
         <span>{lead.created_at.slice(0, 10)}</span>
+        <button
+          type="button"
+          onClick={() => setHistoryOpen(true)}
+          className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-n500 hover:bg-n100 hover:text-ink transition-colors cursor-pointer"
+        >
+          <History className="h-3 w-3" />
+          Histórico
+        </button>
       </div>
 
       {/* Ações */}
@@ -115,7 +131,7 @@ export function LeadCard({ lead, vehicle, stale, onStatusChange, onContacted, on
                   <button
                     key={t.key}
                     type="button"
-                    onClick={() => sendWhatsApp(t.text)}
+                    onClick={() => sendWhatsApp(t.text, t.label)}
                     className="block w-full px-3 py-2 text-left text-xs text-ink hover:bg-n50 transition-colors cursor-pointer"
                   >
                     {t.label}
@@ -146,6 +162,8 @@ export function LeadCard({ lead, vehicle, stale, onStatusChange, onContacted, on
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
+
+      <LeadHistoryDrawer lead={lead} open={historyOpen} onOpenChange={setHistoryOpen} />
     </div>
   );
 }
