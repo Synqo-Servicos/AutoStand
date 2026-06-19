@@ -1,6 +1,8 @@
 import { and, desc, eq } from "drizzle-orm";
-import { leads } from "@/lib/schema";
-import type { LeadRow, NewLead } from "@/lib/schema";
+import { lead_interactions, leads } from "@/lib/schema";
+import type {
+  LeadInteractionRow, LeadRow, NewLead, NewLeadInteraction,
+} from "@/lib/schema";
 import { db } from "./client";
 
 export interface LeadFilters {
@@ -69,4 +71,34 @@ export async function updateLead(
 
 export async function deleteLead(tenantId: number, id: number): Promise<void> {
   await db.delete(leads).where(and(eq(leads.tenant_id, tenantId), eq(leads.id, id)));
+}
+
+// --- Histórico de contato (timeline de interações por lead) ---
+
+/** Interações de um lead, mais recentes primeiro. */
+export async function listLeadInteractions(
+  tenantId: number,
+  leadId: number,
+): Promise<LeadInteractionRow[]> {
+  return db
+    .select()
+    .from(lead_interactions)
+    .where(and(
+      eq(lead_interactions.tenant_id, tenantId),
+      eq(lead_interactions.lead_id, leadId),
+    ))
+    .orderBy(desc(lead_interactions.created_at));
+}
+
+/** Registra uma interação no histórico do lead (tenant-scoped). */
+export async function addLeadInteraction(
+  tenantId: number,
+  leadId: number,
+  input: Omit<NewLeadInteraction, "id" | "tenant_id" | "lead_id" | "created_at">,
+): Promise<LeadInteractionRow> {
+  const [row] = await db
+    .insert(lead_interactions)
+    .values({ ...input, tenant_id: tenantId, lead_id: leadId })
+    .returning();
+  return row;
 }

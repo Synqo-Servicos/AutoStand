@@ -12,7 +12,7 @@
 
 import { z } from "zod";
 import {
-  CONDITIONS, FUELS, LEAD_SOURCES, LEAD_STATUS,
+  CONDITIONS, FUELS, LEAD_INTERACTION_MANUAL_TYPES, LEAD_SOURCES, LEAD_STATUS,
   TRANSACTION_TYPES, TRANSMISSIONS, TX_REQUIRES_VEHICLE, VEHICLE_STATUS,
 } from "@/lib/constants";
 
@@ -221,6 +221,12 @@ export const leadUpdateSchema = z.object({
     .transform((v) => (v === "" ? null : v))
     .nullable()
     .optional(),
+});
+
+/** Interação registrada manualmente no histórico de um lead. */
+export const leadInteractionInputSchema = z.object({
+  type: z.enum(LEAD_INTERACTION_MANUAL_TYPES),
+  body: trimmed(2000).nullable().optional(),
 });
 
 // ---------- Superadmin: cupons & marketplace ----------

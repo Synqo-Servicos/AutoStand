@@ -290,6 +290,31 @@ export const leads = pgTable("leads", {
   byTenantCreated: index("idx_leads_tenant_created").on(table.tenant_id, table.created_at),
 }));
 
+// --- Lead interactions (histórico de contato — timeline por lead) ---
+
+export const lead_interactions = pgTable("lead_interactions", {
+  id: serial("id").primaryKey(),
+  tenant_id: integer("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  lead_id: integer("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  /** Quem registrou; null = sistema/automação (ex.: mudança de estágio). */
+  user_id: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  /** 'nota' | 'ligacao' | 'whatsapp' | 'email' | 'visita' | 'proposta' | 'mudanca_status' */
+  type: text("type").notNull(),
+  /** Texto livre da interação (nota, resumo). Pode ser null em eventos. */
+  body: text("body"),
+  /** Dados estruturados do evento — ex.: { from, to } na mudança de estágio. */
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  byTenantLead: index("idx_lead_interactions_tenant_lead").on(
+    table.tenant_id, table.lead_id, table.created_at,
+  ),
+}));
+
 // --- Partners (links de desconto / atribuição) ---
 
 export const partners = pgTable("partners", {
@@ -374,6 +399,8 @@ export type SellerRow = typeof sellers.$inferSelect;
 export type NewSeller = typeof sellers.$inferInsert;
 export type LeadRow = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
+export type LeadInteractionRow = typeof lead_interactions.$inferSelect;
+export type NewLeadInteraction = typeof lead_interactions.$inferInsert;
 export type PartnerRow = typeof partners.$inferSelect;
 export type NewPartner = typeof partners.$inferInsert;
 export type DemandEventRow = typeof demand_events.$inferSelect;
