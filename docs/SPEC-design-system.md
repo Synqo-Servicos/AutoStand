@@ -461,25 +461,29 @@ Alinhado com o roadmap do `docs/SPEC-evolucao.md`.
 
 ### Onda 1 — Tokens + storefront (1 semana)
 - [x] Atualizar `app/globals.css` com tokens completos (este SPEC + commit acompanhante)
-- [ ] Adicionar utilitárias `shadow-*`, `radius-*`, `duration-*` no Tailwind
-- [ ] Find-replace `slate-*` → `n*` em `components/public/`
+- [x] Adicionar utilitárias `shadow-*`, `radius-*`, `duration-*` no Tailwind (tokens `--shadow-*`/`--radius-*`/`--duration-*` no `@theme` de `globals.css`)
+- [x] Find-replace `slate-*` → `n*` em `components/public/`
 - [ ] Deprecar `font-heading` (Syncopate) — log warning em runtime
 - [ ] Corrigir `border-n300` que agora existe
 
 ### Onda 2 — Camada 1 de componentes (1 semana)
-- [ ] `<Button>` com 5 variants, 3 sizes, loading state
-- [ ] `<Card>` com 3 variants
-- [ ] `<Input>` com states e helper text
-- [ ] `<Skeleton>` para listagens
-- [ ] `<Badge>` padronizado
+- [x] `<Button>` com 5 variants, 3 sizes, loading state
+- [x] `<Card>` com 3 variants
+- [x] `<Input>` com states e helper text
+- [x] `<Skeleton>` para listagens
+- [x] `<Badge>` padronizado
 
 ### Onda 3 — Substituições estratégicas (1-2 semanas)
-- [ ] `<Select>` (combobox) Radix nos filtros do marketplace
-- [ ] `<Modal>`, `<Drawer>`, `<Toast>` Radix
-- [ ] `<EmptyState>` em todas as listagens
-- [ ] Refatorar `VehicleCard` do marketplace com novo design
+- [x] `<Select>` (combobox) Radix nos filtros do marketplace
+- [x] `<Modal>`, `<Drawer>`, `<Toast>` Radix
+- [ ] `<EmptyState>` em todas as listagens — *componente pronto em `components/ui`, mas ainda não adotado nas listagens*
+- [x] Refatorar `VehicleCard` do marketplace com novo design (`MarketplaceVehicleCard`)
 
 ### Onda 4 — Polimento por superfície (1-2 semanas)
+
+> [!todo] Onda pendente (jun/2026)
+> Ondas 1–3 essencialmente concluídas (tokens, Camada 1 e Camada 2 de componentes, refactor do card do marketplace). A Onda 4 é o polimento de superfície que falta.
+
 - [ ] Redesenhar hero do marketplace
 - [ ] Redesenhar hero do superadmin
 - [ ] Mini-chart no dashboard admin
