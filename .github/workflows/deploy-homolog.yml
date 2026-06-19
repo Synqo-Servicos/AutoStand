@@ -90,10 +90,25 @@ jobs:
             ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
             AI_MODEL=${{ secrets.AI_MODEL }}
 
+      # A app lê apenas DATABASE_URL (lib/db/client.ts). Removemos sobras da
+      # migração Turso e da abordagem antiga de credenciais por partes (DB_*),
+      # incluindo o secret DB_PASSWORD do Secrets Manager, que ninguém usa.
+      - name: Strip legacy DB/Turso vars
+        id: clean-task-def
+        env:
+          RENDERED: ${{ steps.task-def.outputs.task-definition }}
+        run: |
+          jq '
+            (.containerDefinitions[0].environment) |= map(select(
+                (.name | IN("TURSO_DATABASE_URL","TURSO_AUTH_TOKEN","DB_HOST","DB_PORT","DB_USER","DB_NAME")) | not))
+            | (.containerDefinitions[0].secrets) |= ((. // []) | map(select(.name != "DB_PASSWORD")))
+          ' "$RENDERED" > clean-task-def.json
+          echo "task-definition=clean-task-def.json" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          task-definition: ${{ steps.clean-task-def.outputs.task-definition }}
           service: autostand-web-homolog
           cluster: autostand
           wait-for-service-stability: true
