@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Plus, Tag } from "lucide-react";
+import { Plus, Tag, Ticket } from "lucide-react";
 import { listCoupons } from "@/lib/db";
 import { formatBRL } from "@/lib/money";
+import { EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -84,15 +85,21 @@ export default async function CuponsPage() {
           </tbody>
         </table>
         {cupons.length === 0 && (
-          <div className="py-16 text-center text-n400">
-            <p className="font-medium">Nenhum cupom cadastrado</p>
-            <Link
-              href="/superadmin/cupons/novo"
-              className="mt-3 inline-block text-sm text-signal hover:text-signal-dark"
-            >
-              Criar o primeiro →
-            </Link>
-          </div>
+          <EmptyState
+            compact
+            icon={Ticket}
+            title="Nenhum cupom cadastrado"
+            description="Crie o primeiro cupom para oferecer descontos na assinatura."
+            cta={
+              <Link
+                href="/superadmin/cupons/novo"
+                className="inline-flex items-center gap-2 bg-signal text-ink text-sm font-medium px-4 py-2 rounded-lg hover:bg-signal-dark transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Novo cupom
+              </Link>
+            }
+          />
         )}
       </div>
     </div>

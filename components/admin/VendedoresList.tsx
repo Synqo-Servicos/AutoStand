@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, Users, X } from "lucide-react";
 import { centsToDisplay, displayToCents, formatBRL } from "@/lib/money";
+import { EmptyState } from "@/components/ui";
 import type { Seller } from "@/types/seller";
 
 interface Props {
@@ -54,9 +55,12 @@ export function VendedoresList({ initialSellers }: Props) {
         </header>
 
         {sellers.length === 0 ? (
-          <div className="py-16 text-center text-sm text-n400">
-            Nenhum vendedor cadastrado.
-          </div>
+          <EmptyState
+            compact
+            icon={Users}
+            title="Nenhum vendedor cadastrado"
+            description="Adicione vendedores para registrar comissões e vincular vendas a cada um."
+          />
         ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-n50">

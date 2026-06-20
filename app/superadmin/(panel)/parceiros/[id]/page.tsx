@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
+import { Building2 } from "lucide-react";
 import { getPartnerById, getTenantsReferredBy } from "@/lib/db";
 import { PartnerForm } from "@/components/superadmin/PartnerForm";
+import { EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,12 @@ export default async function EditParceiroPage({ params }: Params) {
             ))}
           </ul>
         ) : (
-          <p className="mt-4 text-sm text-n400">Nenhuma concessionária atribuída ainda.</p>
+          <EmptyState
+            compact
+            icon={Building2}
+            title="Nenhuma concessionária atribuída"
+            description="As lojas que se cadastrarem pelo link deste parceiro aparecem aqui."
+          />
         )}
       </div>
     </div>

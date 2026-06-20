@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, Car, Download, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, BarChart3, Car, Download, Wallet } from "lucide-react";
 import { getAdminTenant } from "@/lib/tenant";
 import {
   getFinanceiroPorVeiculo,
@@ -7,6 +7,7 @@ import {
   getOperationalExpenses,
 } from "@/lib/db";
 import { formatBRL } from "@/lib/money";
+import { EmptyState } from "@/components/ui";
 import { OperationalExpenseList } from "@/components/admin/OperationalExpenseList";
 
 export const dynamic = "force-dynamic";
@@ -146,9 +147,12 @@ async function VeiculosTab({ tenantId, month }: { tenantId: number; month: strin
         </p>
       </header>
       {rows.length === 0 ? (
-        <div className="py-12 text-center text-sm text-n400">
-          Nenhum veículo vendido no período.
-        </div>
+        <EmptyState
+          compact
+          icon={BarChart3}
+          title="Nenhum veículo vendido no período"
+          description="Ajuste o período ou registre vendas para ver a margem real por veículo aqui."
+        />
       ) : (
         <table className="min-w-full text-sm">
           <thead className="bg-n50">

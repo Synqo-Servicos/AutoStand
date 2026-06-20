@@ -1,9 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Pencil } from "lucide-react";
+import { Car, Plus, Pencil } from "lucide-react";
 import { listVehicles } from "@/lib/db";
 import { getAdminTenant } from "@/lib/tenant";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { EmptyState } from "@/components/ui";
 import { formatBRL } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -30,13 +31,21 @@ export default async function VeiculosPage() {
       </div>
 
       {vehicles.length === 0 ? (
-        <div className="bg-white rounded-xl border border-n200 py-16 text-center text-n500">
-          <p className="font-medium text-ink">Nenhum veículo cadastrado</p>
-          <p className="mt-1 text-body-s text-n600">Adicione seu primeiro veículo para começar.</p>
-          <Link href="/admin/veiculos/novo" className="mt-4 inline-block text-sm font-medium text-signal hover:text-signal-dark">
-            Adicionar primeiro veículo →
-          </Link>
-        </div>
+        <EmptyState
+          icon={Car}
+          title="Nenhum veículo cadastrado"
+          description="Cadastre seu primeiro veículo para começar a controlar estoque, custos e margem."
+          cta={
+            <Link
+              href="/admin/veiculos/novo"
+              className="inline-flex items-center gap-1.5 bg-signal text-ink text-sm font-medium px-4 py-2 rounded-lg hover:bg-signal-dark transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Cadastrar veículo
+            </Link>
+          }
+          className="bg-white rounded-xl border border-n100"
+        />
       ) : (
         <>
           {/* Desktop: tabela */}

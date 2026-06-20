@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, SearchX, SlidersHorizontal } from "lucide-react";
 import { requirePlatformHost } from "@/lib/tenant";
 import {
   searchMarketplaceVehicles,
@@ -13,6 +13,7 @@ import { recordSearch } from "@/lib/demand";
 import { MarketplaceVehicleCard } from "@/components/marketplace/MarketplaceVehicleCard";
 import { MarketplaceFilters as Filters } from "@/components/marketplace/MarketplaceFilters";
 import { MarketplaceSort as SortControl } from "@/components/marketplace/MarketplaceSort";
+import { EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -133,12 +134,22 @@ export default async function ComprarPage({
 
         <div>
           {vehicles.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-n300 bg-white px-6 py-16 text-center">
-              <p className="text-sm font-medium text-ink">Nenhum veículo encontrado</p>
-              <p className="mt-1 text-sm text-n500">
-                Tente ajustar os filtros ou limpá-los para ver todo o catálogo.
-              </p>
-            </div>
+            <EmptyState
+              icon={SearchX}
+              title="Nenhum veículo encontrado"
+              description="Tente ajustar ou limpar os filtros para ver mais opções do catálogo."
+              className="rounded-2xl border border-dashed border-n300 bg-white"
+              cta={
+                activeFilterCount > 0 ? (
+                  <Link
+                    href="/comprar"
+                    className="inline-flex items-center gap-1 rounded-lg border border-n200 bg-white px-3 py-2 text-sm text-ink hover:bg-n50 transition-colors"
+                  >
+                    Limpar filtros
+                  </Link>
+                ) : undefined
+              }
+            />
           ) : (
             <>
               <div className="mb-5 flex items-center justify-between gap-4">

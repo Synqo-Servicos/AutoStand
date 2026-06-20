@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Pencil, Plus } from "lucide-react";
+import { Handshake, Pencil, Plus } from "lucide-react";
 import { listPartners } from "@/lib/db";
 import { formatBRL } from "@/lib/money";
+import { EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -87,15 +88,21 @@ export default async function ParceirosPage() {
           </tbody>
         </table>
         {partners.length === 0 && (
-          <div className="py-16 text-center text-n400">
-            <p className="font-medium">Nenhum parceiro cadastrado</p>
-            <Link
-              href="/superadmin/parceiros/novo"
-              className="mt-3 inline-block text-sm text-signal hover:text-signal-dark"
-            >
-              Cadastrar o primeiro →
-            </Link>
-          </div>
+          <EmptyState
+            compact
+            icon={Handshake}
+            title="Nenhum parceiro cadastrado"
+            description="Cadastre o primeiro parceiro para gerar links de indicação."
+            cta={
+              <Link
+                href="/superadmin/parceiros/novo"
+                className="inline-flex items-center gap-2 bg-signal text-ink text-sm font-medium px-4 py-2 rounded-lg hover:bg-signal-dark transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Novo parceiro
+              </Link>
+            }
+          />
         )}
       </div>
     </div>
