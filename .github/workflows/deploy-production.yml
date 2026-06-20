@@ -49,7 +49,7 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           SHA: ${{ github.sha }}
         run: |
-          docker build -t "$REGISTRY/autostand:$SHA" -t "$REGISTRY/autostand:latest" .
+          docker build --target runner -t "$REGISTRY/autostand:$SHA" -t "$REGISTRY/autostand:latest" .
           docker push "$REGISTRY/autostand:$SHA"
           docker push "$REGISTRY/autostand:latest"
 
