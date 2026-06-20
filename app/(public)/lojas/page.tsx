@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Store, MapPin } from "lucide-react";
 import { requirePlatformHost } from "@/lib/tenant";
 import { listMarketplaceTenants, tenantSiteUrl } from "@/lib/marketplace";
+import { EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,12 @@ export default async function LojasPage() {
       </header>
 
       {lojas.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-n300 bg-white px-6 py-16 text-center">
-          <p className="text-sm font-medium text-ink">Nenhuma loja no marketplace ainda</p>
-          <p className="mt-1 text-sm text-n500">Volte em breve.</p>
-        </div>
+        <EmptyState
+          icon={Store}
+          title="Nenhuma concessionária por aqui ainda"
+          description="Novas lojas parceiras entram na rede AutoStand em breve. Volte logo."
+          className="rounded-2xl border border-dashed border-n300 bg-white"
+        />
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {lojas.map((loja) => (

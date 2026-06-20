@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ExternalLink, Pencil, Plus } from "lucide-react";
+import { ExternalLink, Pencil, Plus, Store } from "lucide-react";
 import { listTenantsWithStats } from "@/lib/db";
-import { Badge } from "@/components/ui";
+import { Badge, EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -92,18 +92,21 @@ export default async function TenantsPage() {
           </tbody>
         </table>
         {tenants.length === 0 && (
-          <div className="py-16 text-center">
-            <p className="font-medium text-ink">Nenhuma concessionária cadastrada</p>
-            <p className="mt-1 text-body-s text-n600">
-              Cadastre a primeira loja cliente para começar.
-            </p>
-            <Link
-              href="/superadmin/tenants/novo"
-              className="mt-4 inline-block text-body-s font-medium text-signal hover:text-signal-dark"
-            >
-              Cadastrar a primeira →
-            </Link>
-          </div>
+          <EmptyState
+            compact
+            icon={Store}
+            title="Nenhuma concessionária cadastrada"
+            description="Cadastre a primeira loja cliente para começar."
+            cta={
+              <Link
+                href="/superadmin/tenants/novo"
+                className="inline-flex items-center gap-2 bg-signal text-ink text-body-s font-medium px-4 py-2.5 rounded-md shadow-xs transition-colors hover:bg-signal-dark"
+              >
+                <Plus className="w-4 h-4" />
+                Nova concessionária
+              </Link>
+            }
+          />
         )}
       </div>
     </div>

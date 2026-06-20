@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Inbox } from "lucide-react";
 import type { LeadRow } from "@/lib/schema";
 import type { Vehicle } from "@/types/vehicle";
 import { LeadCard } from "@/components/admin/LeadCard";
+import { EmptyState } from "@/components/ui";
 import { LEAD_STAGES } from "@/lib/constants";
 
 type StageKey = (typeof LEAD_STAGES)[number]["key"];
@@ -108,10 +109,12 @@ export default function LeadsPage() {
       {loading ? (
         <div className="py-16 text-center text-n400 text-sm">Carregando...</div>
       ) : total === 0 ? (
-        <div className="rounded-xl border border-n100 bg-white py-16 text-center text-n400 text-sm">
-          Nenhum lead capturado ainda. Eles aparecem aqui quando alguém preenche o
-          formulário &quot;Tenho interesse&quot; no site ou no marketplace.
-        </div>
+        <EmptyState
+          icon={Inbox}
+          title="Nenhum lead capturado ainda"
+          description={'Os leads aparecem aqui quando alguém preenche o formulário "Tenho interesse" no site ou no marketplace.'}
+          className="rounded-xl border border-n100 bg-white"
+        />
       ) : (
         <>
           {/* Mobile: seletor horizontal de estágio + uma coluna por vez */}
@@ -152,9 +155,11 @@ export default function LeadsPage() {
                 />
               ))}
               {activeStageLeads.length === 0 && (
-                <div className="rounded-xl border border-dashed border-n200 py-12 text-center text-xs text-n400">
-                  Nenhum lead em {activeStageMeta.label.toLowerCase()}.
-                </div>
+                <EmptyState
+                  compact
+                  title={`Nenhum lead em ${activeStageMeta.label.toLowerCase()}`}
+                  className="rounded-xl border border-dashed border-n200"
+                />
               )}
             </div>
           </div>
@@ -184,9 +189,11 @@ export default function LeadsPage() {
                       />
                     ))}
                     {stageLeads.length === 0 && (
-                      <div className="rounded-xl border border-dashed border-n200 py-8 text-center text-xs text-n400">
-                        Nenhum lead aqui
-                      </div>
+                      <EmptyState
+                        compact
+                        title="Nenhum lead aqui"
+                        className="rounded-xl border border-dashed border-n200"
+                      />
                     )}
                   </div>
                 </div>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus } from "lucide-react";
+import { ArrowLeftRight, Plus } from "lucide-react";
 import { TransactionSlideOver } from "@/components/admin/TransactionSlideOver";
 import { MonthlyTable } from "@/components/admin/MonthlyTable";
+import { EmptyState } from "@/components/ui";
 import { formatBRL } from "@/lib/money";
 import type { TransactionWithVehicle } from "@/types/transaction";
 import type { Vehicle } from "@/types/vehicle";
@@ -81,9 +82,12 @@ export default function TransacoesPage() {
         {loading ? (
           <div className="py-16 text-center text-n400 text-sm">Carregando...</div>
         ) : transactions.length === 0 ? (
-          <div className="py-16 text-center text-n400 text-sm">
-            Nenhuma transação registrada ainda.
-          </div>
+          <EmptyState
+            compact
+            icon={ArrowLeftRight}
+            title="Nenhuma transação registrada"
+            description="Entradas e saídas de veículos aparecem aqui assim que você registrar a primeira."
+          />
         ) : (
           <>
             {/* Desktop: tabela */}
