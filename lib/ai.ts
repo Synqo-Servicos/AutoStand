@@ -1,20 +1,21 @@
 import { generateObject, generateText } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
+import { google } from "@ai-sdk/google";
 import { z } from "zod";
 import type { DemandSnapshot } from "@/lib/demand";
 
 /**
  * Camada de IA — análise da vitrine de um tenant (Fase 8, plano Premium).
  *
- * A chave da Anthropic vem de `ANTHROPIC_API_KEY` (lida automaticamente pelo
- * SDK). O modelo pode ser sobrescrito por `AI_MODEL`.
+ * Usa o Google Gemini via Vercel AI SDK. A chave vem de
+ * `GOOGLE_GENERATIVE_AI_API_KEY` (lida automaticamente pelo SDK). O modelo
+ * pode ser sobrescrito por `AI_MODEL`.
  */
 
-const MODEL = process.env.AI_MODEL ?? "claude-haiku-4-5";
+const MODEL = process.env.AI_MODEL ?? "gemini-2.5-flash";
 
 /** True quando a chave da API está configurada. */
 export function aiConfigured(): boolean {
-  return !!process.env.ANTHROPIC_API_KEY;
+  return !!process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 }
 
 /** Snapshot da vitrine de um tenant — a entrada da análise. */
@@ -61,7 +62,7 @@ coerência visual e textos que vendem.`;
 /** Analisa a vitrine e devolve recomendações estruturadas. */
 export async function analisarVitrine(snapshot: VitrineSnapshot): Promise<Analise> {
   const { object } = await generateObject({
-    model: anthropic(MODEL),
+    model: google(MODEL),
     schema: analiseSchema,
     system: SYSTEM,
     prompt:
@@ -108,7 +109,7 @@ final. Não invente nenhuma informação que não tenha sido fornecida.`;
 /** Gera a legenda do post de Instagram para um veículo. */
 export async function gerarLegendaPost(input: PostInput): Promise<string> {
   const { text } = await generateText({
-    model: anthropic(MODEL),
+    model: google(MODEL),
     system: SYSTEM_LEGENDA,
     prompt:
       "Gere a legenda do post para este veículo:\n\n" +
@@ -146,7 +147,7 @@ export async function gerarDicasDemanda(input: {
   loja: DemandSnapshot;
 }): Promise<DicasDemanda> {
   const { object } = await generateObject({
-    model: anthropic(MODEL),
+    model: google(MODEL),
     schema: dicasDemandaSchema,
     system: SYSTEM_DICAS,
     prompt:
