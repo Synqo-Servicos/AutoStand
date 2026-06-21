@@ -1,8 +1,10 @@
-import { getDashboardStats } from "@/lib/db";
+import { getDashboardStats, getUserById } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { getAdminTenant } from "@/lib/tenant";
 import { DashboardCard } from "@/components/admin/DashboardCard";
 import { MonthlyTable } from "@/components/admin/MonthlyTable";
 import { StockBreakdown } from "@/components/admin/StockBreakdown";
+import { OnboardingChecklist } from "@/components/admin/OnboardingChecklist";
 import { formatBRL } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +12,8 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const tenant = await getAdminTenant();
   const stats = await getDashboardStats(tenant.id);
+  const session = await auth();
+  const user = session?.user?.id ? await getUserById(Number(session.user.id)) : null;
   const disponivel = stats.stockByStatus.find(s => s.status === "disponivel")?.count ?? 0;
   const reservado  = stats.stockByStatus.find(s => s.status === "reservado")?.count ?? 0;
   const vendido    = stats.stockByStatus.find(s => s.status === "vendido")?.count ?? 0;
@@ -24,6 +28,10 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold text-ink">Dashboard</h1>
         <p className="text-sm text-n600 mt-1">Visão geral do mês de {mes}</p>
       </div>
+
+      {user && !user.onboarding_completed && (
+        <OnboardingChecklist name={tenant.name} />
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">

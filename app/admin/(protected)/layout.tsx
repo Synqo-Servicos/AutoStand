@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { getUserById } from "@/lib/db";
 import { getAdminTenant } from "@/lib/tenant";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { SubscriptionBanner } from "@/components/admin/SubscriptionBanner";
@@ -26,6 +27,11 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
   if (session.user.role !== "tenant_admin" || session.user.tenantId !== tenant.id) {
     redirect("/admin/login");
   }
+
+  // Senha provisória (loja provisionada pelo super-admin) → troca obrigatória
+  // antes de qualquer acesso ao painel. A página fica fora de (protected).
+  const user = await getUserById(Number(session.user.id));
+  if (user?.must_change_password) redirect("/admin/trocar-senha");
 
   return (
     <div className="min-h-screen bg-n50 lg:flex">

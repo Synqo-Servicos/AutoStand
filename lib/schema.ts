@@ -88,6 +88,10 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   /** 'super_admin' | 'tenant_admin' */
   role: text("role").notNull().default("tenant_admin"),
+  /** Senha provisória → força troca no 1º login (admin provisionado pelo super-admin). */
+  must_change_password: boolean("must_change_password").notNull().default(false),
+  /** Tutorial de primeiros passos já concluído/dispensado. */
+  onboarding_completed: boolean("onboarding_completed").notNull().default(false),
   created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 });
 
