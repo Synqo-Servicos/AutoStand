@@ -90,7 +90,7 @@ jobs:
             MERCADOPAGO_PLAN_BASICO=${{ secrets.MERCADOPAGO_PLAN_BASICO }}
             MERCADOPAGO_PLAN_PRO=${{ secrets.MERCADOPAGO_PLAN_PRO }}
             MERCADOPAGO_PLAN_PREMIUM=${{ secrets.MERCADOPAGO_PLAN_PREMIUM }}
-            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
             AI_MODEL=${{ secrets.AI_MODEL }}
 
       # DB_PASSWORD vem do Secrets Manager (senha gerenciada do RDS) e é
