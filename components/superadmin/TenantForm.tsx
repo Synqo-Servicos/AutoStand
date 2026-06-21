@@ -240,8 +240,8 @@ export function TenantForm({ tenant }: Props) {
             <Field label="Email">
               <input type="email" value={admin.email} onChange={(e) => setAdmin((a) => ({ ...a, email: e.target.value.trim() }))} className={inputClass} />
             </Field>
-            <Field label="Senha">
-              <input type="text" value={admin.password} onChange={(e) => setAdmin((a) => ({ ...a, password: e.target.value }))} className={inputClass} />
+            <Field label="Senha provisória" hint="O lojista é obrigado a trocá-la no 1º login.">
+              <input type="text" value={admin.password} onChange={(e) => setAdmin((a) => ({ ...a, password: e.target.value }))} className={inputClass} placeholder="ex: autostand2026" />
             </Field>
           </div>
         </Section>

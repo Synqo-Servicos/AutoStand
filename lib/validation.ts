@@ -229,6 +229,11 @@ export const leadInteractionInputSchema = z.object({
   body: trimmed(2000).nullable().optional(),
 });
 
+/** Troca de senha pelo admin da concessionária (forçada no 1º login). */
+export const changePasswordSchema = z.object({
+  password: z.string().min(8, "A senha precisa de ao menos 8 caracteres.").max(200),
+});
+
 // ---------- Superadmin: cupons & marketplace ----------
 
 export const createCouponSchema = z.object({

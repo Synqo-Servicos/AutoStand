@@ -27,6 +27,8 @@ export const POST = withSuperAdmin(async (req) => {
       name: admin.name?.trim() || tenant.name,
       role: "tenant_admin",
       tenant_id: tenant.id,
+      // Senha definida pelo super-admin é provisória — o lojista troca no 1º login.
+      must_change_password: true,
     });
   }
 

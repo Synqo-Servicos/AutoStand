@@ -24,6 +24,7 @@ export async function createUser(
     name: string;
     role?: string;
     tenant_id?: number | null;
+    must_change_password?: boolean;
   },
   tx?: Tx,
 ): Promise<UserRow> {
@@ -36,7 +37,21 @@ export async function createUser(
       name: input.name,
       role: input.role ?? "tenant_admin",
       tenant_id: input.tenant_id ?? null,
+      must_change_password: input.must_change_password ?? false,
     })
     .returning();
   return row;
+}
+
+/** Define uma nova senha (já hasheada) e limpa a flag de senha provisória. */
+export async function setUserPassword(userId: number, passwordHash: string): Promise<void> {
+  await db
+    .update(users)
+    .set({ password: passwordHash, must_change_password: false })
+    .where(eq(users.id, userId));
+}
+
+/** Marca o tutorial de primeiros passos como concluído/dispensado. */
+export async function completeOnboarding(userId: number): Promise<void> {
+  await db.update(users).set({ onboarding_completed: true }).where(eq(users.id, userId));
 }
