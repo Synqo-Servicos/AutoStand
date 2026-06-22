@@ -194,7 +194,7 @@ export const vehicle_documents = pgTable("vehicle_documents", {
   name: text("name").notNull(),
   /** 'crlv' | 'laudo' | 'dut' | 'nf_peca' | 'os' | 'contrato' | 'historico' | 'outros' */
   category: text("category").notNull().default("outros"),
-  /** URL no Vercel Blob (público mas não-indexado — hash não adivinhável). */
+  /** URL no S3 (servida via CloudFront; público mas não-indexado — hash não adivinhável). */
   url: text("url").notNull(),
   /** Tamanho em bytes — exibido na UI. */
   size: integer("size"),

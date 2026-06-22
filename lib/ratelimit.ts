@@ -7,7 +7,7 @@ import { Redis } from "@upstash/redis";
  * window). Quando UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN não
  * estão configurados, todos os limiters viram no-op — ideal pra dev e
  * pra deploys que ainda não plugaram o Redis. Em prod o operador
- * configura as duas envs via `vercel env add`.
+ * configura as duas envs nos secrets do GitHub Environment.
  *
  * Limiters são propositalmente conservadores: signup é um evento raro
  * (poucos por hora), lead é um pouco mais frequente mas ainda baixo.

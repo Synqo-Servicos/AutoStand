@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
  * (autostand.com.br, subdomínio de tenant, custom domain) todas as
  * rotas /superadmin/* devolvem 404.
  *
- * Para ligar: apontar `console.autostand.com.br` para o projeto no
- * Vercel e adicionar `console.autostand.com.br` em PLATFORM_HOSTS.
+ * Para ligar: apontar `console.autostand.com.br` para a
+ * plataforma na AWS (CloudFront) e adicionar `console.autostand.com.br` em PLATFORM_HOSTS.
  */
 export default async function SuperAdminLayout({
   children,
