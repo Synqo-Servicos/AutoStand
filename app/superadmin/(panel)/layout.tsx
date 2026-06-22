@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { getUserById } from "@/lib/db";
 import { SuperAdminSidebar } from "@/components/superadmin/SuperAdminSidebar";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,10 @@ export default async function SuperAdminPanelLayout({
   if (!session?.user || session.user.role !== "super_admin") {
     redirect("/superadmin/login");
   }
+
+  // Senha provisória → troca obrigatória antes de acessar o console.
+  const user = await getUserById(Number(session.user.id));
+  if (user?.must_change_password) redirect("/superadmin/trocar-senha");
 
   return (
     <div className="min-h-screen bg-n100 lg:flex">

@@ -37,4 +37,7 @@ COPY package*.json tsconfig.json ./
 COPY drizzle ./drizzle
 COPY scripts ./scripts
 COPY lib ./lib
-ENTRYPOINT ["./node_modules/.bin/tsx", "scripts/migrate.ts"]
+# ENTRYPOINT = só o runner; o script vem do CMD (default migrate), e pode ser
+# sobrescrito via ECS RunTask command override (ex.: set-superadmin.ts).
+ENTRYPOINT ["./node_modules/.bin/tsx"]
+CMD ["scripts/migrate.ts"]
