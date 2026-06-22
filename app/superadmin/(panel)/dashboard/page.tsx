@@ -59,7 +59,7 @@ export default async function SuperAdminDashboard() {
   ];
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-4 sm:p-8 max-w-6xl">
       {/* Hero — console sóbrio: bg-ink + accent signal só no eyebrow/CTA */}
       <section className="relative overflow-hidden rounded-2xl bg-ink px-7 py-8 mb-8">
         <div className="relative max-w-lg">

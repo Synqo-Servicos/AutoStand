@@ -248,13 +248,13 @@ export function TenantForm({ tenant }: Props) {
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
         {isEdit ? (
           <button
             type="button"
             onClick={handleDelete}
             disabled={loading}
-            className="inline-flex items-center gap-2 text-sm font-medium text-danger hover:bg-danger/10 px-3 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+            className="w-full sm:w-auto inline-flex items-center gap-2 text-sm font-medium text-danger hover:bg-danger/10 px-3 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
           >
             <Trash2 className="w-4 h-4" />
             Excluir concessionária
@@ -265,7 +265,7 @@ export function TenantForm({ tenant }: Props) {
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex items-center gap-2 bg-signal text-ink text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-signal-dark disabled:opacity-50 transition-colors cursor-pointer"
+          className="w-full sm:w-auto inline-flex items-center gap-2 bg-signal text-ink text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-signal-dark disabled:opacity-50 transition-colors cursor-pointer"
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           {isEdit ? "Salvar alterações" : "Cadastrar concessionária"}

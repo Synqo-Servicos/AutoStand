@@ -59,7 +59,7 @@ export function StorefrontFooter({ tenant, waHref }: Props) {
       {tenant.contact_email && (
         <a
           href={`mailto:${tenant.contact_email}`}
-          className="text-white/70 text-sm hover:text-white transition-colors"
+          className="text-white/70 text-sm hover:text-white transition-colors break-words"
         >
           {tenant.contact_email}
         </a>

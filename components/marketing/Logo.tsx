@@ -6,9 +6,11 @@
 export function Logo({
   tone = "dark",
   className = "",
+  wordmarkClassName = "",
 }: {
   tone?: "dark" | "light";
   className?: string;
+  wordmarkClassName?: string;
 }) {
   const monogram = tone === "light" ? "#FFFFFF" : "#0B1F33";
   const wordmark = tone === "light" ? "text-white" : "text-ink";
@@ -25,7 +27,7 @@ export function Logo({
           d="M596.571 352.638L596.715 353.223C591.449 361.981 584.784 371.69 579.19 380.369L537.429 444.837L398.605 660.056L217.241 659.996C217.37 657.334 265.183 583.394 270.704 574.671C297.589 575.156 325.458 574.477 352.486 574.516C366.222 555.086 379.154 534.148 392 514.054L435.44 446.393L457.517 411.977C462.439 404.318 467.475 395.979 472.742 388.623C484.171 384.697 498.096 381.128 509.892 377.674L596.571 352.638Z"
         />
       </svg>
-      <span className={`font-display font-semibold text-xl tracking-tight ${wordmark}`}>
+      <span className={`font-display font-semibold text-xl tracking-tight ${wordmark} ${wordmarkClassName}`}>
         AutoStand
       </span>
     </span>

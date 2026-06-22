@@ -58,6 +58,7 @@ export function VendedoresList({ initialSellers }: Props) {
             Nenhum vendedor cadastrado.
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-n50">
               <tr>
@@ -109,6 +110,7 @@ export function VendedoresList({ initialSellers }: Props) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 

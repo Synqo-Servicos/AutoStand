@@ -87,7 +87,7 @@ export function OperationalExpenseList({ initialRows, month }: Props) {
         ) : (
           <ul className="divide-y divide-n100">
             {rows.map((r) => (
-              <li key={r.id} className="px-5 py-3 flex items-center gap-3 text-sm hover:bg-n50/60">
+              <li key={r.id} className="px-5 py-3 flex flex-wrap items-center gap-3 text-sm hover:bg-n50/60">
                 <span className="text-xs text-n400 w-20 shrink-0">{formatDate(r.date)}</span>
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${TYPE_BADGE[r.type as OpType] ?? "bg-n100 text-n600"}`}

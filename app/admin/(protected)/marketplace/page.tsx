@@ -16,7 +16,7 @@ export default async function MarketplacePage() {
   const tenant = await getAdminTenant();
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-8 max-w-3xl">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-ink">Marketplace AutoStand</h1>
         <p className="text-sm text-n600 mt-1">
@@ -33,9 +33,9 @@ export default async function MarketplacePage() {
         {tenant.marketplace_opt_in && (
           <div className="mt-5 flex items-center gap-2 rounded-lg bg-success/10 border border-success/30 px-4 py-3 text-sm text-ink">
             <ExternalLink className="w-4 h-4 shrink-0 text-success" />
-            <span>
+            <span className="min-w-0">
               Seu perfil:{" "}
-              <span className="font-medium">{PLATFORM_DOMAIN}/loja/{tenant.slug}</span>
+              <span className="font-medium min-w-0 break-all">{PLATFORM_DOMAIN}/loja/{tenant.slug}</span>
             </span>
           </div>
         )}

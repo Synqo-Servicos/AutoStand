@@ -26,7 +26,7 @@ export function StorefrontHero({
 
   return (
     <section
-      className="relative bg-[var(--brand-primary)] text-white py-24 px-4 overflow-hidden"
+      className="relative bg-[var(--brand-primary)] text-white py-16 sm:py-24 px-4 overflow-hidden"
       style={
         useImage
           ? {
@@ -55,7 +55,7 @@ export function StorefrontHero({
             {eyebrow}
           </p>
         )}
-        <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight mb-6 uppercase">
+        <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight mb-6 uppercase break-words">
           {heroTitle}
         </h1>
         <p className="text-n300 text-lg max-w-xl mb-8">{heroSubtitle}</p>
@@ -78,10 +78,10 @@ export function StorefrontHero({
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-8 mt-16 pt-8 border-t border-white/10 max-w-md">
+        <div className="grid grid-cols-3 gap-4 sm:gap-8 mt-16 pt-8 border-t border-white/10 max-w-md">
           {[["100%", "Revisados"], ["0", "Surpresas"], ["Direto", "Comigo"]].map(([val, desc]) => (
             <div key={desc}>
-              <p className="text-2xl font-bold text-white">{val}</p>
+              <p className="text-xl sm:text-2xl font-bold text-white">{val}</p>
               <p className="text-xs text-n400 mt-0.5">{desc}</p>
             </div>
           ))}

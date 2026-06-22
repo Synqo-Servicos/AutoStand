@@ -16,8 +16,8 @@ export default async function ParceirosPage() {
   const partners = await listPartners();
 
   return (
-    <div className="p-8 max-w-6xl">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-8 max-w-6xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-ink">Parceiros</h1>
           <p className="text-sm text-n600 mt-1">{partners.length} cadastrados</p>
@@ -32,6 +32,7 @@ export default async function ParceirosPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-n200/70 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-n100 text-sm">
           <thead>
             <tr className="bg-n50">
@@ -86,6 +87,7 @@ export default async function ParceirosPage() {
             ))}
           </tbody>
         </table>
+        </div>
         {partners.length === 0 && (
           <div className="py-16 text-center text-n400">
             <p className="font-medium">Nenhum parceiro cadastrado</p>

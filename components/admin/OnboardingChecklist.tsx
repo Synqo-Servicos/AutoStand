@@ -30,7 +30,7 @@ export function OnboardingChecklist({ name }: { name?: string }) {
         type="button"
         onClick={dismiss}
         aria-label="Dispensar tutorial"
-        className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-n400 hover:bg-n100 hover:text-ink transition-colors cursor-pointer"
+        className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-md text-n400 hover:bg-n100 hover:text-ink transition-colors cursor-pointer"
       >
         <X className="h-4 w-4" />
       </button>

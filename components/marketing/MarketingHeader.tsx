@@ -7,7 +7,7 @@ export function MarketingHeader() {
     <header className="sticky top-0 z-40 border-b border-n200 bg-n50/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <Link href="/" aria-label="AutoStand — início">
-          <Logo tone="dark" />
+          <Logo tone="dark" wordmarkClassName="hidden sm:inline" />
         </Link>
         <nav className="flex items-center gap-1 sm:gap-4">
           <Link
