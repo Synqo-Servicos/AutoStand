@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Car, MessageCircle, Palette, Sparkles, Users, X } from "lucide-react";
+import { ArrowRight, Car, MessageCircle, Palette, PlayCircle, Sparkles, Users, X } from "lucide-react";
+import { OnboardingTour } from "@/components/admin/OnboardingTour";
 
 const STEPS = [
   { icon: Palette, title: "Personalize sua marca", desc: "Cores, logo e textos do seu site.", href: "/admin/personalizar" },
@@ -14,6 +15,7 @@ const STEPS = [
 /** Tutorial de primeiros passos exibido no 1º acesso, até ser dispensado. */
 export function OnboardingChecklist({ name }: { name?: string }) {
   const [hidden, setHidden] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
   if (hidden) return null;
 
   function dismiss() {
@@ -40,8 +42,17 @@ export function OnboardingChecklist({ name }: { name?: string }) {
         </h2>
       </div>
       <p className="mt-1 text-sm text-n600">
-        Quatro passos rápidos para deixar sua loja pronta para vender:
+        Faça um tour de 1 minuto pelas funcionalidades, ou comece pelos atalhos abaixo.
       </p>
+
+      <button
+        type="button"
+        onClick={() => setTourOpen(true)}
+        className="mt-3 inline-flex items-center gap-2 rounded-lg bg-signal px-4 py-2 text-sm font-semibold text-ink hover:bg-signal-dark transition-colors cursor-pointer"
+      >
+        <PlayCircle className="h-4 w-4" />
+        Fazer o tour guiado
+      </button>
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
         {STEPS.map((s, i) => (
@@ -71,6 +82,8 @@ export function OnboardingChecklist({ name }: { name?: string }) {
       >
         Já configurei — não mostrar de novo
       </button>
+
+      <OnboardingTour open={tourOpen} onOpenChange={setTourOpen} onComplete={dismiss} />
     </div>
   );
 }
