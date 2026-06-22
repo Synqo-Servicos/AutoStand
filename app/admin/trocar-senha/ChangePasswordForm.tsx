@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ redirectTo = "/admin/dashboard" }: { redirectTo?: string }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -35,7 +35,7 @@ export function ChangePasswordForm() {
       return;
     }
     // Senha trocada → flag limpa no banco; o painel para de redirecionar.
-    router.replace("/admin/dashboard");
+    router.replace(redirectTo);
     router.refresh();
   }
 

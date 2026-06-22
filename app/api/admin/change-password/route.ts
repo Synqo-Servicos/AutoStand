@@ -8,7 +8,7 @@ import { changePasswordSchema } from "@/lib/validation";
  *  login (senha provisória) e também avulsamente. Limpa must_change_password. */
 export async function POST(req: NextRequest) {
   const session = await auth().catch(() => null);
-  if (!session?.user?.id || session.user.role !== "tenant_admin") {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const raw = await req.json().catch(() => null);
