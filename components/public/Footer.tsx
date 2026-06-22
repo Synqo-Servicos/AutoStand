@@ -78,7 +78,7 @@ export function Footer() {
             {tenant.contact_email && (
               <a
                 href={`mailto:${tenant.contact_email}`}
-                className="hover:text-white transition-colors block"
+                className="hover:text-white transition-colors block break-words"
               >
                 {tenant.contact_email}
               </a>

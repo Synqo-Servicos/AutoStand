@@ -143,7 +143,7 @@ export function OnboardingTour({ open, onOpenChange, onComplete }: Props) {
       }
       description={step.lead}
       footer={
-        <div className="flex w-full items-center justify-between">
+        <div className="flex w-full flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             {STEPS.map((_, idx) => (
               <span

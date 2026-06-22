@@ -373,7 +373,7 @@ export function VehicleForm({ vehicle }: Props) {
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {isEdit ? (
           <button
             type="button"
@@ -383,7 +383,7 @@ export function VehicleForm({ vehicle }: Props) {
             Excluir veículo
           </button>
         ) : <div />}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => router.back()}

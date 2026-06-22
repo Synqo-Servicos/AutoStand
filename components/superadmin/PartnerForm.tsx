@@ -141,7 +141,7 @@ export function PartnerForm({ partner }: { partner?: PartnerRow }) {
 
       {/* Desconto e limites */}
       <div className={cardClass}>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Tipo de desconto</label>
             <select
@@ -167,7 +167,7 @@ export function PartnerForm({ partner }: { partner?: PartnerRow }) {
             />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Limite de usos</label>
             <input
@@ -207,7 +207,7 @@ export function PartnerForm({ partner }: { partner?: PartnerRow }) {
         <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
         {isEdit ? (
           <button
             type="button"

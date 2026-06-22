@@ -116,9 +116,9 @@ export function AdminSidebar({ tenantName }: { tenantName: string }) {
           <button
             onClick={() => setOpen(false)}
             aria-label="Fechar menu"
-            className="lg:hidden p-1 -mr-1 rounded-md hover:bg-n50 text-n600 cursor-pointer"
+            className="lg:hidden p-2 -mr-1 rounded-md hover:bg-n50 text-n600 cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

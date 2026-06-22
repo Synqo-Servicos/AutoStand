@@ -150,6 +150,7 @@ async function VeiculosTab({ tenantId, month }: { tenantId: number; month: strin
           Nenhum veículo vendido no período.
         </div>
       ) : (
+        <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-n50">
             <tr>
@@ -187,6 +188,7 @@ async function VeiculosTab({ tenantId, month }: { tenantId: number; month: strin
             })}
           </tbody>
         </table>
+        </div>
       )}
     </section>
   );
