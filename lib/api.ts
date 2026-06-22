@@ -111,7 +111,7 @@ function toErrorResponse(err: unknown): NextResponse {
       { status: 400 },
     );
   }
-  // Erro inesperado — logar pra Vercel + responder genérico.
+  // Erro inesperado — logar (CloudWatch) + responder genérico.
   console.error("[api] uncaught:", err);
   const message = err instanceof Error ? err.message : "Erro interno do servidor.";
   return NextResponse.json({ error: message }, { status: 500 });

@@ -10,8 +10,8 @@ import Script from "next/script";
  * passa um token vazio (que o servidor aceita via no-op).
  *
  * Setup em prod:
- *   - vercel env add NEXT_PUBLIC_TURNSTILE_SITE_KEY (public)
- *   - vercel env add TURNSTILE_SECRET_KEY            (server)
+ *   - definir NEXT_PUBLIC_TURNSTILE_SITE_KEY no GitHub Environment (público)
+ *   - definir TURNSTILE_SECRET_KEY no GitHub Environment (servidor)
  */
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();

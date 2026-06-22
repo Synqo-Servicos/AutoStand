@@ -116,11 +116,11 @@ export function TenantForm({ tenant }: Props) {
             value={form.name}
             onChange={(e) => onNameChange(e.target.value)}
             className={inputClass}
-            placeholder="Ex: Pedro Ivo Veículos"
+            placeholder="Ex: Auto Brasil Veículos"
           />
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Slug" hint="Identificador. Dev: <slug>.localhost:3000" required>
+          <Field label="Slug" hint="Identificador único — vira o subdomínio do site: <slug>.autostand.com.br" required>
             <input
               required
               value={form.slug}
@@ -129,10 +129,10 @@ export function TenantForm({ tenant }: Props) {
                 set("slug", normalizeSlug(e.target.value));
               }}
               className={inputClass}
-              placeholder="pedro-ivo"
+              placeholder="auto-brasil"
             />
           </Field>
-          <Field label="Domínio próprio" hint="Domínio do cliente (configure na Vercel à parte).">
+          <Field label="Domínio próprio" hint="Domínio próprio do cliente (opcional). O DNS deve apontar para a plataforma.">
             <input
               value={form.custom_domain}
               onChange={(e) => set("custom_domain", e.target.value.trim())}
@@ -212,7 +212,7 @@ export function TenantForm({ tenant }: Props) {
           <Field label="Cidade">
             <input value={form.city} onChange={(e) => set("city", e.target.value)} className={inputClass} placeholder="Maceió, AL" />
           </Field>
-          <Field label="WhatsApp" hint="Com DDI. Ex: 5582998287879">
+          <Field label="WhatsApp" hint="Com DDI (55) + DDD + número. Ex: 5511999998888">
             <input value={form.whatsapp_number} onChange={(e) => set("whatsapp_number", e.target.value.replace(/\D/g, ""))} className={inputClass} placeholder="5582999999999" />
           </Field>
           <Field label="Instagram (URL)">
