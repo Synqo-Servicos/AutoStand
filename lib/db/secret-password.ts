@@ -81,8 +81,17 @@ export async function getDbPassword(): Promise<string> {
     return password;
   } catch (err) {
     // Resiliência: durante rollout ou falha transitória do SM, cai na senha
-    // injetada no start (se houver).
+    // injetada no start (se houver). NÃO passar calado: um GetSecretValue
+    // negado de forma persistente mascara o problema até a próxima rotação
+    // (quando DB_PASSWORD fica velha) — então logamos para dar visibilidade.
     const fallback = process.env.DB_PASSWORD;
+    const detail = err instanceof Error ? err.message : String(err);
+    console.warn(
+      `[db] Falha ao resolver a senha via Secrets Manager (DB_SECRET_ARN): ${detail}. ` +
+        (fallback
+          ? "Usando DB_PASSWORD de fallback (válida só até a próxima rotação)."
+          : "Sem DB_PASSWORD de fallback — propagando o erro."),
+    );
     if (fallback) return fallback;
     throw err;
   }
