@@ -10,7 +10,7 @@
 
 ## Contexto
 
-- A infra (ECS `autostand`, ALB `autostand-alb`, ECR, S3) **já está na conta Synqo** (`507099297746`, profile `autostand`, região `sa-east-1`). Não foi criada na conta errada.
+- A infra (ECS `autostand`, ALB `autostand-alb`, ECR, S3) **já está na conta Synqo** (`507099297746`, profile `synqo`, região `sa-east-1`). Não foi criada na conta errada.
 - DB hoje: **Turso** via `@libsql/client` + Drizzle `sqlite-core`.
 - **RDS já provisionado**: `autostand-postgres` (Postgres 18, `db.t4g.micro`, 20GB gp3, privado, db `autostand`, senha gerenciada no Secrets Manager, SG `sg-06a2ddf203fcb68a2` liberando o SG do ECS `sg-01e9e2ec9a6929544` na 5432, subnet group `autostand-db-subnets`, deletion protection on).
 - VPC `vpc-00e3d7032cdd2f0f0`; ECS em subnets públicas (sa-east-1a/b/c) com IP público.

@@ -207,7 +207,7 @@ git commit -m "feat(docker): Dockerfile multi-stage + standalone output"
 
 ## Fase 2 — AWS Compute (ECR + ECS + ALB)
 
-> Todos os comandos usam o perfil `autostand`. Rode `export AWS_PROFILE=autostand` antes de começar.
+> Todos os comandos usam o perfil `synqo`. Rode `export AWS_PROFILE=synqo` antes de começar.
 
 ### Task 3: ECR + IAM OIDC para GitHub Actions
 
