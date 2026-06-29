@@ -37,6 +37,7 @@ describe("lib/db/secret-password", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("busca o segredo no SM e retorna o campo .password do JSON", async () => {
@@ -98,9 +99,21 @@ describe("lib/db/secret-password", () => {
     process.env.DB_SECRET_ARN = "arn:test:secret";
     process.env.DB_PASSWORD = "senha-fallback";
     mockSend.mockRejectedValue(new Error("AccessDenied"));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const { getDbPassword } = await import("@/lib/db/secret-password");
     await expect(getDbPassword()).resolves.toBe("senha-fallback");
+  });
+
+  it("loga aviso ao cair no fallback (falha do SM não passa calada)", async () => {
+    process.env.DB_SECRET_ARN = "arn:test:secret";
+    process.env.DB_PASSWORD = "senha-fallback";
+    mockSend.mockRejectedValue(new Error("AccessDenied"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const { getDbPassword } = await import("@/lib/db/secret-password");
+    await getDbPassword();
+    expect(warn).toHaveBeenCalledOnce();
   });
 
   it("sem ARN e sem DB_PASSWORD: lança erro claro", async () => {
