@@ -97,6 +97,16 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   const vehicleId = Number(id);
 
   const { url, set_primary } = await req.json();
+
+  // Confirma que a URL é de uma foto deste tenant+veículo antes de apagar o
+  // blob no S3. deletePhoto já é tenant-scoped (só apaga a linha do dono),
+  // mas deleteFromBlob apaga qualquer key sob o CDN — sem esta checagem um
+  // admin de loja poderia apagar a foto (URL pública) de outra loja.
+  const photos = await getPhotosByVehicle(tenantId, vehicleId);
+  if (!photos.some((p) => p.url === url)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   await deleteFromBlob(url);
   await deletePhoto(tenantId, url);
 
