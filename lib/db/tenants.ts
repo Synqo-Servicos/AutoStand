@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   demand_events, leads, partners, tenants, transactions, users,
   vehicle_documents, vehicle_photos, vehicles,
@@ -7,10 +7,6 @@ import type { NewTenant, TenantRow } from "@/lib/schema";
 import { db, dbAll, dbGet, type Tx } from "./client";
 
 // — CRUD ———————————————————————————————————————————————————————
-
-export async function listTenants(): Promise<TenantRow[]> {
-  return db.select().from(tenants).orderBy(desc(tenants.created_at));
-}
 
 export async function getTenantById(id: number): Promise<TenantRow | null> {
   const [row] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);

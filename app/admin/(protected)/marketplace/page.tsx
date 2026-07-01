@@ -1,10 +1,9 @@
 import { Store, TrendingUp, Users, ExternalLink } from "lucide-react";
 import { getAdminTenant } from "@/lib/tenant";
 import { MarketplaceToggle } from "@/components/admin/MarketplaceToggle";
+import { PLATFORM_DOMAIN } from "@/lib/platform";
 
 export const dynamic = "force-dynamic";
-
-const PLATFORM_DOMAIN = (process.env.PLATFORM_DOMAIN ?? "autostand.com.br").trim();
 
 const BENEFITS = [
   { icon: TrendingUp, title: "Mais alcance", text: "Seu estoque aparece para quem busca carro no portal AutoStand, não só no seu site." },

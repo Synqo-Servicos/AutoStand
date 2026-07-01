@@ -21,12 +21,18 @@ const config: NextConfig = {
       },
     ];
   },
-  serverExternalPackages: ["@libsql/client", "libsql"],
   images: {
     remotePatterns: [
       {
         protocol: "https",
         hostname: "cdn.autostand.com.br",
+      },
+      {
+        // Homolog serve as imagens de cdn.homologation.autostand.com.br.
+        // next/image só carrega hosts allowlistados — sem este, toda
+        // imagem via next/image quebra em homolog.
+        protocol: "https",
+        hostname: "cdn.homologation.autostand.com.br",
       },
       {
         protocol: "https",

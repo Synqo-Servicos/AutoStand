@@ -13,10 +13,6 @@ export async function getUserById(id: number): Promise<UserRow | null> {
   return row ?? null;
 }
 
-export async function listUsersByTenant(tenantId: number): Promise<UserRow[]> {
-  return db.select().from(users).where(eq(users.tenant_id, tenantId));
-}
-
 export async function createUser(
   input: {
     email: string;
