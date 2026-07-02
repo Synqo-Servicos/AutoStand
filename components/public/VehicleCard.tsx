@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Gauge, Calendar, Fuel, Settings } from "lucide-react";
 import { formatBRL } from "@/lib/money";
+import { waHref as toWaHref } from "@/lib/whatsapp";
 import { FUEL_LABELS, TRANSMISSION_LABELS } from "@/lib/constants";
 import type { LayoutConfig } from "@/lib/layout";
 import type { Vehicle } from "@/types/vehicle";
@@ -54,10 +55,8 @@ export function VehicleCard({
   whatsapp?: string | null;
   cardStyle?: CardStyle;
 }) {
-  const msg = encodeURIComponent(
-    `Olá! Tenho interesse no ${vehicle.brand} ${vehicle.model} ${vehicle.year} anunciado no site.`,
-  );
-  const ctaHref = whatsapp ? `https://wa.me/${whatsapp}?text=${msg}` : `/veiculos/${vehicle.id}`;
+  const message = `Olá! Tenho interesse no ${vehicle.brand} ${vehicle.model} ${vehicle.year} anunciado no site.`;
+  const ctaHref = toWaHref(whatsapp, message) ?? `/veiculos/${vehicle.id}`;
   const ctaProps = whatsapp ? { target: "_blank", rel: "noopener noreferrer" } : {};
   const fuel = FUEL_LABELS[vehicle.fuel as keyof typeof FUEL_LABELS] ?? vehicle.fuel;
   const transmission =

@@ -10,6 +10,7 @@ import { requirePlatformHost } from "@/lib/tenant";
 import { getMarketplaceVehicle, tenantSiteUrl } from "@/lib/marketplace";
 import { recordView } from "@/lib/demand";
 import { formatBRL } from "@/lib/money";
+import { waHref as toWaHref } from "@/lib/whatsapp";
 import {
   FUEL_LABELS, TRANSMISSION_LABELS, BODY_TYPE_LABELS, CONDITION_LABELS,
 } from "@/lib/constants";
@@ -60,12 +61,10 @@ export default async function ComprarDetalhePage({ params }: Params) {
   const photos = v.photos.length > 0 ? v.photos : v.primary_photo_url ? [v.primary_photo_url] : [];
   const mainPhoto = v.primary_photo_url ?? photos[0] ?? null;
 
-  const whatsappDigits = v.loja.whatsapp_number?.replace(/\D/g, "") ?? "";
-  const whatsappHref = whatsappDigits
-    ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
-        `Olá! Vi o ${label} no marketplace AutoStand e tenho interesse.`,
-      )}`
-    : null;
+  const whatsappHref = toWaHref(
+    v.loja.whatsapp_number,
+    `Olá! Vi o ${label} no marketplace AutoStand e tenho interesse.`,
+  );
 
   const specs = [
     { icon: Calendar, label: "Ano", value: anos },

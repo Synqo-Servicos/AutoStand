@@ -1,5 +1,6 @@
 import type { LayoutConfig } from "@/lib/layout";
 import type { TenantRow } from "@/lib/schema";
+import { waHref as toWaHref } from "@/lib/whatsapp";
 
 /**
  * Hero da vitrine — renderiza conforme `layout_config.heroStyle`:
@@ -20,7 +21,7 @@ export function StorefrontHero({
     "Carros revisados, documentação em dia e financiamento facilitado. Encontre o carro certo para você.";
   // Eyebrow: slogan editorial tem prioridade; cai pra cidade quando ausente.
   const eyebrow = tenant.slogan?.trim() || tenant.city;
-  const waHref = tenant.whatsapp_number ? `https://wa.me/${tenant.whatsapp_number}` : "#contato";
+  const waHref = toWaHref(tenant.whatsapp_number) ?? "#contato";
 
   const useImage = config.heroStyle === "image" && !!config.heroImageUrl;
 
