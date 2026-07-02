@@ -7,6 +7,7 @@ import { PartnerBanks } from "@/components/public/PartnerBanks";
 import { PhotoGallery } from "@/components/public/PhotoGallery";
 import { LeadForm } from "@/components/public/LeadForm";
 import { formatBRL } from "@/lib/money";
+import { waHref as toWaHref } from "@/lib/whatsapp";
 import { FUEL_LABELS, TRANSMISSION_LABELS, STATUS_LABELS } from "@/lib/constants";
 import type { Metadata } from "next";
 
@@ -44,11 +45,10 @@ export default async function VehiclePage({ params }: Params) {
   });
 
   const label = `${vehicle.brand} ${vehicle.model} ${vehicle.year}`;
-  const waHref = tenant.whatsapp_number
-    ? `https://wa.me/${tenant.whatsapp_number}?text=${encodeURIComponent(
-        `Olá! Tenho interesse no ${label} anunciado no site. Pode me passar mais detalhes?`,
-      )}`
-    : null;
+  const waHref = toWaHref(
+    tenant.whatsapp_number,
+    `Olá! Tenho interesse no ${label} anunciado no site. Pode me passar mais detalhes?`,
+  );
 
   const specs = [
     { icon: Calendar, label: "Ano", value: String(vehicle.year) },

@@ -12,6 +12,7 @@ import { recordSearch } from "@/lib/demand";
 import { getCurrentTenant } from "@/lib/tenant";
 import { resolveLayoutConfig } from "@/lib/layout";
 import { iconForSlug } from "@/lib/about-icons";
+import { waHref as toWaHref } from "@/lib/whatsapp";
 import { StorefrontHero } from "@/components/public/StorefrontHero";
 import { VehicleCard } from "@/components/public/VehicleCard";
 import { VehicleFilters } from "@/components/public/VehicleFilters";
@@ -57,7 +58,7 @@ export async function Storefront({ sp }: { sp: Record<string, string> }) {
     searchTerm:   sp.search       || undefined,
   });
 
-  const waHref = tenant.whatsapp_number ? `https://wa.me/${tenant.whatsapp_number}` : "#contato";
+  const waHref = toWaHref(tenant.whatsapp_number) ?? "#contato";
   const gridCols = layout.cardsPerRow === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3";
 
   return (

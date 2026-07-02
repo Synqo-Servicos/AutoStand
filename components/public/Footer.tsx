@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { PartnerBanks } from "@/components/public/PartnerBanks";
 import { useTenant, tenantInitials } from "@/components/TenantContext";
+import { waHref as toWaHref } from "@/lib/whatsapp";
 
 interface SocialLink {
   label: string;
@@ -56,7 +57,7 @@ export function Footer() {
           <div className="space-y-1 text-sm">
             {tenant.whatsapp_number && (
               <a
-                href={`https://wa.me/${tenant.whatsapp_number}`}
+                href={toWaHref(tenant.whatsapp_number) ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors block"

@@ -142,7 +142,7 @@ export function DocumentGeneratorForm({
         <div className="bg-success/10 border border-success/30 px-4 py-3 rounded-md text-sm">
           <p className="font-semibold text-success">Salvo no veículo.</p>
           <p className="text-n600 mt-1">
-            "{saved.name}" anexado em <strong>Documentos internos</strong>.{" "}
+            &quot;{saved.name}&quot; anexado em <strong>Documentos internos</strong>.{" "}
             <a href={saved.url} target="_blank" rel="noopener noreferrer" className="text-signal hover:underline">
               Abrir PDF
             </a>

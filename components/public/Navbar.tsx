@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, X, Phone } from "lucide-react";
 import { useTenant, tenantInitials } from "@/components/TenantContext";
+import { waHref as toWaHref } from "@/lib/whatsapp";
 
 /**
  * Navbar do storefront com dois estados:
@@ -18,7 +19,7 @@ export function Navbar() {
   const tenant = useTenant();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const waHref = tenant.whatsapp_number ? `https://wa.me/${tenant.whatsapp_number}` : null;
+  const waHref = toWaHref(tenant.whatsapp_number);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);

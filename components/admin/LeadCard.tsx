@@ -6,13 +6,7 @@ import type { LeadRow } from "@/lib/schema";
 import type { Vehicle } from "@/types/vehicle";
 import { LEAD_STAGES, LEAD_SOURCE_LABELS } from "@/lib/constants";
 import { LeadHistoryDrawer } from "@/components/admin/LeadHistoryDrawer";
-
-/** Telefone digitado pelo visitante → número para o wa.me (com DDI 55). */
-function waNumber(raw: string): string {
-  let d = raw.replace(/\D/g, "");
-  if (d.length <= 11 && !d.startsWith("55")) d = `55${d}`;
-  return d;
-}
+import { waHref } from "@/lib/whatsapp";
 
 function buildTemplates(name: string, vehicleLabel: string | null) {
   const carro = vehicleLabel ? `o ${vehicleLabel}` : "um dos nossos veículos";
@@ -51,10 +45,9 @@ export function LeadCard({ lead, vehicle, stale, onStatusChange, onContacted, on
   const [historyOpen, setHistoryOpen] = useState(false);
   const vehicleLabel = vehicle ? `${vehicle.brand} ${vehicle.model} ${vehicle.year}` : null;
   const templates = buildTemplates(lead.name, vehicleLabel);
-  const wa = waNumber(lead.phone);
-
   function sendWhatsApp(text: string, label: string) {
-    window.open(`https://wa.me/${wa}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+    const href = waHref(lead.phone, text);
+    if (href) window.open(href, "_blank", "noopener");
     setMenuOpen(false);
     // Registra no histórico do lead (best-effort — não bloqueia o envio).
     fetch(`/api/leads/${lead.id}/interactions`, {

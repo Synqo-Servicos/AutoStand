@@ -11,7 +11,10 @@ import type { DemandSnapshot } from "@/lib/demand";
  * pode ser sobrescrito por `AI_MODEL`.
  */
 
-const MODEL = process.env.AI_MODEL ?? "gemini-2.5-flash";
+// `|| ` (não `??`) de propósito: AI_MODEL vem de um secret do workflow; um
+// secret ausente chega como string vazia, e `"" ?? default` manteria `""`
+// → google("") quebraria. `|| ` cai no default também para "".
+const MODEL = process.env.AI_MODEL?.trim() || "gemini-2.5-flash";
 
 /** True quando a chave da API está configurada. */
 export function aiConfigured(): boolean {

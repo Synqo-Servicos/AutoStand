@@ -9,6 +9,12 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Vars NEXT_PUBLIC_* são inlined pelo Next em BUILD time — precisam existir
+# aqui, não só no runtime do ECS. Chegam via --build-arg nos workflows de
+# deploy. Vazio (default) = comportamento atual (CAPTCHA desligado). É uma
+# site key pública (vai pro browser), então embutir na imagem é ok.
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=""
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 RUN npm run build
 
 FROM base AS runner

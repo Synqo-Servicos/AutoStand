@@ -2,6 +2,7 @@
 
 import { MessageCircle } from "lucide-react";
 import { useTenant } from "@/components/TenantContext";
+import { waHref as toWaHref } from "@/lib/whatsapp";
 
 export function WhatsAppFAB() {
   const tenant = useTenant();
@@ -9,7 +10,7 @@ export function WhatsAppFAB() {
 
   return (
     <a
-      href={`https://wa.me/${tenant.whatsapp_number}`}
+      href={toWaHref(tenant.whatsapp_number) ?? "#"}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Falar no WhatsApp"

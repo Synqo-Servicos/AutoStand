@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   demand_events, leads, partners, tenants, transactions, users,
   vehicle_documents, vehicle_photos, vehicles,
@@ -7,10 +7,6 @@ import type { NewTenant, TenantRow } from "@/lib/schema";
 import { db, dbAll, dbGet, type Tx } from "./client";
 
 // — CRUD ———————————————————————————————————————————————————————
-
-export async function listTenants(): Promise<TenantRow[]> {
-  return db.select().from(tenants).orderBy(desc(tenants.created_at));
-}
 
 export async function getTenantById(id: number): Promise<TenantRow | null> {
   const [row] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
@@ -32,10 +28,10 @@ export async function getTenantByDomain(domain: string): Promise<TenantRow | nul
 }
 
 /**
- * Allowlist dos campos editáveis em createTenant/updateTenant.
- * Bloqueia mass-assignment: o handler pode receber um body com chaves
- * extras (mp_subscription_id, subscription_status, current_period_end…)
- * e elas não passam pra query.
+ * Allowlist dos campos que um UPDATE (PATCH de usuário) pode setar.
+ * Bloqueia mass-assignment: campos de billing (subscription_status,
+ * mp_subscription_id, current_period_end) ficam DE FORA — só o webhook do
+ * Mercado Pago os altera, via setTenantSubscriptionState (update cru).
  */
 const TENANT_WRITABLE_FIELDS = [
   "slug", "name", "city", "logo_url", "address", "contact_email",
@@ -50,17 +46,44 @@ const TENANT_WRITABLE_FIELDS = [
   "coupon_id",
 ] as const;
 
-function pickTenantFields<T extends Record<string, unknown>>(input: T): Partial<T> {
+/**
+ * Campos aceitos só na CRIAÇÃO. createTenant é montado server-side (signup),
+ * não vem de body de usuário, então pode gravar o estado inicial de billing —
+ * que, na allowlist de update, seria (corretamente) descartado.
+ */
+const TENANT_CREATE_FIELDS = [
+  ...TENANT_WRITABLE_FIELDS,
+  "subscription_status", "mp_subscription_id", "current_period_end",
+] as const;
+
+function pickFields<T extends Record<string, unknown>>(
+  input: T,
+  allow: readonly string[],
+): Partial<T> {
   const safe: Record<string, unknown> = {};
-  for (const key of TENANT_WRITABLE_FIELDS) {
+  for (const key of allow) {
     if (key in input) safe[key] = (input as Record<string, unknown>)[key];
   }
   return safe as Partial<T>;
 }
 
+/** Filtra input p/ os campos gravaveis num UPDATE (bloqueia billing). */
+export function pickWritableTenantFields<T extends Record<string, unknown>>(
+  input: T,
+): Partial<T> {
+  return pickFields(input, TENANT_WRITABLE_FIELDS);
+}
+
+/** Filtra input p/ os campos aceitos na CRIAÇÃO (inclui billing inicial). */
+export function pickCreatableTenantFields<T extends Record<string, unknown>>(
+  input: T,
+): Partial<T> {
+  return pickFields(input, TENANT_CREATE_FIELDS);
+}
+
 export async function createTenant(input: NewTenant, tx?: Tx): Promise<TenantRow> {
   const orm = tx ?? db;
-  const safe = pickTenantFields(input);
+  const safe = pickCreatableTenantFields(input);
   if (!safe.slug || !safe.name) {
     throw new Error("Slug e nome são obrigatórios");
   }
@@ -72,7 +95,7 @@ export async function updateTenant(
   id: number,
   input: Partial<NewTenant>,
 ): Promise<TenantRow | null> {
-  const safe = pickTenantFields(input);
+  const safe = pickWritableTenantFields(input);
   if (Object.keys(safe).length > 0) {
     await db
       .update(tenants)
