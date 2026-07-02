@@ -50,8 +50,11 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           SHA: ${{ github.sha }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
         run: |
-          docker build --target runner -t "$REGISTRY/autostand:homolog-$SHA" -t "$REGISTRY/autostand:homolog-latest" .
+          docker build --target runner \
+            --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY="$NEXT_PUBLIC_TURNSTILE_SITE_KEY" \
+            -t "$REGISTRY/autostand:homolog-$SHA" -t "$REGISTRY/autostand:homolog-latest" .
           docker push "$REGISTRY/autostand:homolog-$SHA"
           docker push "$REGISTRY/autostand:homolog-latest"
 
