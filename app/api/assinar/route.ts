@@ -16,6 +16,8 @@ import { normalizeSlug, slugError } from "@/lib/slug";
 import { createCheckoutSession } from "@/lib/checkout";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { signPaymentToken } from "@/lib/payment-token";
+import { discountedPriceCents } from "@/lib/coupon-pricing";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -109,8 +111,18 @@ export async function POST(req: NextRequest) {
       return t;
     });
 
-    const checkoutUrl = await createCheckoutSession(tenant, getPlan(plan), partner, coupon);
+    if (process.env.CHECKOUT_MODE === "transparent") {
+      const paymentToken = signPaymentToken({
+        tenantId: tenant.id,
+        planSlug: plan,
+        couponId: coupon?.id ?? null,
+      });
+      const planObj = getPlan(plan);
+      const amount = coupon ? discountedPriceCents(planObj, coupon) : planObj.priceMonthly;
+      return NextResponse.json({ ok: true, slug: tenant.slug, paymentToken, amount }, { status: 201 });
+    }
 
+    const checkoutUrl = await createCheckoutSession(tenant, getPlan(plan), partner, coupon);
     return NextResponse.json({ ok: true, slug: tenant.slug, checkoutUrl }, { status: 201 });
   } catch (err) {
     console.error("[assinar] unexpected error:", err);
