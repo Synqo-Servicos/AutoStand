@@ -91,6 +91,19 @@ export function SignupForm({
         setSubmitting(false);
         return;
       }
+      if (data.paymentToken) {
+        sessionStorage.setItem(
+          "autostand.payment",
+          JSON.stringify({
+            paymentToken: data.paymentToken,
+            amount: data.amount,
+            slug: data.slug,
+            email: adminEmail,
+          }),
+        );
+        router.push("/assinar/pagamento");
+        return;
+      }
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
         return;
