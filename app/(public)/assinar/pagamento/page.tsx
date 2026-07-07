@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CardBrick } from "@/components/checkout/CardBrick";
-import { formatBRL } from "@/lib/money";
+import { formatBRLFull } from "@/lib/money";
 
 interface Handoff {
   paymentToken: string;
@@ -70,7 +70,7 @@ export default function PaymentPage() {
     <main className="mx-auto max-w-md px-4 py-10">
       <h1 className="font-display text-h3 text-ink">Pagamento</h1>
       <p className="mt-1 text-body-s text-n600">
-        {formatBRL(handoff.amount)}/mês — {handoff.slug}.autostand.com.br
+        {formatBRLFull(handoff.amount)}/mês — {handoff.slug}.autostand.com.br
       </p>
       {error && (
         <p className="mt-4 rounded-lg bg-danger/10 px-3 py-2 text-body-s text-danger">{error}</p>

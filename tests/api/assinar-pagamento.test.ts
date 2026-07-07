@@ -50,6 +50,17 @@ describe("POST /api/assinar/pagamento", () => {
     expect(setTenantSubscriptionState).not.toHaveBeenCalled();
   });
 
+  it("503 e não ativa quando verifyPaymentToken lança (ex.: falta PAYMENT_TOKEN_SECRET)", async () => {
+    verifyPaymentToken.mockImplementation(() => {
+      throw new Error("no secret");
+    });
+    const { POST } = await import("@/app/api/assinar/pagamento/route");
+    const res = await POST(req({ paymentToken: "t", card_token: "c", payer_email: "a@b.com" }));
+    expect(res.status).toBe(503);
+    expect(setTenantSubscriptionState).not.toHaveBeenCalled();
+    expect(createTransparentSubscription).not.toHaveBeenCalled();
+  });
+
   it("402 e não ativa quando o pagamento é rejeitado", async () => {
     createTransparentSubscription.mockResolvedValue({ id: "sub_2", status: "rejected", statusDetail: "cc_rejected_bad_filled_security_code" });
     const { POST } = await import("@/app/api/assinar/pagamento/route");

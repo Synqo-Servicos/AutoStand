@@ -34,7 +34,13 @@ export async function POST(req: NextRequest) {
   const cardToken = typeof body.card_token === "string" ? body.card_token : "";
   const payerEmail = typeof body.payer_email === "string" ? body.payer_email.trim().toLowerCase() : "";
 
-  const payload = verifyPaymentToken(paymentToken);
+  let payload: ReturnType<typeof verifyPaymentToken>;
+  try {
+    payload = verifyPaymentToken(paymentToken);
+  } catch (err) {
+    console.error("[assinar/pagamento] verificação de token falhou (config?):", err);
+    return NextResponse.json({ error: "Pagamento indisponível no momento." }, { status: 503 });
+  }
   if (!payload) {
     return NextResponse.json({ error: "Sessão de pagamento expirada. Refaça o cadastro." }, { status: 401 });
   }
