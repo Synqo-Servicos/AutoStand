@@ -8,38 +8,34 @@ function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
 }
 
-async function createMpPlan(tenant: TenantRow, plan: Plan, coupon: CouponRow | null): Promise<string> {
-  // Valor cobrado em centavos — sem cupom é a mensalidade cheia; com cupom usa
-  // a fonte única compartilhada com a prévia pública (/api/cupons/validate).
-  // MP exige valor positivo, então o piso é 1 centavo.
+function subscriptionReason(plan: Plan, coupon: CouponRow | null): string {
+  if (!coupon) return `AutoStand ${plan.name}`;
+  if (coupon.discount_type === "percentage") return `AutoStand ${plan.name} — ${coupon.discount_value}% de desconto`;
+  if (coupon.discount_type === "free_month") return `AutoStand ${plan.name} — 1º mês grátis`;
+  return `AutoStand ${plan.name} — desconto especial`;
+}
+
+function autoRecurringBody(plan: Plan, coupon: CouponRow | null): Record<string, unknown> {
   const priceCents = coupon ? discountedPriceCents(plan, coupon) : plan.priceMonthly;
-  const amount = Math.max(1, priceCents) / 100;
-
-  const reason = !coupon
-    ? `AutoStand ${plan.name}`
-    : coupon.discount_type === "percentage"
-      ? `AutoStand ${plan.name} — ${coupon.discount_value}% de desconto`
-      : coupon.discount_type === "free_month"
-        ? `AutoStand ${plan.name} — 1º mês grátis`
-        : `AutoStand ${plan.name} — desconto especial`;
-
-  const autoRecurring: Record<string, unknown> = {
+  const body: Record<string, unknown> = {
     frequency: 1,
     frequency_type: "months",
-    transaction_amount: amount,
+    transaction_amount: Math.max(1, priceCents) / 100, // piso de código; MP tem mínimo próprio
     currency_id: "BRL",
   };
-
   if (coupon?.discount_type === "free_month") {
-    autoRecurring.free_trial = { frequency: 1, frequency_type: "months" };
+    body.free_trial = { frequency: 1, frequency_type: "months" };
   }
+  return body;
+}
 
+async function createMpPlan(tenant: TenantRow, plan: Plan, coupon: CouponRow | null): Promise<string> {
   const preApprovalPlan = new PreApprovalPlan(getMpClient());
   const newPlan = await preApprovalPlan.create({
     body: {
-      reason,
+      reason: subscriptionReason(plan, coupon),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      auto_recurring: autoRecurring as any,
+      auto_recurring: autoRecurringBody(plan, coupon) as any,
       // Volta pro painel da PRÓPRIA loja (subdomínio ou custom_domain).
       // Usar o domínio da plataforma levaria a /admin num host sem tenant
       // (404 + sessão perdida, pois o cookie é host-only do subdomínio).
@@ -77,4 +73,44 @@ export async function createCheckoutSession(
 export async function cancelMpSubscription(subscriptionId: string): Promise<void> {
   const preApproval = new PreApproval(getMpClient());
   await preApproval.update({ id: subscriptionId, body: { status: "cancelled" } });
+}
+
+export interface TransparentSubscriptionResult {
+  id: string;
+  status: string;
+  statusDetail: string | null;
+}
+
+/**
+ * Checkout Transparente: cria o PreApproval direto via API com um card_token
+ * tokenizado no navegador (Card Brick). O pagador não precisa de conta MP.
+ * Retorna o status já resolvido (authorized/pending/rejected).
+ */
+export async function createTransparentSubscription(
+  tenant: TenantRow,
+  plan: Plan,
+  coupon: CouponRow | null,
+  cardToken: string,
+  payerEmail: string,
+): Promise<TransparentSubscriptionResult> {
+  const preApproval = new PreApproval(getMpClient());
+  const res = await preApproval.create({
+    body: {
+      reason: subscriptionReason(plan, coupon),
+      external_reference: String(tenant.id),
+      payer_email: payerEmail,
+      card_token_id: cardToken,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      auto_recurring: autoRecurringBody(plan, coupon) as any,
+      back_url: `${tenantSiteUrl(tenant)}/admin/assinatura`,
+      status: "authorized",
+    },
+  });
+
+  if (!res.id) throw new Error("MP did not return a preapproval id");
+  return {
+    id: String(res.id),
+    status: String(res.status ?? "pending"),
+    statusDetail: (res as { status_detail?: string }).status_detail ?? null,
+  };
 }
