@@ -36,6 +36,16 @@ export async function getCouponByCode(code: string): Promise<CouponRow | null> {
   return coupon;
 }
 
+/**
+ * Busca crua por id — NÃO aplica validade (used_count/expiração). Usado no
+ * pagamento, onde o uso já foi reservado no /assinar; só precisamos da linha
+ * para recomputar o desconto.
+ */
+export async function getCouponById(id: number): Promise<CouponRow | null> {
+  const [row] = await db.select().from(coupons).where(eq(coupons.id, id)).limit(1);
+  return row ?? null;
+}
+
 export async function createCoupon(input: NewCoupon): Promise<CouponRow> {
   const [row] = await db
     .insert(coupons)

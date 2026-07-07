@@ -47,6 +47,8 @@ export const limiters = {
   couponValidate: makeLimiter(10, "1 m", "rl:coupon"),
   /** Login (Credentials). Anti-brute-force: 10 tentativas / 10 min por IP+email. */
   login: makeLimiter(10, "10 m", "rl:login"),
+  /** Tentativas de pagamento no checkout transparente. 8/min por IP. */
+  checkoutPayment: makeLimiter(8, "1 m", "rl:checkout"),
 } as const;
 
 export type LimiterName = keyof typeof limiters;
