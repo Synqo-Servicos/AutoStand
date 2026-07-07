@@ -3,10 +3,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const getTenantById = vi.fn();
 const getCouponById = vi.fn();
 const setTenantSubscriptionState = vi.fn();
+const claimTenantForCheckout = vi.fn();
+const releaseTenantCheckout = vi.fn();
 const createTransparentSubscription = vi.fn();
 const verifyPaymentToken = vi.fn();
 
-vi.mock("@/lib/db", () => ({ getTenantById, getCouponById, setTenantSubscriptionState }));
+vi.mock("@/lib/db", () => ({
+  getTenantById, getCouponById, setTenantSubscriptionState,
+  claimTenantForCheckout, releaseTenantCheckout,
+}));
 vi.mock("@/lib/checkout", () => ({ createTransparentSubscription }));
 vi.mock("@/lib/payment-token", () => ({ verifyPaymentToken }));
 vi.mock("@/lib/ratelimit", () => ({
@@ -24,6 +29,8 @@ describe("POST /api/assinar/pagamento", () => {
     verifyPaymentToken.mockReturnValue({ tenantId: 7, planSlug: "basico", couponId: null });
     getTenantById.mockResolvedValue({ id: 7, slug: "loja", subscription_status: "incomplete", custom_domain: null });
     getCouponById.mockResolvedValue(null);
+    claimTenantForCheckout.mockResolvedValue(true);
+    releaseTenantCheckout.mockResolvedValue(undefined);
     createTransparentSubscription.mockResolvedValue({ id: "sub_1", status: "authorized", statusDetail: "accredited" });
   });
 
@@ -57,5 +64,22 @@ describe("POST /api/assinar/pagamento", () => {
     const res = await POST(req({ paymentToken: "t", card_token: "c", payer_email: "a@b.com" }));
     expect(res.status).toBe(200);
     expect(createTransparentSubscription).not.toHaveBeenCalled();
+  });
+
+  it("não cria segunda assinatura quando perde a corrida (claim=false)", async () => {
+    claimTenantForCheckout.mockResolvedValue(false);
+    const { POST } = await import("@/app/api/assinar/pagamento/route");
+    const res = await POST(req({ paymentToken: "t", card_token: "c", payer_email: "a@b.com" }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, slug: "loja", status: "already_active" });
+    expect(createTransparentSubscription).not.toHaveBeenCalled();
+  });
+
+  it("libera o tenant (release) quando o pagamento é recusado", async () => {
+    createTransparentSubscription.mockResolvedValue({ id: "sub_2", status: "rejected", statusDetail: "cc_rejected_bad_filled_security_code" });
+    const { POST } = await import("@/app/api/assinar/pagamento/route");
+    const res = await POST(req({ paymentToken: "t", card_token: "c", payer_email: "a@b.com" }));
+    expect(res.status).toBe(402);
+    expect(releaseTenantCheckout).toHaveBeenCalledWith(7);
   });
 });

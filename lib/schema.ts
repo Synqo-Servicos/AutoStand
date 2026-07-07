@@ -53,7 +53,7 @@ export const tenants = pgTable("tenants", {
   plan: text("plan"), // PlanSlug — 'basico' | 'pro' | 'premium'
   /** ID da assinatura Mercado Pago (Preapproval). */
   mp_subscription_id: text("mp_subscription_id"),
-  /** 'incomplete' | 'active' | 'past_due' | 'cancelled' (grafia usada em MP_STATUS_MAP) */
+  /** 'incomplete' | 'processing' | 'active' | 'past_due' | 'cancelled' (grafia usada em MP_STATUS_MAP; 'processing' = claim transitório do checkout, ver claimTenantForCheckout) */
   subscription_status: text("subscription_status"),
   current_period_end: text("current_period_end"),
   /** Parceiro de origem da assinatura (atribuição). */

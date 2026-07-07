@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantById, getCouponById, setTenantSubscriptionState } from "@/lib/db";
+import {
+  getTenantById, getCouponById, setTenantSubscriptionState,
+  claimTenantForCheckout, releaseTenantCheckout,
+} from "@/lib/db";
 import { getPlan, isPlanSlug } from "@/lib/plans";
 import { createTransparentSubscription } from "@/lib/checkout";
 import { verifyPaymentToken } from "@/lib/payment-token";
@@ -47,6 +50,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, slug: tenant.slug, status: "already_active" });
   }
 
+  // Reivindica atomicamente — se outro request concorrente já reivindicou,
+  // este perde a corrida e não cria uma segunda assinatura.
+  const claimed = await claimTenantForCheckout(tenant.id);
+  if (!claimed) {
+    return NextResponse.json({ ok: true, slug: tenant.slug, status: "already_active" });
+  }
+
   const coupon = payload.couponId ? await getCouponById(payload.couponId) : null;
   const plan = getPlan(payload.planSlug);
 
@@ -55,6 +65,7 @@ export async function POST(req: NextRequest) {
     result = await createTransparentSubscription(tenant, plan, coupon, cardToken, payerEmail);
   } catch (err) {
     console.error("[assinar/pagamento] erro no MP:", err);
+    await releaseTenantCheckout(tenant.id);
     return NextResponse.json({ error: "Não foi possível processar o pagamento. Tente novamente." }, { status: 502 });
   }
 
@@ -66,6 +77,7 @@ export async function POST(req: NextRequest) {
     // Não ativa ainda — o webhook (external_reference = tenant.id) reconcilia.
     return NextResponse.json({ ok: true, slug: tenant.slug, status: "pending" });
   }
+  await releaseTenantCheckout(tenant.id);
   return NextResponse.json(
     { ok: false, status: result.status, detail: result.statusDetail, error: "Pagamento recusado. Verifique os dados do cartão ou tente outro." },
     { status: 402 },

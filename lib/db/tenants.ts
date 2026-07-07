@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   demand_events, leads, partners, tenants, transactions, users,
   vehicle_documents, vehicle_photos, vehicles,
@@ -130,6 +130,29 @@ export async function setTenantSubscriptionState(
     .set({ ...mapped, mp_subscription_id: mpSubscriptionId, updated_at: sql`CURRENT_TIMESTAMP` })
     .where(eq(tenants.id, tenantId));
   return true;
+}
+
+/**
+ * CAS: reivindica atomicamente um tenant `incomplete` para o checkout,
+ * marcando-o como `processing`. Retorna true só para o request que venceu a
+ * corrida — impede que double-click/retry criem duas assinaturas reais no MP.
+ * Mesmo padrão de incrementCouponUse (UPDATE condicional + returning).
+ */
+export async function claimTenantForCheckout(tenantId: number): Promise<boolean> {
+  const rows = await db
+    .update(tenants)
+    .set({ subscription_status: "processing", updated_at: sql`CURRENT_TIMESTAMP` })
+    .where(and(eq(tenants.id, tenantId), eq(tenants.subscription_status, "incomplete")))
+    .returning({ id: tenants.id });
+  return rows.length > 0;
+}
+
+/** Reverte `processing` → `incomplete` quando o pagamento falha, liberando retry. */
+export async function releaseTenantCheckout(tenantId: number): Promise<void> {
+  await db
+    .update(tenants)
+    .set({ subscription_status: "incomplete", updated_at: sql`CURRENT_TIMESTAMP` })
+    .where(and(eq(tenants.id, tenantId), eq(tenants.subscription_status, "processing")));
 }
 
 /**
