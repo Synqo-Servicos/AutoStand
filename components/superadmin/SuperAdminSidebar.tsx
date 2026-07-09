@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, Handshake, LayoutDashboard, LogOut, Menu, Tag, X } from "lucide-react";
+import { Building2, Handshake, LayoutDashboard, LogOut, Menu, Stethoscope, Tag, X } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/superadmin/tenants", label: "Concessionárias", icon: Building2 },
   { href: "/superadmin/parceiros", label: "Parceiros", icon: Handshake },
   { href: "/superadmin/cupons", label: "Cupons", icon: Tag },
+  { href: "/superadmin/diagnostico", label: "Diagnóstico", icon: Stethoscope },
 ];
 
 export function SuperAdminSidebar() {
