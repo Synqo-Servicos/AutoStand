@@ -35,6 +35,8 @@ describe("superadmin/fluxo-teste", () => {
     const tenantArg = createTenant.mock.calls[0][0];
     expect(tenantArg.slug).toMatch(/^diag-/);
     expect(tenantArg.name).toBe("Diagnóstico");
+    expect(tenantArg.status).toBe("suspended");
+    expect(tenantArg.subscription_status).toBe("incomplete");
 
     const couponArg = createCheckoutSession.mock.calls[0][3];
     expect(couponArg).toMatchObject({ discount_type: "fixed", discount_value: 16890 });
