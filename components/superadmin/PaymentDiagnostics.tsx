@@ -11,6 +11,7 @@ export function PaymentDiagnostics() {
   const [pixStatus, setPixStatus] = useState<string | null>(null);
   const [flow, setFlow] = useState<Flow | null>(null);
   const [flowStatus, setFlowStatus] = useState<string | null>(null);
+  const [flowMpSubscriptionId, setFlowMpSubscriptionId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -88,7 +89,7 @@ export function PaymentDiagnostics() {
           disabled={busy}
           onClick={async () => {
             const j = await call("/api/superadmin/fluxo-teste", "POST");
-            if (j) { setFlow(j); setFlowStatus(null); }
+            if (j) { setFlow(j); setFlowStatus(null); setFlowMpSubscriptionId(null); }
           }}
           className="rounded-md bg-ink text-white px-4 py-2 text-sm disabled:opacity-50 cursor-pointer"
         >
@@ -105,7 +106,10 @@ export function PaymentDiagnostics() {
                 disabled={busy}
                 onClick={async () => {
                   const j = await call(`/api/superadmin/fluxo-teste?tenantId=${flow.tenantId}`, "GET");
-                  if (j) setFlowStatus(j.subscription_status ?? "—");
+                  if (j) {
+                    setFlowStatus(j.subscription_status ?? "—");
+                    setFlowMpSubscriptionId(j.mp_subscription_id ?? null);
+                  }
                 }}
                 className="rounded-md border border-n300 px-3 py-1.5 disabled:opacity-50 cursor-pointer"
               >
@@ -114,8 +118,14 @@ export function PaymentDiagnostics() {
               <button
                 disabled={busy}
                 onClick={async () => {
+                  if (
+                    !window.confirm(
+                      "Isto cancela a assinatura REAL no Mercado Pago e apaga o tenant de teste. Confirme só depois do status aparecer como 'active'. Continuar?",
+                    )
+                  )
+                    return;
                   const j = await call(`/api/superadmin/fluxo-teste?tenantId=${flow.tenantId}`, "DELETE");
-                  if (j) { setFlow(null); setFlowStatus(null); }
+                  if (j) { setFlow(null); setFlowStatus(null); setFlowMpSubscriptionId(null); }
                 }}
                 className="rounded-md border border-red-300 text-red-600 px-3 py-1.5 disabled:opacity-50 cursor-pointer"
               >
@@ -123,6 +133,7 @@ export function PaymentDiagnostics() {
               </button>
             </div>
             <p>Status do tenant: <strong>{flowStatus ?? "—"}</strong></p>
+            <p>Assinatura MP: <strong>{flowMpSubscriptionId ?? "—"}</strong></p>
           </div>
         )}
       </section>

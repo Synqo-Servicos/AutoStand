@@ -29,7 +29,16 @@ function tenantIdParam(req: Request): number {
   return n;
 }
 
+function assertDiagTenant(tenant: { slug: string } | null): void {
+  if (tenant && !tenant.slug.startsWith("diag-")) {
+    throw new ApiError("Rota de diagnóstico só opera tenants diag-.", 400);
+  }
+}
+
 export const POST = withSuperAdmin(async (_req, { userId }) => {
+  if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+    throw new ApiError("MERCADOPAGO_ACCESS_TOKEN não configurado.", 503);
+  }
   const slug = `diag-${Date.now().toString(36)}`;
   const tenant = await createTenant({
     slug,
@@ -38,12 +47,18 @@ export const POST = withSuperAdmin(async (_req, { userId }) => {
     status: "suspended",
     subscription_status: "incomplete",
   });
-  const checkoutUrl = await createCheckoutSession(
-    tenant,
-    getPlan("basico"),
-    null,
-    diagCoupon(userId),
-  );
+  let checkoutUrl: string | null;
+  try {
+    checkoutUrl = await createCheckoutSession(
+      tenant,
+      getPlan("basico"),
+      null,
+      diagCoupon(userId),
+    );
+  } catch (err) {
+    await deleteTenant(tenant.id);
+    throw err;
+  }
   return NextResponse.json(
     { tenantId: tenant.id, slug: tenant.slug, checkoutUrl },
     { status: 201 },
@@ -53,6 +68,7 @@ export const POST = withSuperAdmin(async (_req, { userId }) => {
 export const GET = withSuperAdmin(async (req) => {
   const tenant = await getTenantById(tenantIdParam(req));
   if (!tenant) throw new ApiError("Tenant não encontrado.", 404);
+  assertDiagTenant(tenant);
   return NextResponse.json({
     subscription_status: tenant.subscription_status,
     mp_subscription_id: tenant.mp_subscription_id,
@@ -62,6 +78,7 @@ export const GET = withSuperAdmin(async (req) => {
 export const DELETE = withSuperAdmin(async (req) => {
   const id = tenantIdParam(req);
   const tenant = await getTenantById(id);
+  assertDiagTenant(tenant);
   if (tenant?.mp_subscription_id) {
     await cancelMpSubscription(tenant.mp_subscription_id);
   }
