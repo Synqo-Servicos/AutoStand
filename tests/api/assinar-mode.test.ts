@@ -32,6 +32,7 @@ function req(body: unknown) {
 
 const VALID = {
   plan: "basico", slug: "minhaloja", dealership_name: "Minha Loja",
+  document: "52998224725",
   admin_name: "João", admin_email: "joao@loja.com", admin_password: "senha1234",
   partner_code: "", coupon_code: null, turnstile_token: "tok",
 };
@@ -71,5 +72,22 @@ describe("POST /api/assinar — modo de checkout", () => {
     expect(json.checkoutUrl).toBeUndefined();
     expect(createCheckoutSession).not.toHaveBeenCalled();
     expect(signPaymentToken).toHaveBeenCalledWith({ tenantId: 42, planSlug: "basico", couponId: null });
+  });
+
+  it("400 quando o documento é inválido", async () => {
+    const { POST } = await import("@/app/api/assinar/route");
+    const res = await POST(req({ ...VALID, document: "11111111111" }));
+    expect(res.status).toBe(400);
+    expect(createTenant).not.toHaveBeenCalled();
+  });
+
+  it("persiste o documento normalizado no tenant", async () => {
+    const { POST } = await import("@/app/api/assinar/route");
+    const res = await POST(req({ ...VALID, document: "529.982.247-25" }));
+    expect(res.status).toBe(201);
+    expect(createTenant).toHaveBeenCalledWith(
+      expect.objectContaining({ document: "52998224725" }),
+      expect.anything(),
+    );
   });
 });

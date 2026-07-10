@@ -73,6 +73,9 @@ export const tenants = pgTable("tenants", {
   /** Cupom de desconto aplicado na assinatura. */
   coupon_id: integer("coupon_id").references(() => coupons.id, { onDelete: "set null" }),
 
+  /** CPF ou CNPJ da concessionária (só dígitos). Null em tenants legados/provisionados. */
+  document: text("document"),
+
   created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   updated_at: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 });

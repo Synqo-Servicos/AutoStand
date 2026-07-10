@@ -93,4 +93,16 @@ describe("POST /api/assinar/pagamento", () => {
     expect(res.status).toBe(402);
     expect(releaseTenantCheckout).toHaveBeenCalledWith(7);
   });
+
+  it("402 usa a mensagem específica de recusa vinda do checkout", async () => {
+    createTransparentSubscription.mockResolvedValue({
+      id: null, status: "rejected",
+      statusDetail: "cc_rejected_insufficient_amount",
+      message: "Cartão sem saldo ou limite disponível. Tente outro cartão.",
+    });
+    const { POST } = await import("@/app/api/assinar/pagamento/route");
+    const res = await POST(req({ paymentToken: "t", card_token: "c", payer_email: "a@b.com" }));
+    expect(res.status).toBe(402);
+    expect((await res.json()).error).toBe("Cartão sem saldo ou limite disponível. Tente outro cartão.");
+  });
 });

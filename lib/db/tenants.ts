@@ -44,6 +44,7 @@ const TENANT_WRITABLE_FIELDS = [
   "custom_domain", "plan", "status", "marketplace_opt_in",
   "partner_banks", "referred_by",
   "coupon_id",
+  "document",
 ] as const;
 
 /**
