@@ -6,6 +6,7 @@ import { PLAN_SLUGS, PLANS, type PlanSlug } from "@/lib/plans";
 import { normalizeSlug, slugError } from "@/lib/slug";
 import { Turnstile, isTurnstileEnabled } from "@/components/Turnstile";
 import { formatBRL } from "@/lib/money";
+import { isValidDocument, formatDocument, normalizeDocument } from "@/lib/br-document";
 
 const inputClass =
   "w-full rounded-lg border border-n200 bg-white px-3 py-2 text-body text-ink " +
@@ -28,6 +29,7 @@ export function SignupForm({
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
+  const [document, setDocument] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -40,6 +42,7 @@ export function SignupForm({
   >({ status: "idle" });
 
   const liveSlugError = slug ? slugError(slug) : null;
+  const liveDocError = document && !isValidDocument(document) ? "CPF ou CNPJ inválido." : null;
   const onCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
 
   async function validateCoupon(code: string, currentPlan: PlanSlug) {
@@ -77,6 +80,7 @@ export function SignupForm({
           plan,
           slug,
           dealership_name: dealershipName,
+          document: normalizeDocument(document),
           admin_name: adminName,
           admin_email: adminEmail,
           admin_password: adminPassword,
@@ -165,6 +169,22 @@ export function SignupForm({
             placeholder="Auto Center Silva"
             required
           />
+        </div>
+
+        <div>
+          <label htmlFor="document" className={labelClass}>
+            CPF ou CNPJ
+          </label>
+          <input
+            id="document"
+            inputMode="numeric"
+            className={`mt-1 ${inputClass} ${liveDocError ? "border-danger focus:border-danger focus:ring-danger/30" : ""}`}
+            value={document}
+            onChange={(e) => setDocument(formatDocument(e.target.value))}
+            placeholder="000.000.000-00"
+            required
+          />
+          {liveDocError && <p className="mt-1 text-body-s text-danger">{liveDocError}</p>}
         </div>
 
         <div>
@@ -280,7 +300,7 @@ export function SignupForm({
 
       <button
         type="submit"
-        disabled={!canSubmit || !!liveSlugError}
+        disabled={!canSubmit || !!liveSlugError || !!liveDocError || !document}
         className="w-full rounded-lg bg-signal px-4 py-3 font-semibold text-ink transition-colors hover:bg-signal-dark disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting ? "Enviando…" : "Criar minha conta"}
