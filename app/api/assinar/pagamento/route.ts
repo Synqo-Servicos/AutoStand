@@ -76,7 +76,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (result.status === "authorized") {
-    await setTenantSubscriptionState(tenant.id, "authorized", result.id);
+    // authorized/pending sempre carregam id não-nulo; recusa lançada volta como
+    // status "rejected" com id null, tratada no ramo 402 abaixo.
+    await setTenantSubscriptionState(tenant.id, "authorized", result.id!);
     return NextResponse.json({ ok: true, slug: tenant.slug, status: "authorized" });
   }
   if (result.status === "pending" || result.status === "in_process") {
@@ -85,7 +87,12 @@ export async function POST(req: NextRequest) {
   }
   await releaseTenantCheckout(tenant.id);
   return NextResponse.json(
-    { ok: false, status: result.status, detail: result.statusDetail, error: "Pagamento recusado. Verifique os dados do cartão ou tente outro." },
+    {
+      ok: false,
+      status: result.status,
+      detail: result.statusDetail,
+      error: result.message ?? "Pagamento recusado. Verifique os dados do cartão ou tente outro.",
+    },
     { status: 402 },
   );
 }
