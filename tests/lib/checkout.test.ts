@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { translateDecline } from "@/lib/checkout";
 
 // Mock do SDK do Mercado Pago. mockPlanCreate é a criação do PreApprovalPlan.
 const mockPlanCreate = vi.fn();
@@ -145,5 +146,40 @@ describe("createTransparentSubscription", () => {
     const { createTransparentSubscription } = await import("@/lib/checkout");
     await createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com");
     expect(mockPreApprovalCreate).toHaveBeenCalledOnce();
+  });
+
+  it("traduz recusa lançada em 4xx (não re-lança)", async () => {
+    mockPreApprovalCreate.mockRejectedValue({ status: 400, cause: [{ code: "cc_rejected_insufficient_amount" }] });
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    const res = await createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com");
+    expect(res.status).toBe("rejected");
+    expect(res.id).toBeNull();
+    expect(res.message).toMatch(/saldo|limite/i);
+    expect(res.statusDetail).toBe("cc_rejected_insufficient_amount");
+  });
+
+  it("re-lança erro transitório (>=500) para a rota devolver 502", async () => {
+    mockPreApprovalCreate.mockRejectedValue({ status: 500, message: "internal" });
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    await expect(createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com")).rejects.toBeTruthy();
+  });
+
+  it("inclui message quando o MP retorna rejected (sem lançar)", async () => {
+    mockPreApprovalCreate.mockResolvedValue({ id: "sub_r", status: "rejected", status_detail: "cc_rejected_bad_filled_security_code" });
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    const res = await createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com");
+    expect(res.status).toBe("rejected");
+    expect(res.message).toMatch(/segurança|CVV/i);
+  });
+});
+
+describe("translateDecline", () => {
+  it("mapeia códigos conhecidos", () => {
+    expect(translateDecline("cc_rejected_insufficient_amount")).toMatch(/saldo|limite/i);
+    expect(translateDecline("cc_rejected_bad_filled_security_code")).toMatch(/segurança|CVV/i);
+  });
+  it("cai no genérico para desconhecido/null", () => {
+    expect(translateDecline("algo_novo")).toMatch(/recusado/i);
+    expect(translateDecline(null)).toMatch(/recusado/i);
   });
 });
