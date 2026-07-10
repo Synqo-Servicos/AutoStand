@@ -82,6 +82,22 @@ export interface TransparentSubscriptionResult {
 }
 
 /**
+ * Reconciliação anti-cobrança-dupla: procura uma assinatura já criada para o
+ * tenant (external_reference) que esteja utilizável (authorized/pending). Serve
+ * pro caso de timeout ambíguo — o MP criou a assinatura mas a resposta se perdeu
+ * e o tenant foi liberado; no retry, reaproveitamos em vez de criar a 2ª.
+ */
+async function findReconcilableSubscription(
+  preApproval: PreApproval,
+  tenantId: number,
+): Promise<TransparentSubscriptionResult | null> {
+  const found = await preApproval.search({ options: { external_reference: String(tenantId) } });
+  const usable = found.results?.find((r) => r.status === "authorized" || r.status === "pending");
+  if (!usable?.id) return null;
+  return { id: String(usable.id), status: String(usable.status), statusDetail: null };
+}
+
+/**
  * Checkout Transparente: cria o PreApproval direto via API com um card_token
  * tokenizado no navegador (Card Brick). O pagador não precisa de conta MP.
  * Retorna o status já resolvido (authorized/pending/rejected).
@@ -94,6 +110,10 @@ export async function createTransparentSubscription(
   payerEmail: string,
 ): Promise<TransparentSubscriptionResult> {
   const preApproval = new PreApproval(getMpClient());
+
+  const existing = await findReconcilableSubscription(preApproval, tenant.id);
+  if (existing) return existing;
+
   const res = await preApproval.create({
     body: {
       reason: subscriptionReason(plan, coupon),
@@ -105,6 +125,7 @@ export async function createTransparentSubscription(
       back_url: `${tenantSiteUrl(tenant)}/admin/assinatura`,
       status: "authorized",
     },
+    requestOptions: { idempotencyKey: `sub-${tenant.id}` },
   });
 
   if (!res.id) throw new Error("MP did not return a preapproval id");

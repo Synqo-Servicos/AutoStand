@@ -3,11 +3,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock do SDK do Mercado Pago. mockPlanCreate é a criação do PreApprovalPlan.
 const mockPlanCreate = vi.fn();
 const mockPreApprovalCreate = vi.fn();
+const mockPreApprovalSearch = vi.fn();
 
 vi.mock("mercadopago", () => {
   const MercadoPagoConfig = vi.fn();
   function PreApproval() {
-    return { create: mockPreApprovalCreate, update: vi.fn() };
+    return { create: mockPreApprovalCreate, search: mockPreApprovalSearch, update: vi.fn() };
   }
   function PreApprovalPlan() {
     return { create: mockPlanCreate };
@@ -98,6 +99,8 @@ describe("createCheckoutSession", () => {
 describe("createTransparentSubscription", () => {
   beforeEach(() => {
     mockPreApprovalCreate.mockReset();
+    mockPreApprovalSearch.mockReset();
+    mockPreApprovalSearch.mockResolvedValue({ results: [] });
     mockPreApprovalCreate.mockResolvedValue({ id: "sub_123", status: "authorized", status_detail: "accredited" });
     process.env.MERCADOPAGO_ACCESS_TOKEN = "test-token";
   });
@@ -121,5 +124,26 @@ describe("createTransparentSubscription", () => {
     const body = mockPreApprovalCreate.mock.calls[0][0].body;
     expect(body.auto_recurring.free_trial).toEqual({ frequency: 1, frequency_type: "months" });
     expect(body.auto_recurring.transaction_amount).toBeCloseTo(169.9, 1);
+  });
+
+  it("envia idempotency key estável sub-<tenantId> no create", async () => {
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    await createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com");
+    expect(mockPreApprovalCreate.mock.calls[0][0].requestOptions).toEqual({ idempotencyKey: "sub-1" });
+  });
+
+  it("reconcilia: se já existe assinatura authorized, não cria uma segunda", async () => {
+    mockPreApprovalSearch.mockResolvedValue({ results: [{ id: "sub_existing", status: "authorized" }] });
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    const res = await createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com");
+    expect(mockPreApprovalCreate).not.toHaveBeenCalled();
+    expect(res).toEqual({ id: "sub_existing", status: "authorized", statusDetail: null });
+  });
+
+  it("ignora assinatura cancelada no reconcile e cria nova", async () => {
+    mockPreApprovalSearch.mockResolvedValue({ results: [{ id: "old", status: "cancelled" }] });
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    await createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com");
+    expect(mockPreApprovalCreate).toHaveBeenCalledOnce();
   });
 });
