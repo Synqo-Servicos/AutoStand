@@ -38,9 +38,11 @@ function extractStatusDetail(err: MpErrorShape): string | null {
   return code != null ? String(code) : null;
 }
 
-/** 4xx = recusa/cliente (não retry). >=500 ou sem status = transitório. */
+/** 400/402 = recusa do cartão (não retentar). Demais (401/403 config/auth,
+ *  408/429/5xx transitório, sem status) → re-throw; a rota devolve 502. A
+ *  forma exata da recusa do MP é validada no sandbox (Task 8). */
 function isDeclineError(err: MpErrorShape): boolean {
-  return typeof err?.status === "number" && err.status >= 400 && err.status < 500;
+  return err?.status === 400 || err?.status === 402;
 }
 
 function subscriptionReason(plan: Plan, coupon: CouponRow | null): string {
@@ -129,7 +131,11 @@ async function findReconcilableSubscription(
   tenantId: number,
 ): Promise<TransparentSubscriptionResult | null> {
   const found = await preApproval.search({ options: { external_reference: String(tenantId) } });
-  const usable = found.results?.find((r) => r.status === "authorized" || r.status === "pending");
+  const usable = found.results?.find(
+    (r) =>
+      String(r.external_reference) === String(tenantId) &&
+      (r.status === "authorized" || r.status === "pending"),
+  );
   if (!usable?.id) return null;
   return { id: String(usable.id), status: String(usable.status), statusDetail: null };
 }

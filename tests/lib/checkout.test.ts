@@ -134,11 +134,22 @@ describe("createTransparentSubscription", () => {
   });
 
   it("reconcilia: se já existe assinatura authorized, não cria uma segunda", async () => {
-    mockPreApprovalSearch.mockResolvedValue({ results: [{ id: "sub_existing", status: "authorized" }] });
+    mockPreApprovalSearch.mockResolvedValue({
+      results: [{ id: "sub_existing", status: "authorized", external_reference: 1 }],
+    });
     const { createTransparentSubscription } = await import("@/lib/checkout");
     const res = await createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com");
     expect(mockPreApprovalCreate).not.toHaveBeenCalled();
     expect(res).toEqual({ id: "sub_existing", status: "authorized", statusDetail: null });
+  });
+
+  it("não reconcilia assinatura de outro tenant (external_reference divergente): cria nova", async () => {
+    mockPreApprovalSearch.mockResolvedValue({
+      results: [{ id: "other", status: "authorized", external_reference: 999 }],
+    });
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    await createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com");
+    expect(mockPreApprovalCreate).toHaveBeenCalledOnce();
   });
 
   it("ignora assinatura cancelada no reconcile e cria nova", async () => {
@@ -161,7 +172,27 @@ describe("createTransparentSubscription", () => {
   it("re-lança erro transitório (>=500) para a rota devolver 502", async () => {
     mockPreApprovalCreate.mockRejectedValue({ status: 500, message: "internal" });
     const { createTransparentSubscription } = await import("@/lib/checkout");
-    await expect(createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com")).rejects.toBeTruthy();
+    await expect(
+      createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com"),
+    ).rejects.toMatchObject({ status: 500 });
+  });
+
+  it("re-lança 401 (config/auth) em vez de classificar como recusa", async () => {
+    mockPreApprovalSearch.mockResolvedValue({ results: [] });
+    mockPreApprovalCreate.mockRejectedValue({ status: 401, message: "unauthorized" });
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    await expect(
+      createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com"),
+    ).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("re-lança 429 (rate-limit) em vez de classificar como recusa", async () => {
+    mockPreApprovalSearch.mockResolvedValue({ results: [] });
+    mockPreApprovalCreate.mockRejectedValue({ status: 429, message: "too many requests" });
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    await expect(
+      createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com"),
+    ).rejects.toMatchObject({ status: 429 });
   });
 
   it("inclui message quando o MP retorna rejected (sem lançar)", async () => {
