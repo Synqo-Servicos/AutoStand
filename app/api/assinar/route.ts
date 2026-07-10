@@ -12,6 +12,7 @@ import {
   incrementPartnerSignup,
 } from "@/lib/db";
 import { getPlan, isPlanSlug } from "@/lib/plans";
+import { isValidDocument, normalizeDocument } from "@/lib/br-document";
 import { normalizeSlug, slugError } from "@/lib/slug";
 import { createCheckoutSession } from "@/lib/checkout";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
@@ -58,11 +59,13 @@ export async function POST(req: NextRequest) {
     const adminEmail = String(body.admin_email ?? "").trim().toLowerCase();
     const adminPassword = String(body.admin_password ?? "");
     const partnerCode = String(body.partner_code ?? "").trim();
+    const document = normalizeDocument(String(body.document ?? ""));
 
     if (!isPlanSlug(plan)) return bad("Plano inválido.");
     const slugErr = slugError(slug);
     if (slugErr) return bad(slugErr);
     if (!dealershipName) return bad("Informe o nome da concessionária.");
+    if (!isValidDocument(document)) return bad("CPF ou CNPJ inválido.");
     if (!adminName) return bad("Informe seu nome.");
     if (!EMAIL_RE.test(adminEmail)) return bad("E-mail inválido.");
     if (adminPassword.length < 8) return bad("A senha precisa de pelo menos 8 caracteres.");
@@ -89,6 +92,7 @@ export async function POST(req: NextRequest) {
         {
           slug,
           name: dealershipName,
+          document,
           plan,
           status: "suspended",
           subscription_status: "incomplete",
