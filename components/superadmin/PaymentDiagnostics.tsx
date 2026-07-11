@@ -2,14 +2,20 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { CardBrick } from "@/components/checkout/CardBrick";
+import { formatBRLFull } from "@/lib/money";
 
 type Pix = { id: string; status: string; qrCode: string; qrCodeBase64: string; ticketUrl: string };
-type Flow = { tenantId: number; slug: string; checkoutUrl: string };
+type Flow = { tenantId: number; slug: string; amount: number };
+type PayResult = { status: string; message?: string; mpSubscriptionId?: string };
+
+const DIAG_EMAIL = "diag@autostand.com.br";
 
 export function PaymentDiagnostics() {
   const [pix, setPix] = useState<Pix | null>(null);
   const [pixStatus, setPixStatus] = useState<string | null>(null);
   const [flow, setFlow] = useState<Flow | null>(null);
+  const [payResult, setPayResult] = useState<PayResult | null>(null);
   const [flowStatus, setFlowStatus] = useState<string | null>(null);
   const [flowMpSubscriptionId, setFlowMpSubscriptionId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -26,6 +32,30 @@ export function PaymentDiagnostics() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Erro inesperado.");
       return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleToken({ token, payerEmail }: { token: string; payerEmail: string }) {
+    if (!flow) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/superadmin/fluxo-teste/pagar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantId: flow.tenantId,
+          card_token: token,
+          payer_email: payerEmail || DIAG_EMAIL,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok && !json.status) throw new Error(json.error ?? `Erro ${res.status}`);
+      setPayResult(json as PayResult);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erro inesperado.");
     } finally {
       setBusy(false);
     }
@@ -84,23 +114,43 @@ export function PaymentDiagnostics() {
       </section>
 
       <section className="rounded-lg border border-n200 p-5 space-y-3">
-        <h2 className="font-semibold">Fluxo completo de assinatura (R$1)</h2>
+        <h2 className="font-semibold">Fluxo completo de assinatura (R$1) — transparente</h2>
+        <p className="text-xs text-n600">
+          Mesmo Card Brick do cliente. Cobra R$1 real no cartão. Para testar recusa→retry, gere um novo teste a cada tentativa.
+        </p>
         <button
           disabled={busy}
           onClick={async () => {
             const j = await call("/api/superadmin/fluxo-teste", "POST");
-            if (j) { setFlow(j); setFlowStatus(null); setFlowMpSubscriptionId(null); }
+            if (j) { setFlow(j); setPayResult(null); setFlowStatus(null); setFlowMpSubscriptionId(null); }
           }}
           className="rounded-md bg-ink text-white px-4 py-2 text-sm disabled:opacity-50 cursor-pointer"
         >
           Iniciar teste (R$1)
         </button>
         {flow && (
-          <div className="space-y-2 text-sm">
-            <p>Tenant de teste: <code>{flow.slug}</code></p>
-            <a href={flow.checkoutUrl} target="_blank" rel="noreferrer" className="text-signal underline">
-              Abrir checkout do MP →
-            </a>
+          <div className="space-y-3 text-sm">
+            <p>Tenant de teste: <code>{flow.slug}</code> — {formatBRLFull(flow.amount)}</p>
+
+            {!payResult || payResult.status === "rejected" || payResult.status === "error" ? (
+              <div aria-busy={busy}>
+                <CardBrick
+                  amountReais={flow.amount / 100}
+                  payerEmail={DIAG_EMAIL}
+                  onToken={handleToken}
+                  onError={() => setErr("Erro ao validar o cartão. Confira os dados.")}
+                />
+              </div>
+            ) : null}
+
+            {payResult && (
+              <p>
+                Pagamento: <strong>{payResult.status}</strong>
+                {payResult.message ? ` — ${payResult.message}` : ""}
+                {payResult.mpSubscriptionId ? ` (${payResult.mpSubscriptionId})` : ""}
+              </p>
+            )}
+
             <div className="flex gap-2">
               <button
                 disabled={busy}
@@ -125,7 +175,7 @@ export function PaymentDiagnostics() {
                   )
                     return;
                   const j = await call(`/api/superadmin/fluxo-teste?tenantId=${flow.tenantId}`, "DELETE");
-                  if (j) { setFlow(null); setFlowStatus(null); setFlowMpSubscriptionId(null); }
+                  if (j) { setFlow(null); setPayResult(null); setFlowStatus(null); setFlowMpSubscriptionId(null); }
                 }}
                 className="rounded-md border border-red-300 text-red-600 px-3 py-1.5 disabled:opacity-50 cursor-pointer"
               >
