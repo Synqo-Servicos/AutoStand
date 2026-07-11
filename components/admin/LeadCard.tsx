@@ -104,9 +104,9 @@ export function LeadCard({ lead, vehicle, stale, onStatusChange, onContacted, on
         </button>
       </div>
 
-      {/* Ações */}
-      <div className="mt-3 flex items-center gap-1.5">
-        <div className="relative flex-1">
+      {/* Ações — empilhadas p/ caber em colunas estreitas do kanban */}
+      <div className="mt-3 space-y-2">
+        <div className="relative">
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
@@ -135,25 +135,27 @@ export function LeadCard({ lead, vehicle, stale, onStatusChange, onContacted, on
           )}
         </div>
 
-        <select
-          value={lead.status}
-          onChange={(e) => onStatusChange(lead.id, e.target.value)}
-          aria-label="Estágio do lead"
-          className="rounded-lg border border-n200 bg-white px-1.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-signal cursor-pointer"
-        >
-          {LEAD_STAGES.map((s) => (
-            <option key={s.key} value={s.key}>{s.label}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-1.5">
+          <select
+            value={lead.status}
+            onChange={(e) => onStatusChange(lead.id, e.target.value)}
+            aria-label="Estágio do lead"
+            className="min-w-0 flex-1 rounded-lg border border-n200 bg-white px-1.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-signal cursor-pointer"
+          >
+            {LEAD_STAGES.map((s) => (
+              <option key={s.key} value={s.key}>{s.label}</option>
+            ))}
+          </select>
 
-        <button
-          type="button"
-          onClick={() => onDelete(lead.id)}
-          className="rounded-lg p-1.5 text-n400 hover:bg-danger/10 hover:text-danger transition-colors cursor-pointer"
-          aria-label="Excluir lead"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+          <button
+            type="button"
+            onClick={() => onDelete(lead.id)}
+            className="shrink-0 rounded-lg p-1.5 text-n400 hover:bg-danger/10 hover:text-danger transition-colors cursor-pointer"
+            aria-label="Excluir lead"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       <LeadHistoryDrawer lead={lead} open={historyOpen} onOpenChange={setHistoryOpen} />
