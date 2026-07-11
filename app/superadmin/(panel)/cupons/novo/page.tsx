@@ -47,7 +47,7 @@ export default function NovoCupomPage() {
 
   return (
     <div className="p-8 max-w-lg">
-      <h1 className="text-2xl font-bold text-ink mb-8">Novo cupom</h1>
+      <h1 className="font-display text-h1 font-semibold text-ink mb-8">Novo cupom</h1>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>

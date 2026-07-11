@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { CardBrick } from "@/components/checkout/CardBrick";
 import { formatBRLFull } from "@/lib/money";
+import { useConfirm } from "@/components/ui";
 
 type Pix = { id: string; status: string; qrCode: string; qrCodeBase64: string; ticketUrl: string };
 type Flow = { tenantId: number; slug: string; amount: number };
@@ -20,6 +21,7 @@ export function PaymentDiagnostics() {
   const [flowMpSubscriptionId, setFlowMpSubscriptionId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { confirm, dialog } = useConfirm();
 
   async function call(url: string, method: string) {
     setErr(null);
@@ -63,7 +65,8 @@ export function PaymentDiagnostics() {
 
   return (
     <div className="space-y-8">
-      {err && <p className="text-red-600 text-sm">{err}</p>}
+      {dialog}
+      {err && <p className="text-danger text-sm">{err}</p>}
 
       <section className="rounded-lg border border-n200 p-5 space-y-3">
         <h2 className="font-semibold">PIX rápido (credenciais + dinheiro)</h2>
@@ -168,16 +171,18 @@ export function PaymentDiagnostics() {
               <button
                 disabled={busy}
                 onClick={async () => {
-                  if (
-                    !window.confirm(
-                      "Isto cancela a assinatura REAL no Mercado Pago e apaga o tenant de teste. Confirme só depois do status aparecer como 'active'. Continuar?",
-                    )
-                  )
-                    return;
+                  const ok = await confirm({
+                    title: "Cancelar e apagar o teste?",
+                    description:
+                      "Isto cancela a assinatura REAL no Mercado Pago e apaga o tenant de teste. Faça só depois do status aparecer como 'active'.",
+                    confirmLabel: "Cancelar assinatura",
+                    danger: true,
+                  });
+                  if (!ok) return;
                   const j = await call(`/api/superadmin/fluxo-teste?tenantId=${flow.tenantId}`, "DELETE");
                   if (j) { setFlow(null); setPayResult(null); setFlowStatus(null); setFlowMpSubscriptionId(null); }
                 }}
-                className="rounded-md border border-red-300 text-red-600 px-3 py-1.5 disabled:opacity-50 cursor-pointer"
+                className="rounded-md border border-danger/30 text-danger px-3 py-1.5 disabled:opacity-50 cursor-pointer"
               >
                 Limpar (cancelar + apagar tenant)
               </button>

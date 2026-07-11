@@ -34,3 +34,4 @@ export { Modal, ModalSection, type ModalProps } from "./Modal";
 export { Drawer, type DrawerProps } from "./Drawer";
 export { ToastProvider, toast } from "./Toast";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
+export { useConfirm, type ConfirmOptions } from "./ConfirmDialog";

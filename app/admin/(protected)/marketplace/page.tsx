@@ -17,7 +17,7 @@ export default async function MarketplacePage() {
   return (
     <div className="p-4 sm:p-8 max-w-3xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-ink">Marketplace AutoStand</h1>
+        <h1 className="font-display text-h2 font-semibold text-ink">Marketplace AutoStand</h1>
         <p className="text-sm text-n600 mt-1">
           Apareça no portal de busca da AutoStand e receba leads de novos compradores.
         </p>

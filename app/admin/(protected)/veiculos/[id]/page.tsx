@@ -26,7 +26,7 @@ export default async function EditVeiculoPage({ params }: Params) {
     <div className="p-4 sm:p-8 max-w-4xl space-y-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-ink">{vehicle.brand} {vehicle.model}</h1>
+          <h1 className="font-display text-h2 font-semibold text-ink">{vehicle.brand} {vehicle.model}</h1>
           <p className="text-sm text-n600 mt-1">{vehicle.year} · {vehicle.km.toLocaleString("pt-BR")} km</p>
         </div>
         <PostInstagramButton

@@ -16,7 +16,7 @@ export default async function TrocarSenhaPage() {
     redirect("/admin/login");
   }
   const tenant = await getCurrentTenant();
-  const accent = tenant?.accent_color ?? "#DC2626";
+  const accent = tenant?.accent_color ?? "#FF6A1A";
 
   return (
     <div className="min-h-screen bg-n50 flex items-center justify-center px-4">

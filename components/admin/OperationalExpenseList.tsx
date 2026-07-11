@@ -23,9 +23,9 @@ const TYPE_OPTIONS: { id: OpType; label: string; categories: readonly string[] }
 ];
 
 const TYPE_BADGE: Record<OpType, string> = {
-  despesa_fixa: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
-  despesa_var:  "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  comissao:     "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+  despesa_fixa: "bg-warning/12 text-warning-dark ring-1 ring-warning/30",
+  despesa_var:  "bg-warning/12 text-warning-dark ring-1 ring-warning/30",
+  comissao:     "bg-n100 text-n700 ring-1 ring-n200",
 };
 
 const inp =
