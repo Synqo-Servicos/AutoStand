@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Lock, MapPin } from "lucide-react";
+import { Eye, Lock, MapPin, X } from "lucide-react";
 import { BANKS } from "@/lib/banks";
 import { StorefrontHero } from "@/components/public/StorefrontHero";
 import { VehicleCard } from "@/components/public/VehicleCard";
@@ -104,6 +104,7 @@ export function PersonalizarEditor({
 
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const previewTenant: TenantRow = {
     ...tenant,
@@ -178,9 +179,8 @@ export function PersonalizarEditor({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-      {/* ------- Formulário ------- */}
-      <div className="space-y-5">
+    <>
+      <div className="max-w-4xl space-y-5">
         {/* Identidade visual — logo + cores */}
         <section className={cardClass}>
           <h2 className="font-display text-h3 font-semibold text-ink">Identidade visual</h2>
@@ -561,32 +561,47 @@ export function PersonalizarEditor({
         </div>
       </div>
 
-      {/* ------- Preview ------- */}
-      <div className="self-start lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
-        <div className="overflow-hidden rounded-xl border border-n200 bg-white">
-          <div className="border-b border-n200 px-4 py-2 text-body-s text-n600">
-            Pré-visualização do site
+      {/* Botão flutuante — abre o preview em tela cheia */}
+      <button
+        type="button"
+        onClick={() => setPreviewOpen(true)}
+        className="fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full bg-signal px-5 py-3 text-body-s font-semibold text-ink shadow-lg transition-colors hover:bg-signal-dark cursor-pointer"
+      >
+        <Eye className="h-4 w-4" />
+        Pré-visualizar
+      </button>
+
+      {/* Preview do site em tela cheia */}
+      {previewOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-ink-900/70 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3 border-b border-n200 bg-white px-4 py-3">
+            <span className="font-display text-h3 text-ink">Pré-visualização do site</span>
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              aria-label="Fechar"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-n600 transition-colors hover:bg-n100 hover:text-ink cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <div style={brandVars}>
-            {/* zoom não é padrão CSS — substituído por transform:scale para suporte cross-browser */}
-            <div style={{ overflow: "hidden" }}>
-              <div style={{ transform: "scale(0.62)", transformOrigin: "top left", width: "161.3%" }}>
-                <StorefrontHero tenant={previewTenant} config={previewConfig} />
-                <div className="bg-n50 p-5">
-                  <div
-                    className={`grid gap-4 ${cardsPerRow === 4 ? "grid-cols-4" : "grid-cols-3"}`}
-                  >
-                    {previewVehicles.map((v) => (
-                      <VehicleCard key={v.id} vehicle={v} cardStyle={cardStyle} />
-                    ))}
-                  </div>
+          <div className="flex-1 overflow-auto bg-n50">
+            <div style={brandVars}>
+              <StorefrontHero tenant={previewTenant} config={previewConfig} />
+              <div className="p-5 sm:p-8">
+                <div
+                  className={`grid gap-4 ${cardsPerRow === 4 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-3"}`}
+                >
+                  {previewVehicles.map((v) => (
+                    <VehicleCard key={v.id} vehicle={v} cardStyle={cardStyle} />
+                  ))}
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 }
 
