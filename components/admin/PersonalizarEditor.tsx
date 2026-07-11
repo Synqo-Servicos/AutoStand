@@ -562,7 +562,7 @@ export function PersonalizarEditor({
       </div>
 
       {/* ------- Preview ------- */}
-      <div className="self-start lg:sticky lg:top-6">
+      <div className="self-start lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
         <div className="overflow-hidden rounded-xl border border-n200 bg-white">
           <div className="border-b border-n200 px-4 py-2 text-body-s text-n600">
             Pré-visualização do site

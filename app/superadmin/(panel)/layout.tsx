@@ -32,8 +32,8 @@ export default async function SuperAdminPanelLayout({
   return (
     <div className="min-h-screen bg-n100 lg:flex">
       <SuperAdminSidebar />
-      <div className="flex-1 min-w-0 lg:overflow-auto flex flex-col">
-        <div className="flex-1">{children}</div>
+      <div className="flex-1 min-w-0 lg:overflow-auto">
+        {children}
         <PlatformFooter />
       </div>
     </div>

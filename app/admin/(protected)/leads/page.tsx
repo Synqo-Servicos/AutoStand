@@ -163,12 +163,15 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          {/* Desktop: kanban */}
-          <div className="hidden md:flex gap-4 overflow-x-auto pb-4">
+          {/* Desktop: kanban — colunas iguais que cabem na largura (sem scroll horizontal) */}
+          <div
+            className="hidden md:grid gap-3"
+            style={{ gridTemplateColumns: `repeat(${LEAD_STAGES.length}, minmax(0, 1fr))` }}
+          >
             {LEAD_STAGES.map((stage) => {
               const stageLeads = leads.filter((l) => l.status === stage.key);
               return (
-                <div key={stage.key} className="w-72 shrink-0">
+                <div key={stage.key} className="min-w-0">
                   <div className="mb-3 flex items-center justify-between px-1">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${stage.color}`}>
                       {stage.label}
