@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-const inputClass =
-  "w-full rounded-lg border border-n200 bg-white px-3 py-2 text-sm text-ink placeholder-n400 outline-none focus:border-signal focus:ring-2 focus:ring-signal/30";
-const labelClass = "block text-sm font-medium text-ink";
+import { Button, Field, Input } from "@/components/ui";
 
 export default function NovoCupomPage() {
   const router = useRouter();
@@ -46,36 +43,37 @@ export default function NovoCupomPage() {
   }
 
   return (
-    <div className="p-8 max-w-lg">
+    <div className="p-4 sm:p-8 max-w-lg">
       <h1 className="font-display text-h1 font-semibold text-ink mb-8">Novo cupom</h1>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label htmlFor="code" className={labelClass}>Código do cupom</label>
-          <input
-            id="code"
-            className={`mt-1 font-mono uppercase ${inputClass}`}
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/\s/g, ""))}
-            placeholder="PROMO10"
-            required
-          />
-        </div>
+        <Field label="Código do cupom" required>
+          {(f) => (
+            <Input
+              id={f.id}
+              className="font-mono uppercase"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase().replace(/\s/g, ""))}
+              placeholder="PROMO10"
+              required
+            />
+          )}
+        </Field>
 
-        <div>
-          <label htmlFor="description" className={labelClass}>Descrição <span className="text-n400 font-normal">(opcional)</span></label>
-          <input
-            id="description"
-            className={`mt-1 ${inputClass}`}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Campanha de junho"
-          />
-        </div>
+        <Field label="Descrição (opcional)">
+          {(f) => (
+            <Input
+              id={f.id}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Campanha de junho"
+            />
+          )}
+        </Field>
 
-        <div>
-          <label className={labelClass}>Tipo de desconto</label>
-          <div className="mt-2 grid grid-cols-3 gap-2">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-eyebrow text-n700">Tipo de desconto</span>
+          <div className="grid grid-cols-3 gap-2">
             {([
               ["percentage", "% desconto"],
               ["fixed", "R$ desconto"],
@@ -85,10 +83,10 @@ export default function NovoCupomPage() {
                 key={val}
                 type="button"
                 onClick={() => setDiscountType(val)}
-                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-md border px-3 py-2 text-body-s font-medium transition-colors ${
                   discountType === val
                     ? "border-signal bg-signal/10 text-ink"
-                    : "border-n200 text-n600 hover:border-n400"
+                    : "border-n300 text-n600 hover:border-n400"
                 }`}
               >
                 {label}
@@ -98,67 +96,57 @@ export default function NovoCupomPage() {
         </div>
 
         {discountType !== "free_month" && (
-          <div>
-            <label htmlFor="discount_value" className={labelClass}>
-              {discountType === "percentage" ? "Percentual (%)" : "Valor (R$)"}
-            </label>
-            <input
-              id="discount_value"
-              type="number"
-              className={`mt-1 ${inputClass}`}
-              value={discountValue}
-              onChange={(e) => setDiscountValue(e.target.value)}
-              placeholder={discountType === "percentage" ? "10" : "50"}
-              min="0"
-              max={discountType === "percentage" ? "100" : undefined}
-              required
-            />
-          </div>
+          <Field label={discountType === "percentage" ? "Percentual (%)" : "Valor (R$)"} required>
+            {(f) => (
+              <Input
+                id={f.id}
+                type="number"
+                value={discountValue}
+                onChange={(e) => setDiscountValue(e.target.value)}
+                placeholder={discountType === "percentage" ? "10" : "50"}
+                min="0"
+                max={discountType === "percentage" ? "100" : undefined}
+                required
+              />
+            )}
+          </Field>
         )}
 
-        <div>
-          <label htmlFor="max_uses" className={labelClass}>Número máximo de usos</label>
-          <input
-            id="max_uses"
-            type="number"
-            className={`mt-1 ${inputClass}`}
-            value={maxUses}
-            onChange={(e) => setMaxUses(e.target.value)}
-            min="1"
-            required
-          />
-        </div>
+        <Field label="Número máximo de usos" required>
+          {(f) => (
+            <Input
+              id={f.id}
+              type="number"
+              value={maxUses}
+              onChange={(e) => setMaxUses(e.target.value)}
+              min="1"
+              required
+            />
+          )}
+        </Field>
 
-        <div>
-          <label htmlFor="expires_at" className={labelClass}>Validade <span className="text-n400 font-normal">(opcional)</span></label>
-          <input
-            id="expires_at"
-            type="date"
-            className={`mt-1 ${inputClass}`}
-            value={expiresAt}
-            onChange={(e) => setExpiresAt(e.target.value)}
-          />
-        </div>
+        <Field label="Validade (opcional)">
+          {(f) => (
+            <Input
+              id={f.id}
+              type="date"
+              value={expiresAt}
+              onChange={(e) => setExpiresAt(e.target.value)}
+            />
+          )}
+        </Field>
 
         {error && (
           <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
         )}
 
         <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="flex-1 rounded-lg bg-signal px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-signal-dark disabled:opacity-60"
-          >
-            {submitting ? "Criando…" : "Criar cupom"}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="px-4 py-2.5 rounded-lg border border-n200 text-sm font-medium text-n700 hover:bg-n50 transition-colors"
-          >
+          <Button type="submit" loading={submitting} className="flex-1">
+            Criar cupom
+          </Button>
+          <Button type="button" variant="outline" onClick={() => router.back()}>
             Cancelar
-          </button>
+          </Button>
         </div>
       </form>
     </div>
