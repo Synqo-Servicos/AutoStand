@@ -6,6 +6,7 @@ import type { LeadRow } from "@/lib/schema";
 import type { Vehicle } from "@/types/vehicle";
 import { LeadCard } from "@/components/admin/LeadCard";
 import { LEAD_STAGES } from "@/lib/constants";
+import { useConfirm } from "@/components/ui";
 
 type StageKey = (typeof LEAD_STAGES)[number]["key"];
 
@@ -51,8 +52,10 @@ export default function LeadsPage() {
     });
   }
 
+  const { confirm, dialog } = useConfirm();
+
   async function remove(id: number) {
-    if (!confirm("Excluir este lead?")) return;
+    if (!(await confirm({ title: "Excluir este lead?", confirmLabel: "Excluir", danger: true }))) return;
     setLeads((ls) => ls.filter((l) => l.id !== id));
     await fetch(`/api/leads/${id}`, { method: "DELETE" });
   }
@@ -76,6 +79,7 @@ export default function LeadsPage() {
 
   return (
     <div className="p-4 sm:p-8">
+      {dialog}
       <div className="mb-6">
         <h1 className="font-display text-h2 font-semibold text-ink">Funil de leads</h1>
         <p className="text-sm text-n600 mt-1">

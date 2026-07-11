@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Loader2, Plus, Trash2, X } from "lucide-react";
 import { centsToDisplay, displayToCents, formatBRL } from "@/lib/money";
 import { EXPENSE_CATEGORIES, TRANSACTION_LABELS } from "@/lib/constants";
+import { useConfirm, toast } from "@/components/ui";
 import type { OperationalExpenseRow } from "@/lib/db";
 
 interface Props {
@@ -35,14 +36,15 @@ const lbl = "block text-xs font-medium text-n600 mb-1";
 export function OperationalExpenseList({ initialRows, month }: Props) {
   const [rows, setRows] = useState<OperationalExpenseRow[]>(initialRows);
   const [modalOpen, setModalOpen] = useState(false);
+  const { confirm, dialog } = useConfirm();
 
   const total = useMemo(() => rows.reduce((a, r) => a + r.amount, 0), [rows]);
 
   async function handleDelete(id: number) {
-    if (!confirm("Excluir esta despesa?")) return;
+    if (!(await confirm({ title: "Excluir esta despesa?", confirmLabel: "Excluir", danger: true }))) return;
     const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
     if (!res.ok) {
-      alert("Erro ao excluir");
+      toast.error("Não foi possível excluir. Tente novamente.");
       return;
     }
     setRows((prev) => prev.filter((r) => r.id !== id));
@@ -57,6 +59,7 @@ export function OperationalExpenseList({ initialRows, month }: Props) {
 
   return (
     <>
+      {dialog}
       <section className="bg-white border border-n100 rounded-xl overflow-hidden">
         <header className="flex items-center justify-between px-5 py-4 border-b border-n100">
           <div>

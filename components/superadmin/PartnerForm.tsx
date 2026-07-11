@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Trash2, Copy, Check } from "lucide-react";
 import { normalizeSlug } from "@/lib/slug";
 import type { PartnerRow } from "@/lib/schema";
+import { useConfirm } from "@/components/ui";
 
 const inputClass =
   "w-full border border-n200 rounded-lg px-3 py-2 text-sm text-ink bg-white " +
@@ -85,8 +86,11 @@ export function PartnerForm({ partner }: { partner?: PartnerRow }) {
     router.refresh();
   }
 
+  const { confirm, dialog } = useConfirm();
+
   async function remove() {
-    if (!partner || !confirm(`Excluir o parceiro "${partner.name}"?`)) return;
+    if (!partner) return;
+    if (!(await confirm({ title: `Excluir o parceiro "${partner.name}"?`, confirmLabel: "Excluir", danger: true }))) return;
     setLoading(true);
     await fetch(`/api/superadmin/parceiros/${partner.id}`, { method: "DELETE" });
     router.push("/superadmin/parceiros");
@@ -95,6 +99,7 @@ export function PartnerForm({ partner }: { partner?: PartnerRow }) {
 
   return (
     <form onSubmit={submit} className="space-y-5">
+      {dialog}
       {/* Identificação */}
       <div className={cardClass}>
         <div>

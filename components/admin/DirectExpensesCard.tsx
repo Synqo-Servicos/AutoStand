@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Loader2, Plus, Trash2, X } from "lucide-react";
 import { centsToDisplay, displayToCents, formatBRL } from "@/lib/money";
 import { EXPENSE_CATEGORIES } from "@/lib/constants";
+import { useConfirm, toast } from "@/components/ui";
 import type { Transaction } from "@/types/transaction";
 
 interface Props {
@@ -68,11 +69,13 @@ export function DirectExpensesCard({
     );
   }
 
+  const { confirm, dialog } = useConfirm();
+
   async function handleDelete(id: number) {
-    if (!confirm("Excluir esta despesa?")) return;
+    if (!(await confirm({ title: "Excluir esta despesa?", confirmLabel: "Excluir", danger: true }))) return;
     const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
     if (!res.ok) {
-      alert("Erro ao excluir");
+      toast.error("Não foi possível excluir. Tente novamente.");
       return;
     }
     setExpenses((prev) => prev.filter((e) => e.id !== id));
@@ -80,6 +83,7 @@ export function DirectExpensesCard({
 
   return (
     <section className="bg-white border border-n100 rounded-xl overflow-hidden">
+      {dialog}
       <header className="flex items-center justify-between px-5 py-4 border-b border-n100">
         <div>
           <h2 className="text-sm font-semibold text-ink">Custos diretos &amp; Margem real</h2>

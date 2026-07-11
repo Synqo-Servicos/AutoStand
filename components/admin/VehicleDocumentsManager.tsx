@@ -5,6 +5,7 @@ import {
   Download, FileText, Loader2, Paperclip, Trash2, Upload,
 } from "lucide-react";
 import type { VehicleDocumentRow } from "@/lib/schema";
+import { useConfirm } from "@/components/ui";
 
 const CATEGORIES: { value: string; label: string }[] = [
   { value: "crlv",      label: "CRLV / Licenciamento" },
@@ -69,8 +70,10 @@ export function VehicleDocumentsManager({
     }
   }
 
-  function handleDelete(doc: VehicleDocumentRow) {
-    if (!confirm(`Apagar "${doc.name}"? Esta ação não pode ser desfeita.`)) return;
+  const { confirm, dialog } = useConfirm();
+
+  async function handleDelete(doc: VehicleDocumentRow) {
+    if (!(await confirm({ title: `Apagar "${doc.name}"?`, description: "Esta ação não pode ser desfeita.", confirmLabel: "Apagar", danger: true }))) return;
     startTransition(async () => {
       const res = await fetch(`/api/vehicles/${vehicleId}/documents`, {
         method: "DELETE",
@@ -87,6 +90,7 @@ export function VehicleDocumentsManager({
 
   return (
     <section className="bg-white border border-n100 rounded-xl p-6">
+      {dialog}
       <div className="flex items-start justify-between gap-3 mb-5">
         <div>
           <h2 className="text-lg font-semibold text-ink flex items-center gap-2">
