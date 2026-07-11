@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { TenantRow } from "@/lib/schema";
 import { PLAN_SLUGS, PLANS } from "@/lib/plans";
 import { normalizeSlug } from "@/lib/slug";
-import { useConfirm } from "@/components/ui";
+import { Button, Field, Input, Select, useConfirm } from "@/components/ui";
 
 interface Props {
   tenant?: TenantRow;
@@ -17,6 +17,8 @@ const OPTIONAL_FIELDS = [
   "city", "whatsapp_number", "instagram_url", "business_hours", "contact_email",
   "plan",
 ] as const;
+
+const NO_PLAN = "__none__";
 
 export function TenantForm({ tenant }: Props) {
   const router = useRouter();
@@ -119,61 +121,76 @@ export function TenantForm({ tenant }: Props) {
       {/* Identificação */}
       <Section title="Identificação" desc="Nome e endereço da concessionária na plataforma.">
         <Field label="Nome da concessionária" required>
-          <input
-            required
-            value={form.name}
-            onChange={(e) => onNameChange(e.target.value)}
-            className={inputClass}
-            placeholder="Ex: Auto Brasil Veículos"
-          />
+          {(f) => (
+            <Input
+              id={f.id}
+              required
+              value={form.name}
+              onChange={(e) => onNameChange(e.target.value)}
+              placeholder="Ex: Auto Brasil Veículos"
+            />
+          )}
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Slug" hint="Identificador único — vira o subdomínio do site: <slug>.autostand.com.br" required>
-            <input
-              required
-              value={form.slug}
-              onChange={(e) => {
-                setSlugTouched(true);
-                set("slug", normalizeSlug(e.target.value));
-              }}
-              className={inputClass}
-              placeholder="auto-brasil"
-            />
+          <Field
+            label="Slug"
+            required
+            helperText="Identificador único — vira o subdomínio do site: <slug>.autostand.com.br"
+          >
+            {(f) => (
+              <Input
+                id={f.id}
+                required
+                value={form.slug}
+                onChange={(e) => {
+                  setSlugTouched(true);
+                  set("slug", normalizeSlug(e.target.value));
+                }}
+                placeholder="auto-brasil"
+              />
+            )}
           </Field>
-          <Field label="Domínio próprio" hint="Domínio próprio do cliente (opcional). O DNS deve apontar para a plataforma.">
-            <input
-              value={form.custom_domain}
-              onChange={(e) => set("custom_domain", e.target.value.trim())}
-              className={inputClass}
-              placeholder="concessionaria.com.br"
-            />
+          <Field
+            label="Domínio próprio"
+            helperText="Domínio próprio do cliente (opcional). O DNS deve apontar para a plataforma."
+          >
+            {(f) => (
+              <Input
+                id={f.id}
+                value={form.custom_domain}
+                onChange={(e) => set("custom_domain", e.target.value.trim())}
+                placeholder="concessionaria.com.br"
+              />
+            )}
           </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Plano" hint="Define as capabilities. Vazio = capabilities do Básico.">
-            <select
-              value={form.plan}
-              onChange={(e) => set("plan", e.target.value)}
-              className={inputClass}
-            >
-              <option value="">Sem plano definido</option>
-              {PLAN_SLUGS.map((slug) => (
-                <option key={slug} value={slug}>
-                  {PLANS[slug].name}
-                </option>
-              ))}
-            </select>
+          <Field label="Plano" helperText="Define as capabilities. Vazio = capabilities do Básico.">
+            {(f) => (
+              <Select
+                id={f.id}
+                value={form.plan || NO_PLAN}
+                onValueChange={(v) => set("plan", v === NO_PLAN ? "" : v)}
+                options={[
+                  { value: NO_PLAN, label: "Sem plano definido" },
+                  ...PLAN_SLUGS.map((slug) => ({ value: slug, label: PLANS[slug].name })),
+                ]}
+              />
+            )}
           </Field>
           {isEdit && (
             <Field label="Status">
-              <select
-                value={form.status}
-                onChange={(e) => set("status", e.target.value)}
-                className={inputClass}
-              >
-                <option value="active">Ativa</option>
-                <option value="suspended">Suspensa</option>
-              </select>
+              {(f) => (
+                <Select
+                  id={f.id}
+                  value={form.status}
+                  onValueChange={(v) => set("status", v)}
+                  options={[
+                    { value: "active", label: "Ativa" },
+                    { value: "suspended", label: "Suspensa" },
+                  ]}
+                />
+              )}
             </Field>
           )}
         </div>
@@ -186,30 +203,36 @@ export function TenantForm({ tenant }: Props) {
           <ColorField label="Cor de destaque" value={form.accent_color} onChange={(v) => set("accent_color", v)} />
           <ColorField label="Destaque (escuro)" value={form.accent_dark_color} onChange={(v) => set("accent_dark_color", v)} />
         </div>
-        <Field label="URL do logo" hint="Opcional. Imagem hospedada.">
-          <input
-            value={form.logo_url}
-            onChange={(e) => set("logo_url", e.target.value.trim())}
-            className={inputClass}
-            placeholder="https://..."
-          />
+        <Field label="URL do logo" helperText="Opcional. Imagem hospedada.">
+          {(f) => (
+            <Input
+              id={f.id}
+              value={form.logo_url}
+              onChange={(e) => set("logo_url", e.target.value.trim())}
+              placeholder="https://..."
+            />
+          )}
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Título do hero">
-            <input
-              value={form.hero_title}
-              onChange={(e) => set("hero_title", e.target.value)}
-              className={inputClass}
-              placeholder="Seminovos com procedência"
-            />
+            {(f) => (
+              <Input
+                id={f.id}
+                value={form.hero_title}
+                onChange={(e) => set("hero_title", e.target.value)}
+                placeholder="Seminovos com procedência"
+              />
+            )}
           </Field>
           <Field label="Subtítulo do hero">
-            <input
-              value={form.hero_subtitle}
-              onChange={(e) => set("hero_subtitle", e.target.value)}
-              className={inputClass}
-              placeholder="Carros revisados e documentação em dia"
-            />
+            {(f) => (
+              <Input
+                id={f.id}
+                value={form.hero_subtitle}
+                onChange={(e) => set("hero_subtitle", e.target.value)}
+                placeholder="Carros revisados e documentação em dia"
+              />
+            )}
           </Field>
         </div>
       </Section>
@@ -218,20 +241,56 @@ export function TenantForm({ tenant }: Props) {
       <Section title="Contato" desc="Dados exibidos no site público.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Cidade">
-            <input value={form.city} onChange={(e) => set("city", e.target.value)} className={inputClass} placeholder="Maceió, AL" />
+            {(f) => (
+              <Input
+                id={f.id}
+                value={form.city}
+                onChange={(e) => set("city", e.target.value)}
+                placeholder="Maceió, AL"
+              />
+            )}
           </Field>
-          <Field label="WhatsApp" hint="Com DDI (55) + DDD + número. Ex: 5511999998888">
-            <input value={form.whatsapp_number} onChange={(e) => set("whatsapp_number", e.target.value.replace(/\D/g, ""))} className={inputClass} placeholder="5582999999999" />
+          <Field label="WhatsApp" helperText="Com DDI (55) + DDD + número. Ex: 5511999998888">
+            {(f) => (
+              <Input
+                id={f.id}
+                value={form.whatsapp_number}
+                onChange={(e) => set("whatsapp_number", e.target.value.replace(/\D/g, ""))}
+                placeholder="5582999999999"
+              />
+            )}
           </Field>
           <Field label="Instagram (URL)">
-            <input value={form.instagram_url} onChange={(e) => set("instagram_url", e.target.value.trim())} className={inputClass} placeholder="https://instagram.com/..." />
+            {(f) => (
+              <Input
+                id={f.id}
+                value={form.instagram_url}
+                onChange={(e) => set("instagram_url", e.target.value.trim())}
+                placeholder="https://instagram.com/..."
+              />
+            )}
           </Field>
           <Field label="Email de contato">
-            <input type="email" value={form.contact_email} onChange={(e) => set("contact_email", e.target.value.trim())} className={inputClass} placeholder="contato@..." />
+            {(f) => (
+              <Input
+                id={f.id}
+                type="email"
+                value={form.contact_email}
+                onChange={(e) => set("contact_email", e.target.value.trim())}
+                placeholder="contato@..."
+              />
+            )}
           </Field>
         </div>
         <Field label="Horário de funcionamento">
-          <input value={form.business_hours} onChange={(e) => set("business_hours", e.target.value)} className={inputClass} placeholder="Seg–Sex: 8h às 18h" />
+          {(f) => (
+            <Input
+              id={f.id}
+              value={form.business_hours}
+              onChange={(e) => set("business_hours", e.target.value)}
+              placeholder="Seg–Sex: 8h às 18h"
+            />
+          )}
         </Field>
       </Section>
 
@@ -243,13 +302,34 @@ export function TenantForm({ tenant }: Props) {
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Nome">
-              <input value={admin.name} onChange={(e) => setAdmin((a) => ({ ...a, name: e.target.value }))} className={inputClass} />
+              {(f) => (
+                <Input
+                  id={f.id}
+                  value={admin.name}
+                  onChange={(e) => setAdmin((a) => ({ ...a, name: e.target.value }))}
+                />
+              )}
             </Field>
             <Field label="Email">
-              <input type="email" value={admin.email} onChange={(e) => setAdmin((a) => ({ ...a, email: e.target.value.trim() }))} className={inputClass} />
+              {(f) => (
+                <Input
+                  id={f.id}
+                  type="email"
+                  value={admin.email}
+                  onChange={(e) => setAdmin((a) => ({ ...a, email: e.target.value.trim() }))}
+                />
+              )}
             </Field>
-            <Field label="Senha provisória" hint="O lojista é obrigado a trocá-la no 1º login.">
-              <input type="text" value={admin.password} onChange={(e) => setAdmin((a) => ({ ...a, password: e.target.value }))} className={inputClass} placeholder="ex: autostand2026" />
+            <Field label="Senha provisória" helperText="O lojista é obrigado a trocá-la no 1º login.">
+              {(f) => (
+                <Input
+                  id={f.id}
+                  type="text"
+                  value={admin.password}
+                  onChange={(e) => setAdmin((a) => ({ ...a, password: e.target.value }))}
+                  placeholder="ex: autostand2026"
+                />
+              )}
             </Field>
           </div>
         </Section>
@@ -258,33 +338,26 @@ export function TenantForm({ tenant }: Props) {
       {/* Actions */}
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
         {isEdit ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={handleDelete}
             disabled={loading}
-            className="w-full sm:w-auto inline-flex items-center gap-2 text-sm font-medium text-danger hover:bg-danger/10 px-3 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+            leadingIcon={<Trash2 className="w-4 h-4" />}
+            className="w-full sm:w-auto text-danger hover:border-danger/40 hover:bg-danger/10"
           >
-            <Trash2 className="w-4 h-4" />
             Excluir concessionária
-          </button>
+          </Button>
         ) : (
           <span />
         )}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full sm:w-auto inline-flex items-center gap-2 bg-signal text-ink text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-signal-dark disabled:opacity-50 transition-colors cursor-pointer"
-        >
-          {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+        <Button type="submit" loading={loading} className="w-full sm:w-auto">
           {isEdit ? "Salvar alterações" : "Cadastrar concessionária"}
-        </button>
+        </Button>
       </div>
     </form>
   );
 }
-
-const inputClass =
-  "w-full border border-n200 rounded-lg px-3 py-2 text-sm text-ink bg-white focus:outline-none focus:ring-2 focus:ring-signal focus:border-transparent transition-shadow";
 
 function Section({
   title,
@@ -296,35 +369,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-n200/70 p-6">
+    <div className="bg-white rounded-xl border border-n200 shadow-xs p-6">
       <div className="mb-5">
         <h2 className="text-sm font-semibold text-ink">{title}</h2>
         <p className="text-xs text-n400 mt-0.5">{desc}</p>
       </div>
       <div className="space-y-4">{children}</div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  required,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-n600 mb-1">
-        {label}
-        {required && <span className="text-danger"> *</span>}
-      </label>
-      {children}
-      {hint && <p className="text-[11px] text-n400 mt-1">{hint}</p>}
     </div>
   );
 }
@@ -338,21 +388,21 @@ function ColorField({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const id = useId();
   return (
-    <div>
-      <label className="block text-xs font-medium text-n600 mb-1">{label}</label>
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-eyebrow text-n700">
+        {label}
+      </label>
       <div className="flex items-center gap-2">
         <input
           type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-9 h-9 rounded-lg border border-n200 cursor-pointer bg-white p-0.5"
+          aria-label={label}
+          className="w-9 h-9 rounded-md border border-n300 cursor-pointer bg-white p-0.5"
         />
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={inputClass}
-        />
+        <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} />
       </div>
     </div>
   );

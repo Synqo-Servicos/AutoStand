@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { CardBrick } from "@/components/checkout/CardBrick";
 import { formatBRLFull } from "@/lib/money";
-import { useConfirm } from "@/components/ui";
+import { Button, useConfirm } from "@/components/ui";
 
 type Pix = { id: string; status: string; qrCode: string; qrCodeBase64: string; ticketUrl: string };
 type Flow = { tenantId: number; slug: string; amount: number };
@@ -68,18 +68,19 @@ export function PaymentDiagnostics() {
       {dialog}
       {err && <p className="text-danger text-sm">{err}</p>}
 
-      <section className="rounded-lg border border-n200 p-5 space-y-3">
-        <h2 className="font-semibold">PIX rápido (credenciais + dinheiro)</h2>
-        <button
+      <section className="rounded-lg border border-n200 bg-white shadow-xs p-5 space-y-3">
+        <h2 className="font-display text-h3 text-ink">PIX rápido (credenciais + dinheiro)</h2>
+        <Button
+          variant="secondary"
+          size="sm"
           disabled={busy}
           onClick={async () => {
             const j = await call("/api/superadmin/pix-teste", "POST");
             if (j) { setPix(j); setPixStatus(j.status); }
           }}
-          className="rounded-md bg-ink text-white px-4 py-2 text-sm disabled:opacity-50 cursor-pointer"
         >
           Gerar PIX de teste (R$0,01)
-        </button>
+        </Button>
         {pix && (
           <div className="space-y-2 text-sm">
             {pix.qrCodeBase64 && (
@@ -94,43 +95,47 @@ export function PaymentDiagnostics() {
             )}
             <label className="block">Copia-e-cola:</label>
             <textarea readOnly value={pix.qrCode} className="w-full border border-n200 rounded p-2 text-xs" rows={3} />
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto px-0 py-0 text-signal underline hover:bg-transparent hover:text-signal-dark"
               onClick={() => navigator.clipboard.writeText(pix.qrCode)}
-              className="text-signal underline cursor-pointer"
             >
               Copiar
-            </button>
+            </Button>
             <p>Payment id: <code>{pix.id}</code></p>
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               disabled={busy}
               onClick={async () => {
                 const j = await call(`/api/superadmin/pix-teste?id=${pix.id}`, "GET");
                 if (j) setPixStatus(j.status);
               }}
-              className="rounded-md border border-n300 px-3 py-1.5 disabled:opacity-50 cursor-pointer"
             >
               Atualizar status
-            </button>
+            </Button>
             <p>Status: <strong>{pixStatus}</strong></p>
           </div>
         )}
       </section>
 
-      <section className="rounded-lg border border-n200 p-5 space-y-3">
-        <h2 className="font-semibold">Fluxo completo de assinatura (R$1) — transparente</h2>
+      <section className="rounded-lg border border-n200 bg-white shadow-xs p-5 space-y-3">
+        <h2 className="font-display text-h3 text-ink">Fluxo completo de assinatura (R$1) — transparente</h2>
         <p className="text-xs text-n600">
           Mesmo Card Brick do cliente. Cobra R$1 real no cartão. Para testar recusa→retry, gere um novo teste a cada tentativa.
         </p>
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           disabled={busy}
           onClick={async () => {
             const j = await call("/api/superadmin/fluxo-teste", "POST");
             if (j) { setFlow(j); setPayResult(null); setFlowStatus(null); setFlowMpSubscriptionId(null); }
           }}
-          className="rounded-md bg-ink text-white px-4 py-2 text-sm disabled:opacity-50 cursor-pointer"
         >
           Iniciar teste (R$1)
-        </button>
+        </Button>
         {flow && (
           <div className="space-y-3 text-sm">
             <p>Tenant de teste: <code>{flow.slug}</code> — {formatBRLFull(flow.amount)}</p>
@@ -155,7 +160,9 @@ export function PaymentDiagnostics() {
             )}
 
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 disabled={busy}
                 onClick={async () => {
                   const j = await call(`/api/superadmin/fluxo-teste?tenantId=${flow.tenantId}`, "GET");
@@ -164,11 +171,12 @@ export function PaymentDiagnostics() {
                     setFlowMpSubscriptionId(j.mp_subscription_id ?? null);
                   }
                 }}
-                className="rounded-md border border-n300 px-3 py-1.5 disabled:opacity-50 cursor-pointer"
               >
                 Atualizar status
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
                 disabled={busy}
                 onClick={async () => {
                   const ok = await confirm({
@@ -182,10 +190,9 @@ export function PaymentDiagnostics() {
                   const j = await call(`/api/superadmin/fluxo-teste?tenantId=${flow.tenantId}`, "DELETE");
                   if (j) { setFlow(null); setPayResult(null); setFlowStatus(null); setFlowMpSubscriptionId(null); }
                 }}
-                className="rounded-md border border-danger/30 text-danger px-3 py-1.5 disabled:opacity-50 cursor-pointer"
               >
                 Limpar (cancelar + apagar tenant)
-              </button>
+              </Button>
             </div>
             <p>Status do tenant: <strong>{flowStatus ?? "—"}</strong></p>
             <p>Assinatura MP: <strong>{flowMpSubscriptionId ?? "—"}</strong></p>

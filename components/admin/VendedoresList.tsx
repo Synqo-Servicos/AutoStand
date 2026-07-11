@@ -1,18 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { centsToDisplay, displayToCents, formatBRL } from "@/lib/money";
-import { useConfirm, toast } from "@/components/ui";
+import { Button, Field, Input, Modal, Select, useConfirm, toast } from "@/components/ui";
 import type { Seller } from "@/types/seller";
 
 interface Props {
   initialSellers: Seller[];
 }
-
-const inp =
-  "w-full border border-n200 rounded-lg px-3 py-2 text-sm text-ink bg-white focus:outline-none focus:ring-2 focus:ring-signal focus:border-transparent transition-shadow";
-const lbl = "block text-xs font-medium text-n600 mb-1";
 
 export function VendedoresList({ initialSellers }: Props) {
   const [sellers, setSellers] = useState<Seller[]>(initialSellers);
@@ -52,14 +48,14 @@ export function VendedoresList({ initialSellers }: Props) {
       <section className="bg-white border border-n100 rounded-xl overflow-hidden">
         <header className="flex items-center justify-between px-5 py-4 border-b border-n100">
           <h2 className="text-sm font-semibold text-ink">Equipe ({sellers.length})</h2>
-          <button
+          <Button
             type="button"
+            size="sm"
             onClick={() => setEditing("new")}
-            className="inline-flex items-center gap-1.5 bg-signal text-ink text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-signal-dark transition-colors cursor-pointer"
+            leadingIcon={<Plus className="w-3.5 h-3.5" />}
           >
-            <Plus className="w-3.5 h-3.5" />
             Adicionar vendedor
-          </button>
+          </Button>
         </header>
 
         {sellers.length === 0 ? (
@@ -98,22 +94,25 @@ export function VendedoresList({ initialSellers }: Props) {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setEditing(s)}
-                      className="inline-flex items-center justify-center w-9 h-9 sm:w-7 sm:h-7 rounded text-n400 hover:text-ink hover:bg-n100 transition-colors cursor-pointer"
                       aria-label="Editar"
                     >
                       <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDelete(s)}
-                      className="inline-flex items-center justify-center w-9 h-9 sm:w-7 sm:h-7 rounded text-n400 hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
                       aria-label="Excluir"
+                      className="text-danger hover:bg-danger/10"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -168,8 +167,7 @@ function SellerEditor({ seller, onClose, onSaved }: EditorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!name.trim()) {
       setError("Nome é obrigatório");
       return;
@@ -205,113 +203,138 @@ function SellerEditor({ seller, onClose, onSaved }: EditorProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
-      <form onSubmit={handleSubmit} className="relative z-10 w-full max-w-lg bg-white rounded-xl shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-n100">
-          <h3 className="text-base font-semibold text-ink">
-            {isEdit ? "Editar vendedor" : "Novo vendedor"}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-n400 hover:bg-n100 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+    <Modal
+      open
+      onOpenChange={(next) => { if (!next) onClose(); }}
+      size="lg"
+      title={isEdit ? "Editar vendedor" : "Novo vendedor"}
+      footer={
+        <>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="button" onClick={handleSubmit} loading={saving}>
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <Field label="Nome" required>
+          {(f) => (
+            <Input
+              id={f.id}
+              required
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: João Silva"
+            />
+          )}
+        </Field>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Telefone">
+            {(f) => (
+              <Input
+                id={f.id}
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="11999990000"
+              />
+            )}
+          </Field>
+          <Field label="Email">
+            {(f) => (
+              <Input
+                id={f.id}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="vendedor@loja.com"
+              />
+            )}
+          </Field>
         </div>
 
-        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
-          <div>
-            <label className={lbl}>Nome *</label>
-            <input required type="text" value={name} onChange={(e) => setName(e.target.value)} className={inp} placeholder="Ex: João Silva" />
-          </div>
+        <Field label="CPF">
+          {(f) => (
+            <Input
+              id={f.id}
+              type="text"
+              value={document}
+              onChange={(e) => setDocument(e.target.value)}
+              placeholder="000.000.000-00"
+            />
+          )}
+        </Field>
 
+        <Field label="Foto (URL pública)">
+          {(f) => (
+            <Input
+              id={f.id}
+              type="url"
+              value={photoUrl}
+              onChange={(e) => setPhotoUrl(e.target.value)}
+              placeholder="https://..."
+            />
+          )}
+        </Field>
+
+        <div className="border-t border-n100 pt-4">
+          <p className="text-xs font-semibold text-ink mb-2">Comissão por venda</p>
+          <p className="text-[11px] text-n400 mb-3">
+            Aplicada automaticamente quando uma venda é registrada com este vendedor.
+            Pode usar só % ou só fixo, ou os dois somados.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className={lbl}>Telefone</label>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inp} placeholder="11999990000" />
-            </div>
-            <div>
-              <label className={lbl}>Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inp} placeholder="vendedor@loja.com" />
-            </div>
-          </div>
-
-          <div>
-            <label className={lbl}>CPF</label>
-            <input type="text" value={document} onChange={(e) => setDocument(e.target.value)} className={inp} placeholder="000.000.000-00" />
-          </div>
-
-          <div>
-            <label className={lbl}>Foto (URL pública)</label>
-            <input type="url" value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} className={inp} placeholder="https://..." />
-          </div>
-
-          <div className="border-t border-n100 pt-4">
-            <p className="text-xs font-semibold text-ink mb-2">Comissão por venda</p>
-            <p className="text-[11px] text-n400 mb-3">
-              Aplicada automaticamente quando uma venda é registrada com este vendedor.
-              Pode usar só % ou só fixo, ou os dois somados.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className={lbl}>Comissão (%)</label>
-                <input
+            <Field label="Comissão (%)">
+              {(f) => (
+                <Input
+                  id={f.id}
                   type="text"
                   value={pctStr}
                   onChange={(e) => setPctStr(e.target.value)}
-                  className={inp}
                   placeholder="Ex: 3.5"
                 />
-              </div>
-              <div>
-                <label className={lbl}>Comissão fixa (R$)</label>
-                <input
+              )}
+            </Field>
+            <Field label="Comissão fixa (R$)">
+              {(f) => (
+                <Input
+                  id={f.id}
                   type="text"
                   value={fixedStr}
                   onChange={(e) => setFixedStr(e.target.value)}
                   onBlur={() => setFixedStr(fixedStr.trim() ? centsToDisplay(displayToCents(fixedStr)) : "")}
-                  className={inp}
                   placeholder="Ex: 500"
                 />
-              </div>
-            </div>
+              )}
+            </Field>
           </div>
+        </div>
 
-          <div>
-            <label className={lbl}>Status</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value as Seller["status"])} className={inp}>
-              <option value="ativo">Ativo</option>
-              <option value="desligado">Desligado</option>
-            </select>
-          </div>
-
-          {error && (
-            <p className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">
-              {error}
-            </p>
+        <Field label="Status">
+          {(f) => (
+            <Select
+              id={f.id}
+              value={status}
+              onValueChange={(v) => setStatus(v as Seller["status"])}
+              options={[
+                { value: "ativo", label: "Ativo" },
+                { value: "desligado", label: "Desligado" },
+              ]}
+            />
           )}
-        </div>
+        </Field>
 
-        <div className="bg-n50 border-t border-n100 px-5 py-3 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm border border-n200 rounded-lg text-n600 hover:bg-white transition-colors cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-signal text-ink rounded-lg hover:bg-signal-dark disabled:opacity-50 transition-colors cursor-pointer"
-          >
-            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {saving ? "Salvando..." : "Salvar"}
-          </button>
-        </div>
-      </form>
-    </div>
+        {error && (
+          <p className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">
+            {error}
+          </p>
+        )}
+      </div>
+    </Modal>
   );
 }
