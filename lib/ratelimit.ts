@@ -49,6 +49,8 @@ export const limiters = {
   login: makeLimiter(10, "10 m", "rl:login"),
   /** Tentativas de pagamento no checkout transparente. 8/min por IP. */
   checkoutPayment: makeLimiter(8, "1 m", "rl:checkout"),
+  /** Pedido de reset de senha. 5/hora por IP — barra e-mail bombing. */
+  passwordReset: makeLimiter(5, "1 h", "rl:pwreset"),
 } as const;
 
 export type LimiterName = keyof typeof limiters;
