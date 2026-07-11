@@ -37,9 +37,9 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
   return (
     <div className="min-h-screen bg-n50 lg:flex">
       <AdminSidebar tenantName={tenant.name} />
-      <div className="flex-1 min-w-0 lg:overflow-auto flex flex-col">
+      <div className="flex-1 min-w-0 lg:overflow-auto">
         {tenant.status !== "active" && <SubscriptionBanner />}
-        <div className="flex-1">{children}</div>
+        {children}
         <PlatformFooter />
       </div>
     </div>
