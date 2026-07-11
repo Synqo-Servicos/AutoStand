@@ -66,6 +66,11 @@ export function LoginForm() {
           {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>
+      <p className="mt-4 text-center text-xs text-n500">
+        <a href="/esqueci-senha" className="text-signal hover:underline">
+          Esqueci minha senha
+        </a>
+      </p>
     </div>
   );
 }

@@ -7,6 +7,7 @@ const claimTenantForCheckout = vi.fn();
 const releaseTenantCheckout = vi.fn();
 const createTransparentSubscription = vi.fn();
 const verifyPaymentToken = vi.fn();
+const notifyPaymentStatus = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   getTenantById, getCouponById, setTenantSubscriptionState,
@@ -14,6 +15,7 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/checkout", () => ({ createTransparentSubscription }));
 vi.mock("@/lib/payment-token", () => ({ verifyPaymentToken }));
+vi.mock("@/lib/email/notify", () => ({ notifyPaymentStatus }));
 vi.mock("@/lib/ratelimit", () => ({
   checkRateLimit: vi.fn(async () => ({ ok: true })),
   getClientIp: vi.fn(() => "1.2.3.4"),
@@ -40,6 +42,7 @@ describe("POST /api/assinar/pagamento", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, slug: "loja", status: "authorized" });
     expect(setTenantSubscriptionState).toHaveBeenCalledWith(7, "authorized", "sub_1");
+    expect(notifyPaymentStatus).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }), "active");
   });
 
   it("401 e não ativa quando o token é inválido/expirado", async () => {
