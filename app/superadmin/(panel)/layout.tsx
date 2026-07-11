@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/db";
 import { SuperAdminSidebar } from "@/components/superadmin/SuperAdminSidebar";
+import { PlatformFooter } from "@/components/PlatformFooter";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,10 @@ export default async function SuperAdminPanelLayout({
   return (
     <div className="min-h-screen bg-n100 lg:flex">
       <SuperAdminSidebar />
-      <div className="flex-1 min-w-0 lg:overflow-auto">{children}</div>
+      <div className="flex-1 min-w-0 lg:overflow-auto flex flex-col">
+        <div className="flex-1">{children}</div>
+        <PlatformFooter />
+      </div>
     </div>
   );
 }

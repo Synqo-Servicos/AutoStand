@@ -20,7 +20,7 @@ export default async function CuponsPage() {
     <div className="p-4 sm:p-8 max-w-6xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Cupons</h1>
+          <h1 className="font-display text-h1 font-semibold text-ink">Cupons</h1>
           <p className="text-sm text-n600 mt-1">{cupons.length} cadastrados</p>
         </div>
         <Link

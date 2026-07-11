@@ -30,7 +30,7 @@ export default async function DocumentoTemplatePage({ params }: Params) {
         Voltar para a biblioteca
       </Link>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-ink">{template.name}</h1>
+        <h1 className="font-display text-h2 font-semibold text-ink">{template.name}</h1>
         <p className="text-sm text-n600 mt-1">{template.description}</p>
       </div>
       <DocumentGeneratorForm

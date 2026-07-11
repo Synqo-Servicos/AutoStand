@@ -34,7 +34,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
     <div className="p-4 sm:p-8 max-w-6xl space-y-5 sm:space-y-6">
       <header className="space-y-3 sm:flex sm:items-end sm:justify-between sm:gap-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Financeiro</h1>
+          <h1 className="font-display text-h2 font-semibold text-ink">Financeiro</h1>
           <p className="text-sm text-n600 mt-1">
             Visão consolidada de receita, custos e margem da loja.
           </p>

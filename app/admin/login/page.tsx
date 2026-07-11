@@ -13,7 +13,7 @@ function initials(name: string): string {
 export default async function LoginPage() {
   const tenant = await getCurrentTenant();
   const name = tenant?.name ?? "Painel administrativo";
-  const accent = tenant?.accent_color ?? "#DC2626";
+  const accent = tenant?.accent_color ?? "#FF6A1A";
 
   return (
     <div className="min-h-screen bg-n50 flex items-center justify-center px-4">
@@ -31,6 +31,9 @@ export default async function LoginPage() {
         <Suspense fallback={<div className="bg-white rounded-2xl border border-n100 shadow-sm p-6 h-40" />}>
           <LoginForm />
         </Suspense>
+        <p className="mt-8 text-center text-xs text-n500">
+          <span className="font-display font-semibold text-n600">AutoStand</span> · por Synqo
+        </p>
       </div>
     </div>
   );

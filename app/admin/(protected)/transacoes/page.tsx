@@ -20,10 +20,10 @@ const TYPE_LABEL: Record<string, string> = {
 const TYPE_COLOR: Record<string, string> = {
   entrada: "bg-signal/10 text-signal ring-1 ring-signal",
   saida:   "bg-success/12 text-ink ring-1 ring-success/30",
-  despesa_direta: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  despesa_fixa: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
-  despesa_var: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
-  comissao: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+  despesa_direta: "bg-warning/12 text-warning-dark ring-1 ring-warning/30",
+  despesa_fixa: "bg-warning/12 text-warning-dark ring-1 ring-warning/30",
+  despesa_var: "bg-warning/12 text-warning-dark ring-1 ring-warning/30",
+  comissao: "bg-n100 text-n700 ring-1 ring-n200",
 };
 
 export default function TransacoesPage() {
@@ -52,7 +52,7 @@ export default function TransacoesPage() {
     <div className="p-4 sm:p-8 max-w-6xl">
       <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-ink">Transações</h1>
+          <h1 className="font-display text-h2 font-semibold text-ink">Transações</h1>
           <p className="text-sm text-n600 mt-1">Entradas e saídas de veículos</p>
         </div>
         <button

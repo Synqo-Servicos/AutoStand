@@ -21,7 +21,7 @@ export default async function EditTenantPage({ params }: Params) {
           {tenant.name.slice(0, 2).toUpperCase()}
         </span>
         <div>
-          <h1 className="text-2xl font-bold text-ink">{tenant.name}</h1>
+          <h1 className="font-display text-h1 font-semibold text-ink">{tenant.name}</h1>
           <p className="text-sm text-n600">Editar dados e identidade visual.</p>
         </div>
       </div>

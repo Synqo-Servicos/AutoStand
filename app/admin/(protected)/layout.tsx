@@ -4,6 +4,7 @@ import { getUserById } from "@/lib/db";
 import { getAdminTenant } from "@/lib/tenant";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { SubscriptionBanner } from "@/components/admin/SubscriptionBanner";
+import { PlatformFooter } from "@/components/PlatformFooter";
 
 async function safeAuth() {
   try {
@@ -36,9 +37,10 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
   return (
     <div className="min-h-screen bg-n50 lg:flex">
       <AdminSidebar tenantName={tenant.name} />
-      <div className="flex-1 min-w-0 lg:overflow-auto">
+      <div className="flex-1 min-w-0 lg:overflow-auto flex flex-col">
         {tenant.status !== "active" && <SubscriptionBanner />}
-        {children}
+        <div className="flex-1">{children}</div>
+        <PlatformFooter />
       </div>
     </div>
   );

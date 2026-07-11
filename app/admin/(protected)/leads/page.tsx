@@ -77,7 +77,7 @@ export default function LeadsPage() {
   return (
     <div className="p-4 sm:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">Funil de leads</h1>
+        <h1 className="font-display text-h2 font-semibold text-ink">Funil de leads</h1>
         <p className="text-sm text-n600 mt-1">
           Acompanhe cada contato por estágio e dê retorno pelo WhatsApp em um clique.
         </p>

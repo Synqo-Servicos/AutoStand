@@ -572,7 +572,7 @@ export function PersonalizarEditor({
             <div style={{ overflow: "hidden" }}>
               <div style={{ transform: "scale(0.62)", transformOrigin: "top left", width: "161.3%" }}>
                 <StorefrontHero tenant={previewTenant} config={previewConfig} />
-                <div className="bg-slate-50 p-5">
+                <div className="bg-n50 p-5">
                   <div
                     className={`grid gap-4 ${cardsPerRow === 4 ? "grid-cols-4" : "grid-cols-3"}`}
                   >

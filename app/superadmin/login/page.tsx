@@ -82,6 +82,9 @@ export default function SuperAdminLoginPage() {
         <Suspense fallback={<div className="bg-white/5 rounded-2xl border border-white/10 h-44" />}>
           <LoginForm />
         </Suspense>
+        <p className="mt-8 text-center text-xs text-n500">
+          <span className="font-display font-semibold text-n400">AutoStand</span> · por Synqo
+        </p>
       </div>
     </div>
   );
