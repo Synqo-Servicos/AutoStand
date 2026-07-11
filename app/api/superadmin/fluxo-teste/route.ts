@@ -1,26 +1,8 @@
 import { NextResponse } from "next/server";
 import { ApiError, withSuperAdmin } from "@/lib/api";
 import { createTenant, getTenantById, deleteTenant } from "@/lib/db";
-import { createCheckoutSession, cancelMpSubscription } from "@/lib/checkout";
-import { getPlan } from "@/lib/plans";
-import type { CouponRow } from "@/lib/schema";
-
-/** Cupom sintético (não persistido) que derruba o Básico p/ R$1,00. */
-function diagCoupon(userId: number): CouponRow {
-  return {
-    id: -1,
-    code: "DIAG",
-    description: "diagnóstico",
-    discount_type: "fixed",
-    discount_value: 16890,
-    max_uses: 1,
-    used_count: 0,
-    expires_at: null,
-    partner_id: null,
-    created_by: userId,
-    created_at: "",
-  } as CouponRow;
-}
+import { cancelMpSubscription } from "@/lib/checkout";
+import { assertDiagTenant, diagAmountCents } from "@/lib/diag";
 
 function tenantIdParam(req: Request): number {
   const raw = new URL(req.url).searchParams.get("tenantId");
@@ -29,13 +11,12 @@ function tenantIdParam(req: Request): number {
   return n;
 }
 
-function assertDiagTenant(tenant: { slug: string } | null): void {
-  if (tenant && !tenant.slug.startsWith("diag-")) {
-    throw new ApiError("Rota de diagnóstico só opera tenants diag-.", 400);
-  }
-}
-
-export const POST = withSuperAdmin(async (_req, { userId }) => {
+/**
+ * Etapa 1 do diagnóstico transparente: cria o tenant `diag-` (incomplete) e
+ * devolve o valor a cobrar (R$1 via cupom DIAG). O pagamento acontece no
+ * Card Brick do console → `fluxo-teste/pagar` (o MESMO fluxo do cliente).
+ */
+export const POST = withSuperAdmin(async () => {
   if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
     throw new ApiError("MERCADOPAGO_ACCESS_TOKEN não configurado.", 503);
   }
@@ -47,20 +28,8 @@ export const POST = withSuperAdmin(async (_req, { userId }) => {
     status: "suspended",
     subscription_status: "incomplete",
   });
-  let checkoutUrl: string | null;
-  try {
-    checkoutUrl = await createCheckoutSession(
-      tenant,
-      getPlan("basico"),
-      null,
-      diagCoupon(userId),
-    );
-  } catch (err) {
-    await deleteTenant(tenant.id);
-    throw err;
-  }
   return NextResponse.json(
-    { tenantId: tenant.id, slug: tenant.slug, checkoutUrl },
+    { tenantId: tenant.id, slug: tenant.slug, amount: diagAmountCents() },
     { status: 201 },
   );
 });
