@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import MercadoPagoConfig, { PreApproval } from "mercadopago";
-import { setTenantSubscriptionState } from "@/lib/db";
+import { getTenantById, setTenantSubscriptionState } from "@/lib/db";
+import { notifyPaymentStatus } from "@/lib/email/notify";
+
+/** Status do preapproval do MP → status interno usado na notificação. */
+const MP_TO_INTERNAL: Record<string, string> = {
+  authorized: "active",
+  paused: "past_due",
+  cancelled: "cancelled",
+};
 
 function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
@@ -47,7 +55,14 @@ export async function POST(req: NextRequest) {
   const tenantIdNum = tenantId ? Number(tenantId) : NaN;
 
   if (tenantId && Number.isInteger(tenantIdNum) && tenantIdNum > 0) {
+    const internal = MP_TO_INTERNAL[mpStatus];
+    const before = await getTenantById(tenantIdNum);
     await setTenantSubscriptionState(tenantIdNum, mpStatus, dataId);
+    // Notifica só na TRANSIÇÃO de status (evita e-mail duplicado em webhook
+    // repetido, e o "site no ar" do transparente já saiu pela rota /pagamento).
+    if (before && internal && before.subscription_status !== internal) {
+      void notifyPaymentStatus(before, internal);
+    }
   }
 
   return NextResponse.json({ received: true });

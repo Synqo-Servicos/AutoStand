@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { users } from "@/lib/schema";
 import type { UserRow } from "@/lib/schema";
 import { db, type Tx } from "./client";
@@ -6,6 +6,22 @@ import { db, type Tx } from "./client";
 export async function getUserByEmail(email: string): Promise<UserRow | null> {
   const [row] = await db.select().from(users).where(eq(users.email, email)).limit(1);
   return row ?? null;
+}
+
+/** E-mails de todos os super-admins (destinatários dos alertas internos). */
+export async function getSuperAdminEmails(): Promise<string[]> {
+  const rows = await db.select({ email: users.email }).from(users).where(eq(users.role, "super_admin"));
+  return rows.map((r) => r.email);
+}
+
+/** E-mail do admin (primeiro tenant_admin) de um tenant — destinatário dos avisos ao cliente. */
+export async function getTenantAdminEmail(tenantId: number): Promise<string | null> {
+  const [row] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(and(eq(users.tenant_id, tenantId), eq(users.role, "tenant_admin")))
+    .limit(1);
+  return row?.email ?? null;
 }
 
 export async function getUserById(id: number): Promise<UserRow | null> {

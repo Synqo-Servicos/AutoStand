@@ -4,6 +4,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { ApiError, parseBody, withTenant } from "@/lib/api";
 import { publicLeadSchema } from "@/lib/validation";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
+import { notifyNewLead } from "@/lib/email/notify";
 
 // Admin: list this tenant's leads.
 export const GET = withTenant(async (req, { tenantId }) => {
@@ -43,6 +44,8 @@ export async function POST(req: NextRequest) {
       source: input.source ?? "site",
       status: "novo",
     });
+    // Fire-and-forget: avisa o gestor sem bloquear a resposta (nunca lança).
+    void notifyNewLead(tenant, lead);
     return NextResponse.json(lead, { status: 201 });
   } catch (err) {
     if (err instanceof ApiError) {
