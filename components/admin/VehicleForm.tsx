@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import {
   COMMON_BRANDS, FUELS, FUEL_LABELS, TRANSMISSIONS, TRANSMISSION_LABELS,
   VEHICLE_STATUS, STATUS_LABELS, BODY_TYPES, BODY_TYPE_LABELS,
@@ -10,15 +10,23 @@ import {
 } from "@/lib/constants";
 import { formatBRL, displayToCents, centsToDisplay } from "@/lib/money";
 import { PhotoUploader } from "./PhotoUploader";
-import { useConfirm } from "@/components/ui";
+import { Field, Input, Textarea, Select, Button, useConfirm, type SelectOption } from "@/components/ui";
 import type { VehicleWithPhotos } from "@/types/vehicle";
 
 interface Props {
   vehicle?: VehicleWithPhotos;
 }
 
-const inp = "w-full border border-n200 rounded-lg px-3 py-2 text-sm text-ink bg-white focus:outline-none focus:ring-2 focus:ring-signal focus:border-transparent transition-shadow";
-const lbl = "block text-xs font-medium text-n600 mb-1";
+const brandOptions: SelectOption[] = [
+  ...COMMON_BRANDS.map((b) => ({ value: b, label: b })),
+  { value: "Outro", label: "Outro" },
+];
+const transmissionOptions: SelectOption[] = TRANSMISSIONS.map((t) => ({ value: t, label: TRANSMISSION_LABELS[t] }));
+const fuelOptions: SelectOption[] = FUELS.map((f) => ({ value: f, label: FUEL_LABELS[f] }));
+const doorsOptions: SelectOption[] = [2, 4].map((d) => ({ value: String(d), label: `${d} portas` }));
+const bodyTypeOptions: SelectOption[] = BODY_TYPES.map((b) => ({ value: b, label: BODY_TYPE_LABELS[b] }));
+const conditionOptions: SelectOption[] = CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABELS[c] }));
+const statusOptions: SelectOption[] = VEHICLE_STATUS.map((s) => ({ value: s, label: STATUS_LABELS[s] }));
 
 export function VehicleForm({ vehicle }: Props) {
   const router = useRouter();
@@ -135,137 +143,155 @@ export function VehicleForm({ vehicle }: Props) {
         <h3 className="text-sm font-semibold text-ink">Dados do veículo</h3>
 
         {/* Placa — controle interno (sem lookup automático por enquanto) */}
-        <div>
-          <label className={lbl}>Placa <span className="font-normal text-n400">— opcional</span></label>
-          <input
-            type="text"
-            value={form.plate}
-            onChange={e => set("plate", e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 8))}
-            className={`${inp} uppercase tracking-wider`}
-            placeholder="ABC-1D23"
-          />
-          <p className="text-xs text-n500 mt-1">
-            Usada para controle interno da loja. Não aparece no anúncio público.
-          </p>
-        </div>
+        <Field
+          label="Placa — opcional"
+          helperText="Usada para controle interno da loja. Não aparece no anúncio público."
+        >
+          {(f) => (
+            <Input
+              id={f.id}
+              type="text"
+              value={form.plate}
+              onChange={e => set("plate", e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 8))}
+              className="uppercase tracking-wider"
+              placeholder="ABC-1D23"
+            />
+          )}
+        </Field>
 
         {/* Brand + Model */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Marca *</label>
-            <select required value={form.brand} onChange={e => set("brand", e.target.value)} className={inp}>
-              <option value="">Selecione...</option>
-              {COMMON_BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
-              <option value="Outro">Outro</option>
-            </select>
-          </div>
-          <div>
-            <label className={lbl}>Modelo *</label>
-            <input required type="text" value={form.model} onChange={e => set("model", e.target.value)} className={inp} placeholder="Ex: Onix Plus" />
-          </div>
+          <Field label="Marca" required>
+            {(f) => (
+              <Select
+                id={f.id}
+                value={form.brand}
+                onValueChange={v => set("brand", v)}
+                options={brandOptions}
+                placeholder="Selecione..."
+              />
+            )}
+          </Field>
+          <Field label="Modelo" required>
+            {(f) => (
+              <Input id={f.id} required type="text" value={form.model} onChange={e => set("model", e.target.value)} placeholder="Ex: Onix Plus" />
+            )}
+          </Field>
         </div>
 
         {/* Version + FIPE */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Versão</label>
-            <input type="text" value={form.version} onChange={e => set("version", e.target.value)} className={inp} placeholder="Ex: 1.0 Turbo Premier" />
-          </div>
-          <div>
-            <label className={lbl}>Código FIPE</label>
-            <input type="text" value={form.fipe_code} onChange={e => set("fipe_code", e.target.value)} className={inp} placeholder="Ex: 004445-0" />
-          </div>
+          <Field label="Versão">
+            {(f) => (
+              <Input id={f.id} type="text" value={form.version} onChange={e => set("version", e.target.value)} placeholder="Ex: 1.0 Turbo Premier" />
+            )}
+          </Field>
+          <Field label="Código FIPE">
+            {(f) => (
+              <Input id={f.id} type="text" value={form.fipe_code} onChange={e => set("fipe_code", e.target.value)} placeholder="Ex: 004445-0" />
+            )}
+          </Field>
         </div>
 
         {/* Year model + Year manufacture + KM */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className={lbl}>Ano modelo *</label>
-            <input required type="number" min="1990" max={currentYear + 1}
-              value={form.year} onChange={e => set("year", Number(e.target.value))} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Ano fabricação *</label>
-            <input required type="number" min="1990" max={currentYear + 1}
-              value={form.year_manufacture} onChange={e => set("year_manufacture", Number(e.target.value))} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Quilometragem *</label>
-            <input required type="number" min="0"
-              value={form.km} onChange={e => set("km", Number(e.target.value))} className={inp} />
-          </div>
+          <Field label="Ano modelo" required>
+            {(f) => (
+              <Input
+                id={f.id} required type="number" min="1990" max={currentYear + 1}
+                value={form.year} onChange={e => set("year", Number(e.target.value))}
+              />
+            )}
+          </Field>
+          <Field label="Ano fabricação" required>
+            {(f) => (
+              <Input
+                id={f.id} required type="number" min="1990" max={currentYear + 1}
+                value={form.year_manufacture} onChange={e => set("year_manufacture", Number(e.target.value))}
+              />
+            )}
+          </Field>
+          <Field label="Quilometragem" required>
+            {(f) => (
+              <Input
+                id={f.id} required type="number" min="0"
+                value={form.km} onChange={e => set("km", Number(e.target.value))}
+              />
+            )}
+          </Field>
         </div>
 
         {/* Transmission + Fuel + Doors */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className={lbl}>Câmbio *</label>
-            <select required value={form.transmission} onChange={e => set("transmission", e.target.value)} className={inp}>
-              {TRANSMISSIONS.map(t => <option key={t} value={t}>{TRANSMISSION_LABELS[t]}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={lbl}>Combustível *</label>
-            <select required value={form.fuel} onChange={e => set("fuel", e.target.value)} className={inp}>
-              {FUELS.map(f => <option key={f} value={f}>{FUEL_LABELS[f]}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={lbl}>Portas *</label>
-            <select required value={form.doors} onChange={e => set("doors", Number(e.target.value))} className={inp}>
-              {[2, 4].map(d => <option key={d} value={d}>{d} portas</option>)}
-            </select>
-          </div>
+          <Field label="Câmbio" required>
+            {(f) => (
+              <Select id={f.id} value={form.transmission} onValueChange={v => set("transmission", v)} options={transmissionOptions} />
+            )}
+          </Field>
+          <Field label="Combustível" required>
+            {(f) => (
+              <Select id={f.id} value={form.fuel} onValueChange={v => set("fuel", v)} options={fuelOptions} />
+            )}
+          </Field>
+          <Field label="Portas" required>
+            {(f) => (
+              <Select id={f.id} value={String(form.doors)} onValueChange={v => set("doors", Number(v))} options={doorsOptions} />
+            )}
+          </Field>
         </div>
 
         {/* Body type + Color + Condition */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className={lbl}>Carroceria</label>
-            <select value={form.body_type} onChange={e => set("body_type", e.target.value)} className={inp}>
-              <option value="">Selecione...</option>
-              {BODY_TYPES.map(b => <option key={b} value={b}>{BODY_TYPE_LABELS[b]}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={lbl}>Cor *</label>
-            <input required type="text" value={form.color} onChange={e => set("color", e.target.value)} className={inp} placeholder="Ex: Prata" />
-          </div>
-          <div>
-            <label className={lbl}>Condição *</label>
-            <select required value={form.condition} onChange={e => set("condition", e.target.value)} className={inp}>
-              {CONDITIONS.map(c => <option key={c} value={c}>{CONDITION_LABELS[c]}</option>)}
-            </select>
-          </div>
+          <Field label="Carroceria">
+            {(f) => (
+              <Select id={f.id} value={form.body_type} onValueChange={v => set("body_type", v)} options={bodyTypeOptions} placeholder="Selecione..." />
+            )}
+          </Field>
+          <Field label="Cor" required>
+            {(f) => (
+              <Input id={f.id} required type="text" value={form.color} onChange={e => set("color", e.target.value)} placeholder="Ex: Prata" />
+            )}
+          </Field>
+          <Field label="Condição" required>
+            {(f) => (
+              <Select id={f.id} value={form.condition} onValueChange={v => set("condition", v)} options={conditionOptions} />
+            )}
+          </Field>
         </div>
 
         {/* Cost + Sale Price */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Preço de custo (R$)" required>
+            {(f) => (
+              <Input
+                id={f.id}
+                required type="text" value={costDisplay}
+                onChange={e => setCostDisplay(e.target.value)}
+                onBlur={() => {
+                  const cents = displayToCents(costDisplay);
+                  set("cost_price", cents);
+                  setCostDisplay(centsToDisplay(cents));
+                }}
+                placeholder="Ex: 65.000"
+              />
+            )}
+          </Field>
           <div>
-            <label className={lbl}>Preço de custo (R$) *</label>
-            <input
-              required type="text" value={costDisplay}
-              onChange={e => setCostDisplay(e.target.value)}
-              onBlur={() => {
-                const cents = displayToCents(costDisplay);
-                set("cost_price", cents);
-                setCostDisplay(centsToDisplay(cents));
-              }}
-              className={inp} placeholder="Ex: 65.000"
-            />
-          </div>
-          <div>
-            <label className={lbl}>Preço de venda (R$) *</label>
-            <input
-              required type="text" value={salePriceDisp}
-              onChange={e => setSalePriceDisp(e.target.value)}
-              onBlur={() => {
-                const cents = displayToCents(salePriceDisp);
-                set("sale_price", cents);
-                setSalePriceDisp(centsToDisplay(cents));
-              }}
-              className={inp} placeholder="Ex: 79.900"
-            />
+            <Field label="Preço de venda (R$)" required>
+              {(f) => (
+                <Input
+                  id={f.id}
+                  required type="text" value={salePriceDisp}
+                  onChange={e => setSalePriceDisp(e.target.value)}
+                  onBlur={() => {
+                    const cents = displayToCents(salePriceDisp);
+                    set("sale_price", cents);
+                    setSalePriceDisp(centsToDisplay(cents));
+                  }}
+                  placeholder="Ex: 79.900"
+                />
+              )}
+            </Field>
             {form.cost_price > 0 && form.sale_price > 0 && (
               <p className={`text-xs mt-1 ${form.sale_price > form.cost_price ? "text-ink" : "text-danger"}`}>
                 Margem: {formatBRL(form.sale_price - form.cost_price)}
@@ -275,24 +301,25 @@ export function VehicleForm({ vehicle }: Props) {
         </div>
 
         {/* Status */}
-        <div>
-          <label className={lbl}>Status *</label>
-          <select required value={form.status} onChange={e => set("status", e.target.value)} className={inp}>
-            {VEHICLE_STATUS.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-          </select>
-        </div>
+        <Field label="Status" required>
+          {(f) => (
+            <Select id={f.id} value={form.status} onValueChange={v => set("status", v)} options={statusOptions} />
+          )}
+        </Field>
 
         {/* Description */}
-        <div>
-          <label className={lbl}>Descrição</label>
-          <textarea
-            rows={3}
-            value={form.description}
-            onChange={e => set("description", e.target.value)}
-            className={`${inp} resize-none`}
-            placeholder="Estado de conservação, histórico, garantia..."
-          />
-        </div>
+        <Field label="Descrição">
+          {(f) => (
+            <Textarea
+              id={f.id}
+              rows={3}
+              value={form.description}
+              onChange={e => set("description", e.target.value)}
+              className="resize-none"
+              placeholder="Estado de conservação, histórico, garantia..."
+            />
+          )}
+        </Field>
       </div>
 
       {/* Destaques do anúncio — alimentam o post de Instagram e os portais */}
@@ -306,7 +333,7 @@ export function VehicleForm({ vehicle }: Props) {
 
         {/* Opcionais — chips */}
         <div>
-          <label className={lbl}>Opcionais</label>
+          <label className="mb-1.5 block text-eyebrow text-n700">Opcionais</label>
           {optionals.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {optionals.map(opt => (
@@ -325,23 +352,23 @@ export function VehicleForm({ vehicle }: Props) {
             </div>
           )}
           <div className="flex gap-2">
-            <input
+            <Input
               type="text"
               value={optionalDraft}
               onChange={e => setOptionalDraft(e.target.value)}
               onKeyDown={e => {
                 if (e.key === "Enter") { e.preventDefault(); addOptional(); }
               }}
-              className={inp}
               placeholder="Ex: Teto solar — Enter para adicionar"
             />
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={addOptional}
-              className="shrink-0 px-3 py-2 text-sm border border-n200 rounded-lg text-n600 hover:bg-n50 transition-colors cursor-pointer"
+              className="shrink-0"
             >
               Adicionar
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -380,30 +407,29 @@ export function VehicleForm({ vehicle }: Props) {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {isEdit ? (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={handleDelete}
-            className="text-sm text-danger hover:text-danger hover:bg-danger/10 px-3 py-2 rounded-lg transition-colors cursor-pointer"
+            className="text-danger hover:bg-danger/10"
           >
             Excluir veículo
-          </button>
+          </Button>
         ) : <div />}
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => router.back()}
-            className="px-4 py-2 text-sm border border-n200 rounded-lg text-n600 hover:bg-n50 transition-colors cursor-pointer"
           >
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-signal text-ink rounded-lg hover:bg-signal-dark disabled:opacity-50 transition-colors cursor-pointer"
+            loading={saving}
           >
-            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {saving ? "Salvando..." : isEdit ? "Salvar alterações" : "Criar veículo"}
-          </button>
+          </Button>
         </div>
       </div>
     </form>

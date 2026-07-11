@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { centsToDisplay, displayToCents, formatBRL } from "@/lib/money";
 import { EXPENSE_CATEGORIES } from "@/lib/constants";
-import { useConfirm, toast } from "@/components/ui";
+import { Button, Field, Input, Modal, Select, Textarea, useConfirm, toast } from "@/components/ui";
 import type { Transaction } from "@/types/transaction";
 
 interface Props {
@@ -14,10 +14,6 @@ interface Props {
   vehicleStatus: string;
   initialExpenses: Transaction[];
 }
-
-const inp =
-  "w-full border border-n200 rounded-lg px-3 py-2 text-sm text-ink bg-white focus:outline-none focus:ring-2 focus:ring-signal focus:border-transparent transition-shadow";
-const lbl = "block text-xs font-medium text-n600 mb-1";
 
 const CATEGORIES = EXPENSE_CATEGORIES.veiculo;
 
@@ -93,14 +89,14 @@ export function DirectExpensesCard({
               : "Margem projetada — usa o preço de venda atual."}
           </p>
         </div>
-        <button
+        <Button
           type="button"
+          size="sm"
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-1.5 bg-signal text-ink text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-signal-dark transition-colors cursor-pointer"
+          leadingIcon={<Plus className="w-3.5 h-3.5" />}
         >
-          <Plus className="w-3.5 h-3.5" />
           Adicionar despesa
-        </button>
+        </Button>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 px-5 py-4 text-sm">
@@ -136,14 +132,16 @@ export function DirectExpensesCard({
                 <span className="font-medium text-ink whitespace-nowrap">
                   {formatBRL(e.amount)}
                 </span>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handleDelete(e.id)}
-                  className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded text-n400 hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer shrink-0"
                   aria-label="Excluir"
+                  className="text-danger hover:bg-danger/10 shrink-0"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -220,8 +218,7 @@ function AddExpenseModal({ onClose, onSubmit }: ModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     const amount = displayToCents(amountStr);
     if (amount <= 0) {
       setError("Informe um valor válido");
@@ -244,99 +241,78 @@ function AddExpenseModal({ onClose, onSubmit }: ModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
-      <form
-        onSubmit={handleSubmit}
-        className="relative z-10 w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden"
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-n100">
-          <h3 className="text-base font-semibold text-ink">Nova despesa direta</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-n400 hover:bg-n100 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-4">
-          <div>
-            <label className={lbl}>Categoria *</label>
-            <select
+    <Modal
+      open
+      onOpenChange={(next) => { if (!next) onClose(); }}
+      title="Nova despesa direta"
+      footer={
+        <>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="button" onClick={handleSubmit} loading={saving}>
+            {saving ? "Salvando..." : "Adicionar"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <Field label="Categoria" required>
+          {(f) => (
+            <Select
+              id={f.id}
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className={inp}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
+              onValueChange={setCategory}
+              options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+            />
+          )}
+        </Field>
 
-          <div>
-            <label className={lbl}>Valor (R$) *</label>
-            <input
+        <Field label="Valor (R$)" required>
+          {(f) => (
+            <Input
+              id={f.id}
               required
               type="text"
               value={amountStr}
               onChange={(e) => setAmountStr(e.target.value)}
               onBlur={() => setAmountStr(centsToDisplay(displayToCents(amountStr)))}
-              className={inp}
               placeholder="Ex: 1.500"
             />
-          </div>
+          )}
+        </Field>
 
-          <div>
-            <label className={lbl}>Data *</label>
-            <input
+        <Field label="Data" required>
+          {(f) => (
+            <Input
+              id={f.id}
               required
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className={inp}
             />
-          </div>
+          )}
+        </Field>
 
-          <div>
-            <label className={lbl}>Observações</label>
-            <textarea
+        <Field label="Observações">
+          {(f) => (
+            <Textarea
+              id={f.id}
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className={`${inp} resize-none`}
+              className="resize-none"
               placeholder="Ex: nota fiscal #1234"
             />
-          </div>
-
-          {error && (
-            <p className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">
-              {error}
-            </p>
           )}
-        </div>
+        </Field>
 
-        <div className="bg-n50 border-t border-n100 px-5 py-3 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm border border-n200 rounded-lg text-n600 hover:bg-white transition-colors cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-signal text-ink rounded-lg hover:bg-signal-dark disabled:opacity-50 transition-colors cursor-pointer"
-          >
-            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {saving ? "Salvando..." : "Adicionar"}
-          </button>
-        </div>
-      </form>
-    </div>
+        {error && (
+          <p className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">
+            {error}
+          </p>
+        )}
+      </div>
+    </Modal>
   );
 }

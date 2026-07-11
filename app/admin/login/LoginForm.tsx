@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { Loader2 } from "lucide-react";
+import { Field, Input, Button } from "@/components/ui";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -35,36 +35,33 @@ export function LoginForm() {
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-n600 mb-1">Email</label>
-          <input
-            required
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            className="w-full border border-n200 rounded-lg px-3 py-2 text-sm text-ink bg-white focus:outline-none focus:ring-2 focus:ring-signal focus:border-transparent transition-shadow"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-n600 mb-1">Senha</label>
-          <input
-            required
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            className="w-full border border-n200 rounded-lg px-3 py-2 text-sm text-ink bg-white focus:outline-none focus:ring-2 focus:ring-signal focus:border-transparent transition-shadow"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full inline-flex items-center justify-center gap-2 py-2.5 bg-signal text-ink text-sm font-medium rounded-lg hover:bg-signal-dark disabled:opacity-50 transition-colors cursor-pointer"
-        >
-          {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+        <Field label="Email" required>
+          {(f) => (
+            <Input
+              id={f.id}
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+            />
+          )}
+        </Field>
+        <Field label="Senha" required>
+          {(f) => (
+            <Input
+              id={f.id}
+              required
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          )}
+        </Field>
+        <Button type="submit" loading={loading} className="w-full">
           {loading ? "Entrando..." : "Entrar"}
-        </button>
+        </Button>
       </form>
       <p className="mt-4 text-center text-xs text-n500">
         <a href="/esqueci-senha" className="text-signal hover:underline">
