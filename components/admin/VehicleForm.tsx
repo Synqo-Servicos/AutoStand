@@ -10,6 +10,7 @@ import {
 } from "@/lib/constants";
 import { formatBRL, displayToCents, centsToDisplay } from "@/lib/money";
 import { PhotoUploader } from "./PhotoUploader";
+import { useConfirm } from "@/components/ui";
 import type { VehicleWithPhotos } from "@/types/vehicle";
 
 interface Props {
@@ -102,14 +103,18 @@ export function VehicleForm({ vehicle }: Props) {
     }
   }
 
+  const { confirm, dialog } = useConfirm();
+
   async function handleDelete() {
-    if (!vehicle || !confirm(`Excluir ${vehicle.brand} ${vehicle.model}?`)) return;
+    if (!vehicle) return;
+    if (!(await confirm({ title: `Excluir ${vehicle.brand} ${vehicle.model}?`, confirmLabel: "Excluir", danger: true }))) return;
     await fetch(`/api/vehicles/${vehicle.id}`, { method: "DELETE" });
     router.push("/admin/veiculos");
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+      {dialog}
 
       {/* Fotos — só no modo edição */}
       {isEdit && (

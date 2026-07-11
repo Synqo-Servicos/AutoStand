@@ -6,6 +6,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import type { TenantRow } from "@/lib/schema";
 import { PLAN_SLUGS, PLANS } from "@/lib/plans";
 import { normalizeSlug } from "@/lib/slug";
+import { useConfirm } from "@/components/ui";
 
 interface Props {
   tenant?: TenantRow;
@@ -89,11 +90,17 @@ export function TenantForm({ tenant }: Props) {
     router.refresh();
   }
 
+  const { confirm, dialog } = useConfirm();
+
   async function handleDelete() {
     if (!tenant) return;
-    if (!confirm(`Excluir "${tenant.name}"? Todos os veículos, leads e usuários serão removidos.`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: `Excluir "${tenant.name}"?`,
+      description: "Todos os veículos, leads e usuários serão removidos.",
+      confirmLabel: "Excluir",
+      danger: true,
+    });
+    if (!ok) return;
     setLoading(true);
     await fetch(`/api/superadmin/tenants/${tenant.id}`, { method: "DELETE" });
     router.push("/superadmin/tenants");
@@ -102,6 +109,7 @@ export function TenantForm({ tenant }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {dialog}
       {error && (
         <div className="rounded-lg bg-danger/10 border border-danger/30 px-4 py-3 text-sm text-danger">
           {error}

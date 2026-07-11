@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { centsToDisplay, displayToCents, formatBRL } from "@/lib/money";
+import { useConfirm, toast } from "@/components/ui";
 import type { Seller } from "@/types/seller";
 
 interface Props {
@@ -16,12 +17,19 @@ const lbl = "block text-xs font-medium text-n600 mb-1";
 export function VendedoresList({ initialSellers }: Props) {
   const [sellers, setSellers] = useState<Seller[]>(initialSellers);
   const [editing, setEditing] = useState<Seller | "new" | null>(null);
+  const { confirm, dialog } = useConfirm();
 
   async function handleDelete(s: Seller) {
-    if (!confirm(`Excluir o vendedor "${s.name}"?\n\nO histórico de comissões já registrado não será apagado.`)) return;
+    const ok = await confirm({
+      title: `Excluir o vendedor "${s.name}"?`,
+      description: "O histórico de comissões já registrado não será apagado.",
+      confirmLabel: "Excluir",
+      danger: true,
+    });
+    if (!ok) return;
     const res = await fetch(`/api/sellers/${s.id}`, { method: "DELETE" });
     if (!res.ok) {
-      alert("Erro ao excluir");
+      toast.error("Não foi possível excluir. Tente novamente.");
       return;
     }
     setSellers((prev) => prev.filter((x) => x.id !== s.id));
@@ -40,6 +48,7 @@ export function VendedoresList({ initialSellers }: Props) {
 
   return (
     <>
+      {dialog}
       <section className="bg-white border border-n100 rounded-xl overflow-hidden">
         <header className="flex items-center justify-between px-5 py-4 border-b border-n100">
           <h2 className="text-sm font-semibold text-ink">Equipe ({sellers.length})</h2>
