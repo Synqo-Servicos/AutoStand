@@ -127,7 +127,7 @@ export function VehicleForm({ vehicle }: Props) {
       {/* Fotos — só no modo edição */}
       {isEdit && (
         <div className="bg-white rounded-xl border border-n100 p-6">
-          <h3 className="text-sm font-semibold text-ink mb-4">Fotos</h3>
+          <h3 className="font-display text-h3 font-semibold text-ink mb-4">Fotos</h3>
           <PhotoUploader
             vehicleId={vehicle.id}
             initialPhotos={vehicle.photos.map(p => ({
@@ -140,7 +140,7 @@ export function VehicleForm({ vehicle }: Props) {
       )}
 
       <div className="bg-white rounded-xl border border-n100 p-6 space-y-5">
-        <h3 className="text-sm font-semibold text-ink">Dados do veículo</h3>
+        <h3 className="font-display text-h3 font-semibold text-ink">Dados do veículo</h3>
 
         {/* Placa — controle interno (sem lookup automático por enquanto) */}
         <Field
@@ -325,7 +325,7 @@ export function VehicleForm({ vehicle }: Props) {
       {/* Destaques do anúncio — alimentam o post de Instagram e os portais */}
       <div className="bg-white rounded-xl border border-n100 p-6 space-y-5">
         <div>
-          <h3 className="text-sm font-semibold text-ink">Destaques do anúncio</h3>
+          <h3 className="font-display text-h3 font-semibold text-ink">Destaques do anúncio</h3>
           <p className="text-xs text-n500 mt-0.5">
             Usados na geração de posts e nos anúncios para portais (OLX, Webmotors).
           </p>

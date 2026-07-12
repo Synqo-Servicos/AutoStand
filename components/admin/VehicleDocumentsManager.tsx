@@ -93,7 +93,7 @@ export function VehicleDocumentsManager({
       {dialog}
       <div className="flex items-start justify-between gap-3 mb-5">
         <div>
-          <h2 className="text-lg font-semibold text-ink flex items-center gap-2">
+          <h2 className="font-display text-h3 font-semibold text-ink flex items-center gap-2">
             <Paperclip className="w-4 h-4 text-n400" />
             Documentos internos
           </h2>

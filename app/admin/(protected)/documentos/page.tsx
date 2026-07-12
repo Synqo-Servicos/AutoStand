@@ -27,7 +27,7 @@ export default function DocumentosPage() {
                 <FileText className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-ink leading-snug">{tpl.name}</h2>
+                <h2 className="font-display text-body-s font-semibold text-ink leading-snug">{tpl.name}</h2>
                 <p className="text-xs text-n500 mt-1 line-clamp-3">{tpl.description}</p>
                 {!tpl.requiresVehicle && (
                   <p className="mt-2 inline-flex text-[10px] font-semibold uppercase tracking-wider text-n500 bg-n50 px-2 py-0.5 rounded">

@@ -38,7 +38,7 @@ export function InteligenciaDicas({ configured }: { configured: boolean }) {
     <div className="rounded-xl border border-n200 bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-ink">Dicas de demanda</h2>
+          <h2 className="font-display text-h3 font-semibold text-ink">Dicas de demanda</h2>
           <p className="text-xs text-n500">
             A IA lê os sinais abaixo e sugere ações de estoque e anúncio.
           </p>
@@ -74,7 +74,7 @@ export function InteligenciaDicas({ configured }: { configured: boolean }) {
                   {OPP[d.oportunidade]?.label ?? d.oportunidade}
                 </span>
               </div>
-              <h3 className="mt-1.5 text-sm font-semibold text-ink">{d.titulo}</h3>
+              <h3 className="mt-1.5 font-display text-body-s font-semibold text-ink">{d.titulo}</h3>
               <p className="mt-0.5 text-sm text-n600">{d.texto}</p>
             </div>
           ))}

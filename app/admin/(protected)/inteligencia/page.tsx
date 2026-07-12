@@ -19,7 +19,7 @@ export default async function InteligenciaPage() {
         <div className="mt-6 rounded-xl border border-n200 bg-white p-6">
           <div className="flex items-center gap-2 text-ink">
             <Lock className="h-4 w-4" />
-            <h2 className="text-base font-semibold">Recurso do plano Premium</h2>
+            <h2 className="font-display text-h3 font-semibold text-ink">Recurso do plano Premium</h2>
           </div>
           <p className="mt-2 text-sm text-n600">
             A inteligência de demanda mostra o que os compradores estão procurando —

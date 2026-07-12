@@ -15,7 +15,7 @@ function RankList({
   const max = items.reduce((m, i) => Math.max(m, i.count), 0) || 1;
   return (
     <div className="rounded-xl border border-n100 bg-white p-4">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-n500">{title}</h3>
+      <h3 className="text-eyebrow text-n500">{title}</h3>
       {items.length === 0 ? (
         <p className="mt-3 text-xs text-n400">Sem dados ainda</p>
       ) : (
@@ -54,7 +54,7 @@ export function DemandPanel({ title, subtitle, snapshot }: Props) {
   return (
     <section>
       <div className="mb-3">
-        <h2 className="text-lg font-semibold text-ink">{title}</h2>
+        <h2 className="font-display text-h3 font-semibold text-ink">{title}</h2>
         <p className="text-xs text-n500">{subtitle}</p>
       </div>
 

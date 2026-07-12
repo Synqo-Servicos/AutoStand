@@ -49,7 +49,7 @@ export default async function DashboardPage() {
       {/* Monthly table */}
       <div className="bg-white rounded-xl border border-n100 overflow-hidden">
         <div className="px-5 sm:px-6 py-4 border-b border-n100">
-          <h2 className="text-sm font-semibold text-ink">Histórico mensal</h2>
+          <h2 className="font-display text-h3 font-semibold text-ink">Histórico mensal</h2>
         </div>
         <MonthlyTable data={stats.monthly} />
       </div>

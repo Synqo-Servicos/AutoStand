@@ -68,7 +68,7 @@ export default function TransacoesPage() {
       {/* Monthly breakdown */}
       <div className="bg-white rounded-xl border border-n100 overflow-hidden mb-6">
         <div className="px-5 sm:px-6 py-4 border-b border-n100">
-          <h2 className="text-sm font-semibold text-ink">Vendas por mês</h2>
+          <h2 className="font-display text-h3 font-semibold text-ink">Vendas por mês</h2>
         </div>
         <MonthlyTable data={monthly} />
       </div>
@@ -76,7 +76,7 @@ export default function TransacoesPage() {
       {/* Transactions list */}
       <div className="bg-white rounded-xl border border-n100 overflow-hidden">
         <div className="px-5 sm:px-6 py-4 border-b border-n100">
-          <h2 className="text-sm font-semibold text-ink">Histórico de transações</h2>
+          <h2 className="font-display text-h3 font-semibold text-ink">Histórico de transações</h2>
         </div>
         {loading ? (
           <div className="py-16 text-center text-n400 text-sm">Carregando...</div>

@@ -47,7 +47,7 @@ export function VendedoresList({ initialSellers }: Props) {
       {dialog}
       <section className="bg-white border border-n100 rounded-xl overflow-hidden">
         <header className="flex items-center justify-between px-5 py-4 border-b border-n100">
-          <h2 className="text-sm font-semibold text-ink">Equipe ({sellers.length})</h2>
+          <h2 className="font-display text-h3 font-semibold text-ink">Equipe ({sellers.length})</h2>
           <Button
             type="button"
             size="sm"
