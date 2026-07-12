@@ -59,7 +59,7 @@ export function OperationalExpenseList({ initialRows, month }: Props) {
       <section className="bg-white border border-n100 rounded-xl overflow-hidden">
         <header className="flex items-center justify-between px-5 py-4 border-b border-n100">
           <div>
-            <h2 className="text-sm font-semibold text-ink">Despesas operacionais</h2>
+            <h2 className="font-display text-h3 font-semibold text-ink">Despesas operacionais</h2>
             <p className="text-xs text-n400 mt-0.5">
               Aluguel, energia, marketing, comissão e afins. Período: {month}.
             </p>

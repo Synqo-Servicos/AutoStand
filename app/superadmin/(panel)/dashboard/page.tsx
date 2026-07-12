@@ -109,7 +109,7 @@ export default async function SuperAdminDashboard() {
       {/* Recent tenants */}
       <section className="bg-white rounded-xl border border-n200 overflow-hidden shadow-xs">
         <header className="flex items-center justify-between px-6 py-4 border-b border-n100">
-          <h2 className="text-body-s font-semibold text-ink">Concessionárias recentes</h2>
+          <h2 className="font-display text-h3 font-semibold text-ink">Concessionárias recentes</h2>
           <Link
             href="/superadmin/tenants"
             className="inline-flex items-center gap-1 text-body-s font-medium text-ink transition-colors hover:text-n700"

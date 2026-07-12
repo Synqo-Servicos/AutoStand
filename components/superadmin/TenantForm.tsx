@@ -371,7 +371,7 @@ function Section({
   return (
     <div className="bg-white rounded-xl border border-n200 shadow-xs p-6">
       <div className="mb-5">
-        <h2 className="text-sm font-semibold text-ink">{title}</h2>
+        <h2 className="font-display text-h3 font-semibold text-ink">{title}</h2>
         <p className="text-xs text-n400 mt-0.5">{desc}</p>
       </div>
       <div className="space-y-4">{children}</div>

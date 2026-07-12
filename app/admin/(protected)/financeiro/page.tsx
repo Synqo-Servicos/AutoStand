@@ -116,7 +116,7 @@ async function ResumoTab({ tenantId, month }: { tenantId: number; month: string 
 
       <section className="bg-white border border-n100 rounded-xl overflow-hidden">
         <header className="px-5 py-4 border-b border-n100">
-          <h2 className="text-sm font-semibold text-ink">Composição do resultado</h2>
+          <h2 className="font-display text-h3 font-semibold text-ink">Composição do resultado</h2>
           <p className="text-xs text-n400 mt-0.5">Período: {month}</p>
         </header>
         <div className="divide-y divide-n100 text-sm">
@@ -140,7 +140,7 @@ async function VeiculosTab({ tenantId, month }: { tenantId: number; month: strin
   return (
     <section className="bg-white border border-n100 rounded-xl overflow-hidden">
       <header className="px-5 py-4 border-b border-n100">
-        <h2 className="text-sm font-semibold text-ink">Margem real por veículo vendido</h2>
+        <h2 className="font-display text-h3 font-semibold text-ink">Margem real por veículo vendido</h2>
         <p className="text-xs text-n400 mt-0.5">
           Receita − custo − despesas diretas. Período: {month}.
         </p>

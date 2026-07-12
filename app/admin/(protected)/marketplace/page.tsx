@@ -24,7 +24,7 @@ export default async function MarketplacePage() {
       </div>
 
       <div className="bg-white rounded-xl border border-n100 p-6 mb-6">
-        <h2 className="text-sm font-semibold text-ink mb-1">Participar do marketplace</h2>
+        <h2 className="font-display text-h3 font-semibold text-ink mb-1">Participar do marketplace</h2>
         <p className="text-xs text-n500 mb-5">
           A adesão é opcional e você pode sair quando quiser. Disponível em todos os planos.
         </p>
@@ -44,7 +44,7 @@ export default async function MarketplacePage() {
         {BENEFITS.map(({ icon: Icon, title, text }) => (
           <div key={title} className="bg-white rounded-xl border border-n100 p-5">
             <Icon className="w-5 h-5 text-signal" />
-            <h3 className="text-sm font-semibold text-ink mt-3">{title}</h3>
+            <h3 className="font-display text-body-s font-semibold text-ink mt-3">{title}</h3>
             <p className="text-xs text-n600 mt-1 leading-relaxed">{text}</p>
           </div>
         ))}

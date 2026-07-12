@@ -71,7 +71,7 @@ export default async function AssinaturaPage() {
 
         {falta.length > 0 && (
           <>
-            <h3 className="mt-5 text-body-s font-semibold text-n600">
+            <h3 className="mt-5 font-display text-body-s font-semibold text-n600">
               Disponível em planos superiores
             </h3>
             <ul className="mt-2 space-y-2">

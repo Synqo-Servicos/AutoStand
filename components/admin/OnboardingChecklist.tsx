@@ -37,7 +37,7 @@ export function OnboardingChecklist({ name }: { name?: string }) {
 
       <div className="flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-signal" />
-        <h2 className="text-base font-bold text-ink">
+        <h2 className="font-display text-h3 font-semibold text-ink">
           Bem-vindo{name ? `, ${name}` : ""}! 👋
         </h2>
       </div>

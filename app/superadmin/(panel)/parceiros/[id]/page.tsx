@@ -24,7 +24,7 @@ export default async function EditParceiroPage({ params }: Params) {
 
       {/* Atribuição */}
       <div className="mt-8 bg-white rounded-xl border border-n200/70 p-6">
-        <h2 className="text-sm font-semibold text-ink">Atribuição</h2>
+        <h2 className="font-display text-h3 font-semibold text-ink">Atribuição</h2>
         <p className="text-xs text-n400 mt-0.5">
           {partner.signup_count} cadastro(s) pelo link deste parceiro.
         </p>
