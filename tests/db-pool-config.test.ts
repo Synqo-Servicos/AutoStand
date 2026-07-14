@@ -49,4 +49,27 @@ describe("buildPoolConfig", () => {
     expect(cfg.connectionString).toBe(process.env.DATABASE_URL);
     expect(cfg.ssl).toEqual({ rejectUnauthorized: true });
   });
+
+  // Serverless: cada instância quente da função mantém seu próprio pool. O
+  // default do pg (max: 10) × N instâncias esgota o limite de conexões do
+  // Neon, então o caminho DATABASE_URL usa 1 conexão por instância e devolve
+  // as ociosas rápido.
+  it("limita o pool a 1 conexão no caminho DATABASE_URL (serverless/Neon)", () => {
+    process.env.DATABASE_URL =
+      "postgresql://u:p@ep-cool-name-123456-pooler.sa-east-1.aws.neon.tech/autostand?sslmode=require";
+    const cfg = buildPoolConfig();
+    expect(cfg.max).toBe(1);
+    expect(cfg.idleTimeoutMillis).toBe(10_000);
+    expect(cfg.connectionTimeoutMillis).toBe(10_000);
+  });
+
+  it("não mexe no tamanho do pool no caminho DB_HOST (RDS/legado)", () => {
+    process.env.DB_HOST = "autostand-postgres.cvm00qaemt5n.sa-east-1.rds.amazonaws.com";
+    process.env.DB_NAME = "autostand_prod";
+    process.env.DB_PASSWORD = "x";
+    const cfg = buildPoolConfig();
+    expect(cfg.max).toBeUndefined();
+    expect(cfg.idleTimeoutMillis).toBeUndefined();
+    expect(cfg.connectionTimeoutMillis).toBeUndefined();
+  });
 });

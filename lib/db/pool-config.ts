@@ -52,5 +52,13 @@ export function buildPoolConfig(): PoolConfig {
   return {
     connectionString: url,
     ssl: sslFor(hostnameOf(url)),
+    // Este é o caminho serverless (Vercel + Neon). Cada instância quente da
+    // função carrega seu próprio pool, então o default do `pg` (max: 10) na
+    // prática vira 10 × N instâncias e estoura o limite de conexões do Neon.
+    // 1 conexão por instância + devolução rápida das ociosas mantém o total
+    // proporcional à concorrência real, não ao número de instâncias.
+    max: 1,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
   };
 }
