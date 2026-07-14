@@ -81,16 +81,24 @@ export async function checkRateLimit(
 
 /** Extrai o IP do cliente a partir dos headers do request.
  *
- *  Infraestrutura: CloudFront → ALB → ECS. A cadeia X-Forwarded-For é
- *  `[spoofed?, real-client, cloudfront-edge]` — CloudFront acrescenta o
- *  IP real do viewer; ALB acrescenta o edge do CloudFront. Pegar o
- *  segundo-ao-último dá o IP real do viewer sem permitir spoofing pelo
- *  primeiro campo controlado pelo cliente. */
+ *  Infraestrutura: Vercel. O edge da Vercel termina a conexão do cliente e
+ *  seta `x-real-ip` com o IP do socket — o cliente não consegue forjá-lo,
+ *  porque a plataforma sobrescreve o header. Essa é a fonte confiável.
+ *
+ *  `x-forwarded-for` é só fallback: a Vercel *anexa* o IP real ao que o
+ *  cliente mandou, então a cadeia é `[o-que-o-cliente-mandou..., real]` e
+ *  qualquer posição no meio é controlada pelo atacante. Usamos a PRIMEIRA
+ *  entrada (convenção XFF: o cliente original) e nunca a penúltima — a
+ *  heurística antiga, herdada da cadeia CloudFront → ALB → ECS, devolvia
+ *  um valor arbitrário do atacante e permitia furar o rate limit. */
 export function getClientIp(req: { headers: Headers }): string {
+  const realIp = req.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+
   const xff = req.headers.get("x-forwarded-for");
   if (xff) {
-    const ips = xff.split(",").map((s) => s.trim()).filter(Boolean);
-    return ips.length >= 2 ? ips[ips.length - 2] : ips[0];
+    const [first] = xff.split(",").map((s) => s.trim()).filter(Boolean);
+    if (first) return first;
   }
-  return req.headers.get("x-real-ip") ?? "unknown";
+  return "unknown";
 }
