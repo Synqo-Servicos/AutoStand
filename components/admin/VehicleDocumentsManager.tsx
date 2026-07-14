@@ -6,6 +6,10 @@ import {
 } from "lucide-react";
 import type { VehicleDocumentRow } from "@/lib/schema";
 import { useConfirm } from "@/components/ui";
+import { DOC_MAX_BYTES, DOC_MIMES } from "@/lib/blob-constants";
+import { uploadFile } from "@/lib/upload-client";
+
+const ACCEPT = DOC_MIMES.join(",");
 
 const CATEGORIES: { value: string; label: string }[] = [
   { value: "crlv",      label: "CRLV / Licenciamento" },
@@ -44,16 +48,36 @@ export function VehicleDocumentsManager({
 
   async function handleUpload(file: File) {
     setError(null);
+
+    // Pré-check (o presign revalida). Antes não havia nenhum: o <input> nem
+    // `accept` tinha, então qualquer arquivo era enviado só pra tomar 4xx.
+    if (!(DOC_MIMES as readonly string[]).includes(file.type)) {
+      setError(`"${file.name}" não é um tipo aceito (PDF, JPG, PNG ou WebP).`);
+      return;
+    }
+    if (file.size > DOC_MAX_BYTES) {
+      setError(
+        `"${file.name}" passa do limite de ${(DOC_MAX_BYTES / 1024 / 1024).toFixed(0)}MB.`,
+      );
+      return;
+    }
+
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("category", category);
-      if (name.trim()) formData.append("name", name.trim());
+      // Direto pro S3 (presign + PUT) — o body da function não aguenta um
+      // PDF de 20MB na Vercel (teto de 4,5MB). Depois vai só a `key`.
+      const { key } = await uploadFile(file, { kind: "document", vehicleId });
 
       const res = await fetch(`/api/vehicles/${vehicleId}/documents`, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key,
+          category,
+          name: name.trim() || file.name,
+          size: file.size,
+          mimeType: file.type,
+        }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -62,11 +86,11 @@ export function VehicleDocumentsManager({
       const created = (await res.json()) as VehicleDocumentRow;
       setDocuments((prev) => [created, ...prev]);
       setName("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha no upload");
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -153,6 +177,7 @@ export function VehicleDocumentsManager({
           <input
             ref={fileInputRef}
             type="file"
+            accept={ACCEPT}
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];

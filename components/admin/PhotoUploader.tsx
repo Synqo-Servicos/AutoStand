@@ -21,12 +21,23 @@ import { cn } from "@/lib/cn";
 import {
   IMAGE_MIMES, MAX_PHOTOS_PER_VEHICLE, PHOTO_MAX_BYTES,
 } from "@/lib/blob-constants";
+import { uploadFile } from "@/lib/upload-client";
 import { Lightbox } from "./Lightbox";
 
 /**
- * Compressão client antes do upload — reduz tráfego e melhora UX em
- * conexões móveis. JPEG/WebP saem ~70% menores; PNG geralmente piora
- * (lossless), então mantemos JPEG/WebP e deixamos PNG passar.
+ * Compressão client antes do upload — reduz tráfego e custo de CDN.
+ *
+ * PNG NÃO é mais pulado. Pular era bug: um PNG de câmera/print de 8MB subia
+ * inteiro. A justificativa antiga ("PNG recomprimido fica maior") só vale se
+ * o destino continuar PNG — que é lossless e péssimo pra foto. Então PNG sai
+ * daqui como **WebP**, não JPEG: mesma qualidade em ~25-35% menos bytes que
+ * JPEG, e mantém canal alfa (JPEG descartaria a transparência, enegrecendo
+ * fundos vazados). WebP já está na allowlist do servidor e é suportado por
+ * todo browser que roda este admin.
+ *
+ * Se a recompressão não valer a pena (saiu maior), devolvemos o original — o
+ * `file.type` resultante é o que manda no presign, então o par MIME/extensão
+ * fica coerente nos dois caminhos.
  */
 const COMPRESSION_OPTIONS = {
   maxSizeMB: 1.5,
@@ -35,20 +46,21 @@ const COMPRESSION_OPTIONS = {
   initialQuality: 0.8,
 } as const;
 
+/** Abaixo disso a economia não paga o custo de decodificar/reencodar. */
+const COMPRESS_THRESHOLD_BYTES = 500 * 1024;
+
 async function compressIfWorthwhile(file: File): Promise<File> {
-  // PNG transparente fica maior se recomprimido — não vale.
-  if (file.type === "image/png") return file;
-  // Arquivos já pequenos (< 500KB) provavelmente não economizam muito.
-  if (file.size < 500 * 1024) return file;
+  if (file.size < COMPRESS_THRESHOLD_BYTES) return file;
+  const targetType = file.type === "image/png" ? "image/webp" : file.type;
   try {
     const compressed = await imageCompression(file, {
       ...COMPRESSION_OPTIONS,
-      fileType: file.type,
+      fileType: targetType,
     });
     // Se a "compressão" resultou em arquivo maior (raro), descarta.
     return compressed.size < file.size ? compressed : file;
   } catch {
-    // Falha silenciosa — segue com o original, o server-side valida.
+    // Falha silenciosa — segue com o original, o servidor revalida no presign.
     return file;
   }
 }
@@ -107,6 +119,16 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
     return null;
   }
 
+  /**
+   * Sobe UMA foto por vez — cada arquivo vai direto pro S3 (presign + PUT) e
+   * só a `key` volta pro nosso servidor.
+   *
+   * O fluxo antigo empacotava o lote inteiro num único POST multipart: com
+   * `maxSizeMB: 1.5`, 4 fotos já passavam dos 4,5MB que a Vercel aceita no
+   * body de uma function — e o 413 vinha da borda, antes do handler, então
+   * nem o erro era nosso. Um a um, o teto por request deixa de existir e uma
+   * falha no meio do lote não perde as fotos que já subiram.
+   */
   async function handleFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
     const files = Array.from(fileList);
@@ -115,32 +137,40 @@ export function PhotoUploader({ vehicleId, initialPhotos = [], onChange }: Props
       toast.error(err);
       return;
     }
-    try {
-      setBusyLabel(files.length === 1 ? "Comprimindo…" : `Comprimindo ${files.length} fotos…`);
-      const prepared = await Promise.all(files.map(compressIfWorthwhile));
 
-      setBusyLabel(files.length === 1 ? "Enviando…" : `Enviando ${files.length} fotos…`);
-      const formData = new FormData();
-      prepared.forEach((f) => formData.append("files", f));
-      if (photos.length === 0) formData.append("set_primary", "true");
-      const res = await fetch(`/api/vehicles/${vehicleId}/photos`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? "Erro ao fazer upload das fotos.");
-      const newPhotos: UploadedPhoto[] = (data.urls as string[]).map((url, i) => ({
-        url,
-        isPrimary: photos.length === 0 && i === 0,
-      }));
-      const updated = [...photos, ...newPhotos];
-      setPhotos(updated);
-      onChange?.(updated.find((p) => p.isPrimary)?.url ?? null);
-      toast.success(
-        files.length === 1 ? "Foto adicionada." : `${files.length} fotos adicionadas.`,
-      );
+    let current = photos;
+    let sent = 0;
+
+    try {
+      for (const [i, file] of files.entries()) {
+        const step = files.length === 1 ? "" : ` (${i + 1}/${files.length})`;
+
+        setBusyLabel(`Comprimindo…${step}`);
+        const prepared = await compressIfWorthwhile(file);
+
+        setBusyLabel(`Enviando…${step}`);
+        const { key } = await uploadFile(prepared, { kind: "photo", vehicleId });
+
+        // A primeira foto do veículo vira a principal.
+        const isPrimary = current.length === 0;
+        const res = await fetch(`/api/vehicles/${vehicleId}/photos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, set_primary: isPrimary }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error ?? "Erro ao salvar a foto.");
+
+        current = [...current, { url: data.url as string, isPrimary }];
+        sent++;
+        setPhotos(current);
+        onChange?.(current.find((p) => p.isPrimary)?.url ?? null);
+      }
+      toast.success(sent === 1 ? "Foto adicionada." : `${sent} fotos adicionadas.`);
     } catch (e) {
-      toast.error((e as Error).message);
+      // As que já subiram ficam — `current` foi comitado a cada iteração.
+      const done = sent > 0 ? ` ${sent} de ${files.length} foram salvas.` : "";
+      toast.error(`${(e as Error).message}${done}`);
     } finally {
       setBusyLabel(null);
       if (inputRef.current) inputRef.current.value = "";
