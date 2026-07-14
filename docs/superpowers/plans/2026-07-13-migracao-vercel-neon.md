@@ -21,7 +21,23 @@
 | 5 — Credenciais S3 | ✅ **OIDC federation** (`9f3a95c`) — sem chave estática. Provado: PutObject+DeleteObject em 708 ms |
 | 6 — Deploy Vercel | ✅ 22 env vars · região `gru1` (São Paulo) |
 | 7 — Cutover DNS | ✅ `autostand.com.br` → Vercel · console → `/superadmin/login` · CDN intacto |
-| 8 — Demolição | 🔒 **PENDENTE** — aguardar 24–48h de estabilidade. Vale os ~US$80/mês. |
+| 8 — Demolição | 🟡 **PARCIAL** — etapa reversível feita (ECS `desired=0`, RDS **parado**): −US$53/mês. Falta a etapa irreversível: −US$48/mês. |
+
+### ⏰ PRAZO: 2026-07-21
+
+**A AWS religa um RDS parado automaticamente após 7 dias.** O `autostand-postgres` foi parado em
+2026-07-14. Se a demolição final não ocorrer até **21/07**, ele volta sozinho e a cobrança retoma.
+
+**Run-rate em 2026-07-14: ~US$50/mês** (partiu de ~115). O que ainda cobra: ALB `autostand-alb`
+(~US$23) + 2 EIPs do ALB (~US$14) + storage de RDS/EBS (~US$9) + Route 53 (US$1).
+
+**Verificado após desligar a AWS:** `autostand.com.br` responde 200 em `/`, `/comprar`, `/lojas`,
+`/comprar/24` e `/sitemap.xml`, servindo dados do Neon, com imagens do CloudFront. O Vercel está
+de pé sozinho.
+
+**Fluxos ainda NÃO validados por humano** (motivo de manter o rollback): login pela UI, upload de
+foto pela UI (o caminho S3 foi provado por rota de diagnóstico, não pela interface), envio de e-mail,
+webhook do Mercado Pago.
 
 ### Armadilhas encontradas na execução (não estavam no plano original)
 
