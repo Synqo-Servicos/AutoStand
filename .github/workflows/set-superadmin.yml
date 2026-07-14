@@ -1,9 +1,10 @@
 name: Set Super Admin
 
 # Cria/atualiza o super-admin da plataforma com uma senha provisória (troca
-# forçada no 1º login). Roda DENTRO da VPC (RDS privado) via ECS RunTask, com
-# a imagem `migrator` do Dockerfile rodando scripts/set-superadmin.ts.
-# A senha provisória gerada aparece nos logs deste run.
+# forçada no 1º login). Roda direto do runner: o Neon é publicamente acessível,
+# então não há VPC pra entrar nem imagem pra buildar — só `tsx
+# scripts/set-superadmin.ts` com `DATABASE_URL` vindo dos secrets do GitHub
+# Environment. A senha provisória gerada aparece nos logs deste run.
 on:
   workflow_dispatch:
     inputs:
@@ -20,7 +21,6 @@ on:
           - homologation
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -31,82 +31,20 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+      - uses: actions/setup-node@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: sa-east-1
+          node-version: '22'
+          cache: 'npm'
 
-      - name: Login to ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - run: npm ci
 
-      - name: Build and push migrator image
+      - name: Set super-admin
         env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          SHA: ${{ github.sha }}
-        run: |
-          docker build --target migrator -t "$REGISTRY/autostand:migrate-$SHA" .
-          docker push "$REGISTRY/autostand:migrate-$SHA"
-
-      - name: Set super-admin (ECS RunTask in VPC)
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          SHA: ${{ github.sha }}
-          ENVIRONMENT: ${{ inputs.environment }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPERADMIN_EMAIL: ${{ inputs.email }}
         run: |
-          set -euo pipefail
-          CLUSTER=autostand
-          REGION=sa-east-1
-          if [ "$ENVIRONMENT" = "production" ]; then FAMILY=autostand; else FAMILY=autostand-homolog; fi
-          IMAGE="$REGISTRY/autostand:migrate-$SHA"
-
-          aws ecs describe-task-definition --task-definition "$FAMILY" --region "$REGION" \
-            --query taskDefinition > app-td.json
-          jq --arg img "$IMAGE" --arg fam "${FAMILY}-setadmin" '
-            .family = $fam
-            | .containerDefinitions[0].image = $img
-            | del(.containerDefinitions[0].healthCheck)
-            | del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
-                  .compatibilities, .registeredAt, .registeredBy)
-          ' app-td.json > td.json
-
-          TASK_DEF=$(aws ecs register-task-definition --cli-input-json file://td.json \
-            --region "$REGION" --query 'taskDefinition.taskDefinitionArn' --output text)
-          echo "Task definition: $TASK_DEF"
-
-          # Override: roda set-superadmin.ts (em vez do migrate default) e injeta o e-mail.
-          OVERRIDES=$(jq -nc --arg email "$SUPERADMIN_EMAIL" '{
-            containerOverrides: [{
-              name: "autostand",
-              command: ["scripts/set-superadmin.ts"],
-              environment: [{ name: "SUPERADMIN_EMAIL", value: $email }]
-            }]
-          }')
-
-          TASK_ARN=$(aws ecs run-task --cluster "$CLUSTER" --region "$REGION" \
-            --task-definition "$TASK_DEF" --launch-type FARGATE \
-            --network-configuration 'awsvpcConfiguration={subnets=[subnet-044e90e6bf3adc1a7,subnet-06b877a62eb18e6cf,subnet-069dfd061f90b5660],securityGroups=[sg-01e9e2ec9a6929544],assignPublicIp=ENABLED}' \
-            --overrides "$OVERRIDES" --started-by "gha-setadmin-${ENVIRONMENT}" \
-            --query 'tasks[0].taskArn' --output text)
-          echo "Task: $TASK_ARN"
-
-          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION"
-
-          EXIT=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION" \
-            --query 'tasks[0].containers[0].exitCode' --output text)
-          REASON=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION" \
-            --query 'tasks[0].stoppedReason' --output text)
-          echo "Exit code: $EXIT — $REASON"
-
-          # A senha provisória gerada está nestes logs:
-          TASK_ID="${TASK_ARN##*/}"
-          echo "=================== resultado ==================="
-          aws logs get-log-events --region "$REGION" --log-group-name /ecs/autostand \
-            --log-stream-name "ecs/autostand/$TASK_ID" --start-from-head \
-            --query 'events[*].message' --output text 2>/dev/null || echo "(sem logs)"
-          echo "================================================"
-
-          if [ "$EXIT" != "0" ]; then echo "❌ Falhou"; exit 1; fi
-          echo "✅ Super-admin configurado em $ENVIRONMENT"
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "❌ Secret DATABASE_URL não configurado no environment '${{ inputs.environment }}'"
+            exit 1
+          fi
+          npx tsx scripts/set-superadmin.ts
