@@ -26,6 +26,7 @@
     "@react-pdf/renderer": "^4.5.1",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
+    "@vercel/oidc-aws-credentials-provider": "^3.3.0",
     "ai": "^6.0.184",
     "bcryptjs": "^2.4.3",
     "browser-image-compression": "^2.0.2",

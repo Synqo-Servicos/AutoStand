@@ -4,8 +4,14 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import { s3Credentials } from "./s3-credentials";
 
-export const s3 = new S3Client({ region: process.env.AWS_S3_REGION ?? "sa-east-1" });
+// Região: `AWS_S3_REGION`, nunca `AWS_REGION` — o Vercel sobrescreve essa
+// última com a região de execução da function, que é instável.
+export const s3 = new S3Client({
+  region: process.env.AWS_S3_REGION ?? "sa-east-1",
+  credentials: s3Credentials(),
+});
 
 export const BUCKET = process.env.AWS_S3_BUCKET ?? "";
 
