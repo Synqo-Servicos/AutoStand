@@ -188,7 +188,7 @@ Exceções já resolvidas, geradas novas na Task 6:
 
 Painel: https://www.mercadopago.com.br/developers/panel/app → sua aplicação → *Credenciais de produção*.
 1. Gerar novo `Access Token` de produção.
-2. Revogar o antigo (`<REDIGIDO>…`).
+2. Revogar o antigo (o `APP_USR-…` que estava na task definition `autostand:47`).
 3. Regerar o `Webhook secret` na aba de Webhooks.
 
 Anotar: `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`.
@@ -232,11 +232,14 @@ echo "PAYMENT_TOKEN_SECRET=$(openssl rand -hex 48)"
 - [ ] **Verificar a revogação (fazer só na Task 8, após o ECS morrer)**
 
 ```bash
+# Cole a chave ANTIGA na variável — NÃO commite o valor.
+OLD_KEY="<chave-antiga-aqui>"
 curl -s -o /dev/null -w "%{http_code}\n" https://api.anthropic.com/v1/models \
-  -H "x-api-key: <REDIGIDO>" \
-  -H "anthropic-version: 2023-06-01"
+  -H "x-api-key: $OLD_KEY" -H "anthropic-version: 2023-06-01"
 ```
-Esperado: **401**. Se vier 200, a chave antiga ainda está viva — volte ao Step 2.
+Esperado: **401**. Se vier 200, a chave antiga ainda está viva.
+
+> ⚠️ **Nunca escreva um segredo neste arquivo.** O push protection do GitHub bloqueou esta branch em 2026-07-14 justamente porque a chave estava embutida aqui em texto plano.
 
 ---
 
