@@ -100,6 +100,18 @@ webhook do Mercado Pago.
 | **`getClientIp` permitia spoofing.** `lib/ratelimit.ts` pegava o **penúltimo** IP do XFF — heurística da cadeia CloudFront→ALB. No Vercel, essa posição pode ser controlada pelo cliente → bypass do rate limit de reset de senha, signup e leads. | Usa `x-real-ip` do Vercel (`0d7edab`). **A função nunca tinha sido executada pela suíte** (todos os testes mockavam `@/lib/ratelimit` inteiro) — por isso a heurística morta sobreviveu |
 | `pg.Pool` sem `max` — default 10 por instância; em serverless, N instâncias × 10 esgota o Neon | `max: 1` + timeouts no ramo serverless (`5f8f918`) |
 
+### Corrigido — segunda leva (2026-07-14, tarde)
+
+| Achado | Correção |
+|---|---|
+| 🔴 **O domínio estava congelado num deployment antigo.** `autostand.com.br` foi vinculado com `vercel alias set`, que **fixa** o alias num deployment específico. Sem conexão Git, novos deploys de produção **não moviam o alias** — o apex serviu o build do cutover por horas, e nenhuma correção posterior (remoção do `NEXTAUTH_URL`, região `gru1`, fixes de rate limit e pool) chegou nele. O wildcard `*.autostand.com.br` era domínio de projeto e por isso **atualizava normalmente** — o que mascarou o problema. | `autostand.com.br` e `console.autostand.com.br` registrados como **domínios do projeto** via API → acompanham produção automaticamente |
+| Uploads > 4,5 MB (413 na borda) | **Upload direto pro S3 via presigned URL** (`2caab37`, `0893a04`, `02a4e25`). `ContentType` e `ContentLength` entram na assinatura (`signableHeaders`), expiração 60s. Uma foto por request. **PNG passou a ser comprimido** (→ WebP, preserva alfa). `assertKeyInFolder` impede um admin de assinar write na pasta de outro tenant |
+| CORS do bucket (o `PUT` do browser morria no preflight) | Aplicado em `autostand-uploads`: `PUT`, origens `autostand.com.br` + `*.autostand.com.br` + `autostand-*.vercel.app` + localhost, headers `content-type`/`content-length` |
+| **`notification_url` do MP era ponto cego** (só no painel, não versionado) | Agora explícito no código (`c0af6ce`), derivado de `PLATFORM_ORIGIN` via `mpNotificationUrl()`. **Vai para o apex, nunca para o host do tenant** — o `back_url` continua no `tenantSiteUrl()`, e há teste travando essa distinção |
+| Turnstile desligado | Chaves **de teste** do Cloudflare cadastradas (par "always passes") e verificadas ativas no bundle. ⚠️ **Trocar pelas reais** |
+
+**Perda consciente na migração de upload:** a validação por *magic bytes* (`lib/blob.ts`) morreu — o servidor não vê mais os bytes. Resta o `Content-Type` fixado na assinatura; como nenhum MIME ativo (`svg`, `html`) está na allowlist e o CDN serve com o tipo assinado, payload disfarçado não executa.
+
 ### Aberto
 
 - 🔴 **Uploads > 4,5 MB falham com 413.** Limite de body do Vercel é 4,5 MB. O app permite fotos de 8 MB (`lib/blob-constants.ts:19`) e documentos de 20 MB (`:20`). Pior: `components/admin/PhotoUploader.tsx:123` manda **todas** as fotos num único POST (4 fotos a 1,5 MB já estouram), e **PNG é pulado da compressão** (`:40`). O 413 vem da borda — o erro tratado do código nunca dispara. *Correção certa: presigned URL do S3 (cliente sobe direto pro bucket).*
