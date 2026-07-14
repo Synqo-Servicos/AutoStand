@@ -47,7 +47,20 @@ webhook do Mercado Pago.
 4. **Pastas com `_` são private folders no Next.js.** `app/api/_diag-s3` nunca virou rota.
 5. **Havia um registro AAAA (IPv6)** apontando para o CloudFront, além do A. Ambos precisaram ser removidos no cutover.
 6. **`PLATFORM_HOSTS` precisa conter o host servidor**, senão o app rende como tenant desconhecido e `/comprar` dá 404.
-7. **`tenantSubdomain()` é código morto** — as lojas são path-based (`/loja/[slug]`). O wildcard `*.autostand.com.br` só servia o `console.*`, que agora tem CNAME próprio.
+7. ~~`tenantSubdomain()` é código morto — as lojas são path-based.~~ **ERRADO. Corrigido em 2026-07-14 após um 503 em produção.**
+
+   **O wildcard `*.autostand.com.br` é load-bearing: ele serve as vitrines das lojas.**
+   `lib/tenant.ts:69-72` resolve `<slug>.autostand.com.br` **por slug** (`getCurrentTenant()`). O erro de
+   análise foi grepar `tenantSubdomain()` — que é só o *construtor* de URL e de fato não tem uso — sem
+   procurar o *resolvedor* de host. `docs/Arquitetura.md:34` já documentava a regra.
+
+   Sintoma: com o Fargate em `desired=0`, o wildcard (A-alias → CloudFront → ALB sem targets) devolvia
+   **503** em `autoprime.autostand.com.br`.
+
+   Correção: `*.autostand.com.br` virou **CNAME → `cname.vercel-dns.com`** (o wildcard precisa estar
+   vinculado ao projeto no Vercel). Os 10 tenants foram verificados em 200 depois disso.
+
+   **Lição:** ao decidir que um recurso de infra é vestigial, procure o *consumidor*, não o *produtor*.
 
 ### Pendências
 
