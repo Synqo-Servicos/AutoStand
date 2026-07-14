@@ -1,61 +1,34 @@
 import { NextResponse } from "next/server";
-import { withTenant } from "@/lib/api";
-import {
-  IMAGE_MIMES,
-  MB,
-  UploadValidationError,
-  uploadToBlob,
-} from "@/lib/blob";
-import { UPLOAD_KINDS, type UploadKind } from "@/lib/validation";
-
-/** Limites por tipo — logo é menor (otimização de bandwidth no rodapé). */
-const LIMITS: Record<UploadKind, number> = {
-  logo: 4 * MB,
-  hero: 8 * MB,
-};
-
-const UPLOAD_OPTIONS = (kind: UploadKind) =>
-  ({
-    allowedMimes: IMAGE_MIMES,
-    maxBytes: LIMITS[kind],
-  }) as const;
+import { ApiError, parseBody, withTenant } from "@/lib/api";
+import { UploadValidationError } from "@/lib/blob-constants";
+import { publicUrlForKey } from "@/lib/blob";
+import { assertKeyInFolder, uploadFolder } from "@/lib/presign";
+import { brandingUploadSchema } from "@/lib/validation";
 
 /**
- * Upload de imagens de identidade visual (logo, hero) — scope tenant.
- * Recebe FormData com `file` + `kind`. Devolve `{ url }` pra o client
- * persistir via PATCH /api/personalizar (logo_url ou layout_config.heroImageUrl).
+ * Confirma um upload de identidade visual (logo, hero) — scope tenant.
  *
- * Cleanup de URLs antigas fica por conta do usuário trocar e salvar — o
- * endpoint não tem contexto pra saber qual era a anterior. Em prod isso
- * gera alguns blobs órfãos quando o usuário troca várias vezes sem salvar;
- * aceitável pra v1.
+ * Body: `{ key, kind }` — JSON, não mais multipart. O arquivo já subiu direto
+ * pro S3 via /api/uploads/presign (o body de uma function na Vercel estoura em
+ * 4,5MB, na borda). Aqui só validamos que a key é de uma pasta de branding
+ * DESTE tenant e devolvemos a URL pública derivada no servidor — o cliente
+ * persiste depois via PATCH /api/personalizar (logo_url ou
+ * layout_config.heroImageUrl).
+ *
+ * Cleanup de URLs antigas continua por conta do usuário trocar e salvar — o
+ * endpoint não tem contexto pra saber qual era a anterior.
  */
 export const POST = withTenant(async (req, { tenantId }) => {
-  const formData = await req.formData();
-  const file = formData.get("file");
-  const kind = formData.get("kind");
-
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Arquivo não enviado." }, { status: 400 });
-  }
-  if (typeof kind !== "string" || !UPLOAD_KINDS.includes(kind as UploadKind)) {
-    return NextResponse.json(
-      { error: `Tipo inválido. Use: ${UPLOAD_KINDS.join(", ")}.` },
-      { status: 400 },
-    );
-  }
+  const { key, kind } = await parseBody(req, brandingUploadSchema);
 
   try {
-    const url = await uploadToBlob(
-      file,
-      `tenants/${tenantId}/branding/${kind}`,
-      UPLOAD_OPTIONS(kind as UploadKind),
-    );
-    return NextResponse.json({ url });
+    assertKeyInFolder(key, uploadFolder(kind, tenantId));
   } catch (err) {
     if (err instanceof UploadValidationError) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
+      throw new ApiError(err.message, err.status);
     }
     throw err;
   }
+
+  return NextResponse.json({ url: publicUrlForKey(key) });
 });

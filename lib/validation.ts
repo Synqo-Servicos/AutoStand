@@ -15,6 +15,7 @@ import {
   CONDITIONS, FUELS, LEAD_INTERACTION_MANUAL_TYPES, LEAD_SOURCES, LEAD_STATUS,
   TRANSACTION_TYPES, TRANSMISSIONS, TX_REQUIRES_VEHICLE, VEHICLE_STATUS,
 } from "@/lib/constants";
+import { DOC_MAX_BYTES, DOC_MIMES, PRESIGN_KINDS } from "@/lib/blob-constants";
 
 const positiveInt = z.number().int().positive();
 const nonNegativeInt = z.number().int().min(0);
@@ -202,6 +203,50 @@ export const tenantStorefrontSchema = z.object({
 /** Tipos de upload de branding (logo + imagem de hero). */
 export const UPLOAD_KINDS = ["logo", "hero"] as const;
 export type UploadKind = (typeof UPLOAD_KINDS)[number];
+
+// ---------- Upload direto pro S3 (presign) ----------
+
+/** Categorias de documento interno do veículo (espelha o <select> do admin). */
+export const DOCUMENT_CATEGORIES = [
+  "crlv", "laudo", "dut", "nf_peca", "os", "contrato", "historico", "outros",
+] as const;
+export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
+
+/**
+ * Pedido de URL assinada. O cliente diz o que quer subir; o servidor decide
+ * se pode e ONDE — a `key` nunca vem daqui. MIME e tamanho são revalidados
+ * em lib/presign.ts contra a regra do `kind` (este schema só checa a forma).
+ */
+export const presignRequestSchema = z.object({
+  kind: z.enum(PRESIGN_KINDS),
+  contentType: z.string().min(1).max(128),
+  size: z.number().int().positive(),
+  vehicleId: z.number().int().positive().optional(),
+});
+
+/** Key devolvida pelo cliente depois do PUT — sempre revalidada contra o folder. */
+const uploadedKeySchema = z.string().min(1).max(512);
+
+/** POST /api/upload — persiste (na verdade só resolve) a URL de logo/hero. */
+export const brandingUploadSchema = z.object({
+  key: uploadedKeySchema,
+  kind: z.enum(UPLOAD_KINDS),
+});
+
+/** POST /api/vehicles/[id]/photos — grava a foto já subida. */
+export const photoCreateSchema = z.object({
+  key: uploadedKeySchema,
+  set_primary: z.boolean().optional(),
+});
+
+/** POST /api/vehicles/[id]/documents — grava o documento já subido. */
+export const documentCreateSchema = z.object({
+  key: uploadedKeySchema,
+  name: z.string().trim().max(200).optional(),
+  category: z.enum(DOCUMENT_CATEGORIES).default("outros"),
+  size: z.number().int().positive().max(DOC_MAX_BYTES).optional(),
+  mimeType: z.enum(DOC_MIMES).optional(),
+});
 
 // ---------- Vehicle photos ----------
 

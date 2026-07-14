@@ -4,17 +4,11 @@ import {
   addPhoto, deletePhoto, getPhotosByVehicle, getVehicle,
   reorderVehiclePhotos, updateVehicle,
 } from "@/lib/db";
-import {
-  IMAGE_MIMES, MAX_PHOTOS_PER_VEHICLE, PHOTO_MAX_BYTES, UploadValidationError,
-  deleteFromBlob, uploadToBlob,
-} from "@/lib/blob";
+import { MAX_PHOTOS_PER_VEHICLE, UploadValidationError } from "@/lib/blob-constants";
+import { deleteFromBlob, publicUrlForKey } from "@/lib/blob";
+import { assertKeyInFolder, uploadFolder } from "@/lib/presign";
 import { ApiError, parseBody, withTenant } from "@/lib/api";
-import { photoReorderSchema } from "@/lib/validation";
-
-const PHOTO_UPLOAD_OPTIONS = {
-  allowedMimes: IMAGE_MIMES,
-  maxBytes: PHOTO_MAX_BYTES,
-} as const;
+import { photoCreateSchema, photoReorderSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -27,66 +21,61 @@ export async function GET(_req: NextRequest, { params }: Params) {
   return NextResponse.json(await getPhotosByVehicle(tenantId, Number(id)));
 }
 
-export async function POST(req: NextRequest, { params }: Params) {
-  const tenantId = await getApiTenantId();
-  if (tenantId === null) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const { id } = await params;
-  const vehicleId = Number(id);
+/**
+ * Grava UMA foto já subida direto no S3 (ver /api/uploads/presign).
+ *
+ * Body: `{ key, set_primary? }` — JSON, não mais multipart. O arquivo não
+ * passa por aqui: na Vercel o body morre em 4,5MB, na borda, e o antigo
+ * fluxo mandava o lote inteiro num único POST (4 fotos já estouravam).
+ * Uma foto por request, e o que trafega é só a key.
+ */
+export const POST = withTenant<{ id: string }>(async (req, { tenantId, params }) => {
+  const vehicleId = Number(params.id);
 
   // Confirma que o veículo pertence ao tenant da sessão antes de aceitar
   // qualquer escrita — defesa contra um admin de loja gravar foto com FK
   // pra veículo de outra loja (mesmo que listagens depois filtrem por
   // tenant_id, isso polui o DB e abre caminho pra joins por vehicle_id).
   if (!(await getVehicle(tenantId, vehicleId))) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    throw new ApiError("Not found", 404);
   }
 
-  const formData = await req.formData();
-  const files = formData.getAll("files") as File[];
-  const setPrimary = formData.get("set_primary") === "true";
+  const { key, set_primary: setPrimary } = await parseBody(req, photoCreateSchema);
 
-  const existing = await getPhotosByVehicle(tenantId, vehicleId);
-
-  // Limite total — protege contra galeria infinita (gasto de storage,
-  // página de veículo pesada). Validação no client é melhor UX, esta
-  // é defesa em profundidade.
-  if (existing.length + files.length > MAX_PHOTOS_PER_VEHICLE) {
-    return NextResponse.json(
-      {
-        error:
-          `Limite de ${MAX_PHOTOS_PER_VEHICLE} fotos por veículo. ` +
-          `Você tem ${existing.length} e tentou subir ${files.length}.`,
-      },
-      { status: 413 },
-    );
-  }
-  const urls: string[] = [];
-
+  // A key tem que ser uma que ESTE servidor assinou pra ESTA pasta. Sem isso
+  // o admin mandaria a key de outra loja e gravaria a URL dela no próprio
+  // banco — e o DELETE, que confia no banco, apagaria o blob alheio depois.
   try {
-    for (let i = 0; i < files.length; i++) {
-      const url = await uploadToBlob(
-        files[i],
-        `tenants/${tenantId}/vehicles/${vehicleId}`,
-        PHOTO_UPLOAD_OPTIONS,
-      );
-      await addPhoto(tenantId, vehicleId, url, existing.length + i);
-      urls.push(url);
-    }
+    assertKeyInFolder(key, uploadFolder("photo", tenantId, vehicleId));
   } catch (err) {
     if (err instanceof UploadValidationError) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
+      throw new ApiError(err.message, err.status);
     }
     throw err;
   }
 
-  if (setPrimary && urls[0]) {
-    await updateVehicle(tenantId, vehicleId, { primary_photo_url: urls[0] });
+  const existing = await getPhotosByVehicle(tenantId, vehicleId);
+
+  // Limite total — protege contra galeria infinita (gasto de storage,
+  // página de veículo pesada). O presign já barra antes do upload; esta é
+  // a defesa em profundidade (e cobre corrida entre uploads paralelos).
+  if (existing.length >= MAX_PHOTOS_PER_VEHICLE) {
+    throw new ApiError(
+      `Limite de ${MAX_PHOTOS_PER_VEHICLE} fotos por veículo atingido.`,
+      413,
+    );
   }
 
-  return NextResponse.json({ urls });
-}
+  // URL derivada da key no servidor — o cliente não escolhe o que vai pro banco.
+  const url = publicUrlForKey(key);
+  await addPhoto(tenantId, vehicleId, url, existing.length);
+
+  if (setPrimary) {
+    await updateVehicle(tenantId, vehicleId, { primary_photo_url: url });
+  }
+
+  return NextResponse.json({ url }, { status: 201 });
+});
 
 export async function DELETE(req: NextRequest, { params }: Params) {
   const tenantId = await getApiTenantId();
