@@ -21,15 +21,30 @@
 | 5 — Credenciais S3 | ✅ **OIDC federation** (`9f3a95c`) — sem chave estática. Provado: PutObject+DeleteObject em 708 ms |
 | 6 — Deploy Vercel | ✅ 22 env vars · região `gru1` (São Paulo) |
 | 7 — Cutover DNS | ✅ `autostand.com.br` → Vercel · console → `/superadmin/login` · CDN intacto |
-| 8 — Demolição | 🟡 **PARCIAL** — etapa reversível feita (ECS `desired=0`, RDS **parado**): −US$53/mês. Falta a etapa irreversível: −US$48/mês. |
+| 8 — Demolição | 🟡 **PARCIAL** — ECS `desired=0`, RDS **parado**, **ALB e os 2 EIPs DELETADOS**. Run-rate: **~US$13/mês** (de ~115). |
 
 ### ⏰ PRAZO: 2026-07-21
 
 **A AWS religa um RDS parado automaticamente após 7 dias.** O `autostand-postgres` foi parado em
-2026-07-14. Se a demolição final não ocorrer até **21/07**, ele volta sozinho e a cobrança retoma.
+2026-07-14. Se ele não for deletado até **21/07**, volta sozinho e a cobrança retoma (~US$22/mês).
 
-**Run-rate em 2026-07-14: ~US$50/mês** (partiu de ~115). O que ainda cobra: ALB `autostand-alb`
-(~US$23) + 2 EIPs do ALB (~US$14) + storage de RDS/EBS (~US$9) + Route 53 (US$1).
+**Feito em 2026-07-14:**
+- ECS `autostand-web` → `desired=0`
+- RDS `autostand-postgres` → `stopped`
+- **ALB `autostand-alb` → DELETADO.** Os 2 EIPs eram `ServiceManaged: alb` — a AWS os recolheu
+  sozinha alguns minutos depois (não dá para liberá-los à mão; `release-address` devolve
+  `OperationNotPermitted`).
+- Verificado após tudo: apex, `/comprar`, `/admin/login`, console e **os 10 subdomínios de tenant**
+  todos em 200.
+
+**Ainda falta deletar** (~US$10/mês + fecha o prazo): serviços e cluster ECS, target groups
+`autostand-tg` e `autostand-homolog-tg`, **RDS com snapshot final**, ECR, distros CloudFront
+`E2ZAXVU5GRBGKB` e `E3LRVJCG5UO8AI`, stack de homolog (bucket `autostand-uploads-homolog` + registros
+DNS `*.homologation.*`).
+
+**O rollback para o RDS já é lossy.** O Neon recebeu escritas após o cutover (`demand_events` 725 → 732
+em 2026-07-14). Voltar para o RDS perderia dados, e a divergência cresce. O que protege de verdade é o
+snapshot `autostand-pre-migracao` + `~/autostand-dump.sql` + `~/autostand-dns-backup.json`.
 
 **Verificado após desligar a AWS:** `autostand.com.br` responde 200 em `/`, `/comprar`, `/lojas`,
 `/comprar/24` e `/sitemap.xml`, servindo dados do Neon, com imagens do CloudFront. O Vercel está
