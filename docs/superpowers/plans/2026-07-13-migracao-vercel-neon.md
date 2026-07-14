@@ -86,6 +86,38 @@ webhook do Mercado Pago.
 
 ---
 
+## VARREDURA PÓS-MIGRAÇÃO (2026-07-14)
+
+### Corrigido
+
+| Achado | Correção |
+|---|---|
+| **`NEXTAUTH_URL` quebrava o login multi-tenant.** Cadastrada por engano na migração (não existia no ECS). O `reqWithEnvURL` do next-auth (`next-auth/index.js:106,130`) reescreve o origin de toda request de auth **ignorando `trustHost`** — exatamente o bug que o comentário em `lib/auth.ts:15-18` diz que `trustHost: true` foi adicionado para evitar. | Env **removida** de production e preview |
+| `ANTHROPIC_API_KEY` órfã (zero leituras; o app usa só Gemini) | Env **removida** |
+| Functions rodavam em `iad1` (Virgínia), Neon em `sa-east-1` | `serverlessFunctionRegion: gru1` |
+| **`deploy-homolog.yml` disparava em push na `main`** e passava **verde tendo deployado nada** (`UpdateService` num serviço com `desiredCount=0`; o waiter vê `running(0)==desired(0)` e retorna). Empurrava 2 imagens novas pro ECR a cada push. Viraria vermelho ao deletar o cluster. | Workflow **deletado** (`fef4ea1`), junto de `deploy-production.yml` |
+| **Sem caminho para migrations no Neon.** `migrate.yml` fazia `ecs run-task` na VPC contra o RDS parado — único caminho de CI, já quebrado. | Reescrito como job Node com `DATABASE_URL` (`6cc32b4`). ⚠️ **Exige criar o secret `DATABASE_URL` nos GitHub Environments** |
+| **`getClientIp` permitia spoofing.** `lib/ratelimit.ts` pegava o **penúltimo** IP do XFF — heurística da cadeia CloudFront→ALB. No Vercel, essa posição pode ser controlada pelo cliente → bypass do rate limit de reset de senha, signup e leads. | Usa `x-real-ip` do Vercel (`0d7edab`). **A função nunca tinha sido executada pela suíte** (todos os testes mockavam `@/lib/ratelimit` inteiro) — por isso a heurística morta sobreviveu |
+| `pg.Pool` sem `max` — default 10 por instância; em serverless, N instâncias × 10 esgota o Neon | `max: 1` + timeouts no ramo serverless (`5f8f918`) |
+
+### Aberto
+
+- 🔴 **Uploads > 4,5 MB falham com 413.** Limite de body do Vercel é 4,5 MB. O app permite fotos de 8 MB (`lib/blob-constants.ts:19`) e documentos de 20 MB (`:20`). Pior: `components/admin/PhotoUploader.tsx:123` manda **todas** as fotos num único POST (4 fotos a 1,5 MB já estouram), e **PNG é pulado da compressão** (`:40`). O 413 vem da borda — o erro tratado do código nunca dispara. *Correção certa: presigned URL do S3 (cliente sobe direto pro bucket).*
+- 🔴 **Vercel não está conectado ao GitHub.** Push na `main` não deploya; não existem preview deploys por PR — o que invalida a justificativa original de destruir o homolog.
+- 🟡 **Webhook do Mercado Pago é ponto cego.** `notification_url` **não existe no código** (zero ocorrências) — vive só no painel do MP. Só verificável manualmente.
+- 🟡 **Turnstile desligado** (chaves vazias desde o ECS). `/api/assinar` e `/api/marketplace/lead` são públicos e ficam só com rate limit.
+- ⚪ Lixo: `Dockerfile` + `.dockerignore` + `task-definition.json` + `next.config.ts:9` (`output: "standalone"`, inofensivo no Vercel mas o `Dockerfile:28` depende dele — remover juntos, Dockerfile primeiro); `lib/db/secret-password.ts` e `lib/db/rds-ca.ts` (caminho morto, mas bundlam o SDK do Secrets Manager em toda function); `README.md` e `obsidian-vault/Infrastructure & Deployment.md` documentam a infra AWS morta.
+
+### Falsos alarmes (verificados)
+
+- **Timeout não é risco.** Default do Hobby é **300s** (doc oficial), não 10s.
+- Escrita em FS está protegida (`lib/blob.ts:166-175` lança erro em prod).
+- Zero URLs de homolog no banco.
+- `DB_HOST` não vazou pro Vercel — o caminho do Neon está garantido.
+- E-mail OK: todos os links derivam de env/DB.
+
+---
+
 ## Global Constraints
 
 - **Nada é destruído antes do cutover validado.** A Task 8 (demolição) só roda depois da Task 7 confirmar HTTP 200 em `autostand.com.br` servido pelo Vercel.
