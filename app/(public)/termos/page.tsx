@@ -4,8 +4,8 @@ export const metadata = { title: "Termos de Uso — AutoStand" };
 
 /**
  * Termos de Uso do AutoStand (contrato com a concessionária contratante).
- * PLACEHOLDERS a preencher antes do deploy: [RAZÃO SOCIAL], [CNPJ],
- * [CIDADE/UF], [E-MAIL DO ENCARREGADO].
+ * Empresa: SYNQO SERVIÇOS LTDA, CNPJ 67.106.653/0001-20, foro de Maceió/AL.
+ * Minuta ainda sujeita a revisão jurídica (aviso na base da página).
  */
 export default function TermosPage() {
   return (
@@ -29,8 +29,8 @@ export default function TermosPage() {
           fornece à Contratante um site próprio (whitelabel) para exposição de
           veículos, um painel administrativo, presença em marketplace, funil de
           leads e ferramentas de atendimento por WhatsApp assistido. O serviço é
-          fornecido por <strong>[RAZÃO SOCIAL]</strong> (&ldquo;Synqo&rdquo;),
-          inscrita no CNPJ sob o nº <strong>[CNPJ]</strong>, titular da marca
+          fornecido por <strong>SYNQO SERVIÇOS LTDA</strong> (&ldquo;Synqo&rdquo;),
+          inscrita no CNPJ sob o nº <strong>67.106.653/0001-20</strong>, titular da marca
           AutoStand.
         </p>
         <p>
@@ -110,7 +110,7 @@ export default function TermosPage() {
         <h2>7. Propriedade intelectual</h2>
         <p>
           A plataforma AutoStand, seu código, design e as marcas AutoStand e Synqo
-          são de titularidade da <strong>[RAZÃO SOCIAL]</strong> e não são
+          são de titularidade da <strong>SYNQO SERVIÇOS LTDA</strong> e não são
           licenciados à Contratante além do necessário para o uso do serviço. O
           conteúdo inserido pela Contratante (fotos, textos, dados da loja)
           permanece de sua propriedade.
@@ -143,7 +143,7 @@ export default function TermosPage() {
         <h2>10. Legislação e foro</h2>
         <p>
           Estes Termos são regidos pela legislação brasileira. Fica eleito o foro
-          da comarca de <strong>[CIDADE/UF]</strong> para dirimir questões
+          da comarca de <strong>Maceió/AL</strong> para dirimir questões
           decorrentes deste contrato, com renúncia a qualquer outro, por mais
           privilegiado que seja.
         </p>
@@ -153,7 +153,7 @@ export default function TermosPage() {
         <h2>11. Contato</h2>
         <p>
           Dúvidas sobre estes Termos podem ser encaminhadas para{" "}
-          <a href="mailto:[E-MAIL DO ENCARREGADO]">[E-MAIL DO ENCARREGADO]</a>.
+          <a href="mailto:contato.synqo@gmail.com">contato.synqo@gmail.com</a>.
         </p>
       </section>
     </LegalDoc>

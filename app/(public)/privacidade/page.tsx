@@ -4,8 +4,8 @@ export const metadata = { title: "Política de Privacidade — AutoStand" };
 
 /**
  * Política de Privacidade do AutoStand (LGPD).
- * PLACEHOLDERS a preencher antes do deploy: [RAZÃO SOCIAL], [CNPJ],
- * [E-MAIL DO ENCARREGADO].
+ * Controladora: SYNQO SERVIÇOS LTDA, CNPJ 67.106.653/0001-20. DPO: contato.synqo@gmail.com.
+ * Minuta ainda sujeita a revisão jurídica (aviso na base da página).
  */
 export default function PrivacidadePage() {
   return (
@@ -13,12 +13,12 @@ export default function PrivacidadePage() {
       <section className="space-y-3">
         <h2>1. Quem somos (controlador)</h2>
         <p>
-          A <strong>[RAZÃO SOCIAL]</strong> (&ldquo;Synqo&rdquo;), CNPJ{" "}
-          <strong>[CNPJ]</strong>, titular da plataforma AutoStand, é a
+          A <strong>SYNQO SERVIÇOS LTDA</strong> (&ldquo;Synqo&rdquo;), CNPJ{" "}
+          <strong>67.106.653/0001-20</strong>, titular da plataforma AutoStand, é a
           controladora dos dados pessoais tratados na relação com as
           concessionárias contratantes. Encarregado pelo tratamento de dados
           (DPO):{" "}
-          <a href="mailto:[E-MAIL DO ENCARREGADO]">[E-MAIL DO ENCARREGADO]</a>.
+          <a href="mailto:contato.synqo@gmail.com">contato.synqo@gmail.com</a>.
         </p>
       </section>
 
@@ -111,7 +111,7 @@ export default function PrivacidadePage() {
           existência de tratamento, acesso, correção, anonimização, portabilidade,
           eliminação e informação sobre compartilhamentos, além de revogar o
           consentimento. Os pedidos podem ser feitos por{" "}
-          <a href="mailto:[E-MAIL DO ENCARREGADO]">[E-MAIL DO ENCARREGADO]</a>.
+          <a href="mailto:contato.synqo@gmail.com">contato.synqo@gmail.com</a>.
         </p>
       </section>
 
@@ -148,7 +148,7 @@ export default function PrivacidadePage() {
         <p>
           Para exercer direitos ou esclarecer dúvidas sobre o tratamento de dados,
           contate o nosso encarregado em{" "}
-          <a href="mailto:[E-MAIL DO ENCARREGADO]">[E-MAIL DO ENCARREGADO]</a>.
+          <a href="mailto:contato.synqo@gmail.com">contato.synqo@gmail.com</a>.
         </p>
       </section>
     </LegalDoc>
