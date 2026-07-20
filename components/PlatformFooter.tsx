@@ -14,12 +14,24 @@ export function PlatformFooter({ className }: { className?: string }) {
         <span className="font-display font-semibold tracking-tight text-ink">
           Auto<span className="text-signal">Stand</span>
         </span>
-        <span className="flex items-center gap-2">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span>© {year}</span>
           <span className="text-n300" aria-hidden>
             ·
           </span>
           <span>por Synqo</span>
+          <span className="text-n300" aria-hidden>
+            ·
+          </span>
+          <a href="/termos" className="transition-colors hover:text-ink">
+            Termos
+          </a>
+          <span className="text-n300" aria-hidden>
+            ·
+          </span>
+          <a href="/privacidade" className="transition-colors hover:text-ink">
+            Privacidade
+          </a>
           <span className="text-n300" aria-hidden>
             ·
           </span>

@@ -52,6 +52,11 @@ export async function POST(req: NextRequest) {
       return bad("Verificação de segurança falhou. Recarregue a página e tente novamente.");
     }
 
+    // Enforcement server-side do aceite (impede bypass do checkbox via request direta).
+    if (body.accepted_terms !== true) {
+      return bad("É necessário aceitar os Termos de Uso e a Política de Privacidade.");
+    }
+
     const plan = String(body.plan ?? "");
     const slug = normalizeSlug(String(body.slug ?? ""));
     const dealershipName = String(body.dealership_name ?? "").trim();

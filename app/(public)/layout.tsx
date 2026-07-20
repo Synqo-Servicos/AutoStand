@@ -5,6 +5,7 @@ import { WhatsAppFAB } from "@/components/public/WhatsAppFAB";
 import { TenantProvider } from "@/components/TenantContext";
 import { MarketingHeader } from "@/components/marketing/MarketingHeader";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
+import { CookieNotice } from "@/components/CookieNotice";
 import { LojaIndisponivel } from "@/components/public/LojaIndisponivel";
 import { getCurrentTenant, getRequestHost, isPlatformHost } from "@/lib/tenant";
 
@@ -23,6 +24,7 @@ export default async function PublicLayout({ children }: { children: React.React
         <MarketingHeader />
         <main className="flex-1">{children}</main>
         <MarketingFooter />
+        <CookieNotice />
       </div>
     );
   }

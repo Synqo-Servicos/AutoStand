@@ -22,6 +22,12 @@ export function MarketingFooter() {
           <Link href="/anuncie" className="text-n400 hover:text-white">
             Anuncie sua loja
           </Link>
+          <Link href="/termos" className="text-n400 hover:text-white">
+            Termos de Uso
+          </Link>
+          <Link href="/privacidade" className="text-n400 hover:text-white">
+            Privacidade
+          </Link>
         </nav>
       </div>
       <div className="border-t border-ink-800 px-5 py-4">

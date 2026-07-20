@@ -30,6 +30,7 @@ export function SignupForm({
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [document, setDocument] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -87,6 +88,7 @@ export function SignupForm({
           partner_code: partnerCode ?? "",
           coupon_code: couponCode.trim().toUpperCase() || null,
           turnstile_token: captchaToken,
+          accepted_terms: acceptedTerms,
         }),
       });
       const data = await res.json();
@@ -294,13 +296,34 @@ export function SignupForm({
 
       {captchaEnabled && <Turnstile onVerify={setCaptchaToken} onExpire={onCaptchaExpire} />}
 
+      <label className="flex items-start gap-2 text-body-s text-n700">
+        <input
+          type="checkbox"
+          checked={acceptedTerms}
+          onChange={(e) => setAcceptedTerms(e.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-signal"
+          required
+        />
+        <span>
+          Li e aceito os{" "}
+          <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-signal underline">
+            Termos de Uso
+          </a>{" "}
+          e a{" "}
+          <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-signal underline">
+            Política de Privacidade
+          </a>
+          .
+        </span>
+      </label>
+
       {error && (
         <p className="rounded-lg bg-danger/10 px-3 py-2 text-body-s text-danger">{error}</p>
       )}
 
       <button
         type="submit"
-        disabled={!canSubmit || !!liveSlugError || !!liveDocError || !document}
+        disabled={!canSubmit || !!liveSlugError || !!liveDocError || !document || !acceptedTerms}
         className="w-full rounded-lg bg-signal px-4 py-3 font-semibold text-ink transition-colors hover:bg-signal-dark disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting ? "Enviando…" : "Criar minha conta"}
