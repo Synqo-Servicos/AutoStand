@@ -1,0 +1,1 @@
+ALTER TABLE "tenants" ADD COLUMN "terms_accepted_at" timestamp;
