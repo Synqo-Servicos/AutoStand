@@ -75,8 +75,6 @@ export const tenants = pgTable("tenants", {
 
   /** CPF ou CNPJ da concessionária (só dígitos). Null em tenants legados/provisionados. */
   document: text("document"),
-  /** Aceite dos Termos e da Política de Privacidade no cadastro (prova de consentimento LGPD). */
-  terms_accepted_at: timestamp("terms_accepted_at", { mode: "string" }),
 
   created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   updated_at: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),

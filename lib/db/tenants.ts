@@ -55,7 +55,6 @@ const TENANT_WRITABLE_FIELDS = [
 const TENANT_CREATE_FIELDS = [
   ...TENANT_WRITABLE_FIELDS,
   "subscription_status", "mp_subscription_id", "current_period_end",
-  "terms_accepted_at",
 ] as const;
 
 function pickFields<T extends Record<string, unknown>>(
