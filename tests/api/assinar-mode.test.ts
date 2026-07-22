@@ -35,6 +35,7 @@ const VALID = {
   document: "52998224725",
   admin_name: "João", admin_email: "joao@loja.com", admin_password: "senha1234",
   partner_code: "", coupon_code: null, turnstile_token: "tok",
+  accepted_terms: true,
 };
 
 describe("POST /api/assinar — modo de checkout", () => {
@@ -78,6 +79,15 @@ describe("POST /api/assinar — modo de checkout", () => {
     const { POST } = await import("@/app/api/assinar/route");
     const res = await POST(req({ ...VALID, document: "11111111111" }));
     expect(res.status).toBe(400);
+    expect(createTenant).not.toHaveBeenCalled();
+  });
+
+  it("400 quando não aceita os Termos/Privacidade (enforcement server-side)", async () => {
+    const { POST } = await import("@/app/api/assinar/route");
+    const res = await POST(req({ ...VALID, accepted_terms: false }));
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.error).toMatch(/Termos de Uso/);
     expect(createTenant).not.toHaveBeenCalled();
   });
 
