@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
           subscription_status: "incomplete",
           referred_by: partner?.id ?? null,
           coupon_id: coupon?.id ?? null,
+          terms_accepted_at: new Date().toISOString(),
         },
         tx,
       );
