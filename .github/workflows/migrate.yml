@@ -1,8 +1,10 @@
 name: Run DB Migrations
 
-# Migrations rodam de DENTRO da VPC (o RDS é privado) como um ECS RunTask
-# one-off, usando a imagem `migrator` do Dockerfile. Manual, por ambiente.
-# Rodar ANTES do deploy quando uma migration nova precisa existir no banco.
+# Migrations rodam direto do runner do GitHub Actions: o Neon é publicamente
+# acessível (TLS + credenciais na connection string), então não há VPC pra
+# entrar nem imagem pra buildar. `DATABASE_URL` vem dos secrets do GitHub
+# Environment escolhido. Manual, por ambiente. Rodar ANTES do deploy quando
+# uma migration nova precisa existir no banco.
 on:
   workflow_dispatch:
     inputs:
@@ -15,7 +17,6 @@ on:
           - production
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -26,79 +27,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+      - uses: actions/setup-node@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: sa-east-1
+          node-version: '22'
+          cache: 'npm'
 
-      - name: Login to ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - run: npm ci
 
-      - name: Build and push migrator image
+      - name: Run migrations
         env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          SHA: ${{ github.sha }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          docker build --target migrator -t "$REGISTRY/autostand:migrate-$SHA" .
-          docker push "$REGISTRY/autostand:migrate-$SHA"
-
-      - name: Run migrations (ECS RunTask in VPC)
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          SHA: ${{ github.sha }}
-          ENVIRONMENT: ${{ inputs.environment }}
-        run: |
-          set -euo pipefail
-          CLUSTER=autostand
-          REGION=sa-east-1
-          if [ "$ENVIRONMENT" = "production" ]; then FAMILY=autostand; else FAMILY=autostand-homolog; fi
-          IMAGE="$REGISTRY/autostand:migrate-$SHA"
-
-          # Task def de migração = a task def da app (carrega DB_*, o secret
-          # DB_PASSWORD e a execution role), com a imagem trocada pela migrator
-          # e uma família própria. Remove os campos read-only do describe.
-          aws ecs describe-task-definition --task-definition "$FAMILY" --region "$REGION" \
-            --query taskDefinition > app-td.json
-          jq --arg img "$IMAGE" --arg fam "${FAMILY}-migrate" '
-            .family = $fam
-            | .containerDefinitions[0].image = $img
-            | del(.containerDefinitions[0].healthCheck)
-            | del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
-                  .compatibilities, .registeredAt, .registeredBy)
-          ' app-td.json > migrate-td.json
-
-          MIGRATE_ARN=$(aws ecs register-task-definition \
-            --cli-input-json file://migrate-td.json --region "$REGION" \
-            --query 'taskDefinition.taskDefinitionArn' --output text)
-          echo "Task definition: $MIGRATE_ARN"
-
-          TASK_ARN=$(aws ecs run-task --cluster "$CLUSTER" --region "$REGION" \
-            --task-definition "$MIGRATE_ARN" --launch-type FARGATE \
-            --network-configuration 'awsvpcConfiguration={subnets=[subnet-044e90e6bf3adc1a7,subnet-06b877a62eb18e6cf,subnet-069dfd061f90b5660],securityGroups=[sg-01e9e2ec9a6929544],assignPublicIp=ENABLED}' \
-            --started-by "gha-migrate-${ENVIRONMENT}" \
-            --query 'tasks[0].taskArn' --output text)
-          echo "Task: $TASK_ARN"
-
-          echo "Aguardando a task de migração terminar..."
-          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION"
-
-          EXIT=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION" \
-            --query 'tasks[0].containers[0].exitCode' --output text)
-          REASON=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION" \
-            --query 'tasks[0].stoppedReason' --output text)
-          echo "Exit code: $EXIT — $REASON"
-
-          # Logs da task de migração (best-effort)
-          TASK_ID="${TASK_ARN##*/}"
-          echo "----- logs da migração -----"
-          aws logs get-log-events --region "$REGION" --log-group-name /ecs/autostand \
-            --log-stream-name "ecs/autostand/$TASK_ID" \
-            --query 'events[*].message' --output text 2>/dev/null || echo "(sem logs)"
-          echo "----------------------------"
-
-          if [ "$EXIT" != "0" ]; then
-            echo "❌ Migração falhou em $ENVIRONMENT"; exit 1
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "❌ Secret DATABASE_URL não configurado no environment '${{ inputs.environment }}'"
+            exit 1
           fi
-          echo "✅ Migrações aplicadas em $ENVIRONMENT"
+          npx tsx scripts/migrate.ts

@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { translateDecline } from "@/lib/checkout";
+import { PLATFORM_ORIGIN } from "@/lib/platform";
+
+const WEBHOOK_URL = `${PLATFORM_ORIGIN}/api/webhooks/mercadopago`;
 
 // Mock do SDK do Mercado Pago. mockPlanCreate é a criação do PreApprovalPlan.
 const mockPlanCreate = vi.fn();
@@ -95,6 +98,30 @@ describe("createCheckoutSession", () => {
     const body = mockPlanCreate.mock.calls[0][0].body;
     expect(body.back_url).toBe("https://loja.exemplo.com.br/admin/assinatura");
   });
+
+  it("envia notification_url explícito, apontando pro apex da plataforma", async () => {
+    const { createCheckoutSession } = await import("@/lib/checkout");
+    await createCheckoutSession(TENANT, PLAN, null);
+
+    const body = mockPlanCreate.mock.calls[0][0].body;
+    expect(body.notification_url).toBe(WEBHOOK_URL);
+  });
+
+  it("notification_url NÃO segue o custom_domain do tenant (só o back_url segue)", async () => {
+    const { createCheckoutSession } = await import("@/lib/checkout");
+    await createCheckoutSession(
+      { id: 2, slug: "x", custom_domain: "loja.exemplo.com.br" } as any,
+      PLAN,
+      null,
+    );
+
+    const body = mockPlanCreate.mock.calls[0][0].body;
+    // back_url = redirect do usuário → host da loja. notification_url =
+    // server-to-server → apex, onde a rota existe e o secret valida.
+    expect(body.back_url).toBe("https://loja.exemplo.com.br/admin/assinatura");
+    expect(body.notification_url).toBe(WEBHOOK_URL);
+    expect(body.notification_url).not.toContain("loja.exemplo.com.br");
+  });
 });
 
 describe("createTransparentSubscription", () => {
@@ -125,6 +152,28 @@ describe("createTransparentSubscription", () => {
     const body = mockPreApprovalCreate.mock.calls[0][0].body;
     expect(body.auto_recurring.free_trial).toEqual({ frequency: 1, frequency_type: "months" });
     expect(body.auto_recurring.transaction_amount).toBeCloseTo(169.9, 1);
+  });
+
+  it("envia notification_url explícito, apontando pro apex da plataforma", async () => {
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    await createTransparentSubscription(TENANT, PLAN, null, "tok", "c@t.com");
+    const body = mockPreApprovalCreate.mock.calls[0][0].body;
+    expect(body.notification_url).toBe(WEBHOOK_URL);
+  });
+
+  it("notification_url NÃO segue o custom_domain do tenant (só o back_url segue)", async () => {
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    await createTransparentSubscription(
+      { id: 2, slug: "x", custom_domain: "loja.exemplo.com.br" } as any,
+      PLAN,
+      null,
+      "tok",
+      "c@t.com",
+    );
+    const body = mockPreApprovalCreate.mock.calls[0][0].body;
+    expect(body.back_url).toBe("https://loja.exemplo.com.br/admin/assinatura");
+    expect(body.notification_url).toBe(WEBHOOK_URL);
+    expect(body.notification_url).not.toContain("loja.exemplo.com.br");
   });
 
   it("envia idempotency key estável sub-<tenantId> no create", async () => {

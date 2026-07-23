@@ -18,6 +18,7 @@ export default function PaymentPage() {
   const [handoff, setHandoff] = useState<Handoff | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     const raw = sessionStorage.getItem(KEY);
@@ -59,6 +60,8 @@ export default function PaymentPage() {
         return;
       }
       setError(data.error ?? "Pagamento não aprovado. Tente outro cartão.");
+      // Remonta o Card Brick para um formulário limpo (tentar outro cartão).
+      setAttempt((a) => a + 1);
     } catch {
       setError("Erro de conexão. Tente novamente.");
     } finally {
@@ -77,6 +80,7 @@ export default function PaymentPage() {
       )}
       <div className="mt-6" aria-busy={processing}>
         <CardBrick
+          key={attempt}
           amountReais={handoff.amount / 100}
           payerEmail={handoff.email}
           onToken={handleToken}

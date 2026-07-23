@@ -3,10 +3,24 @@ import type { Plan } from "@/lib/plans";
 import type { CouponRow, PartnerRow, TenantRow } from "@/lib/schema";
 import { discountedPriceCents } from "@/lib/coupon-pricing";
 import { tenantSiteUrl } from "@/lib/marketplace";
+import { mpNotificationUrl } from "@/lib/platform";
 
 function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
 }
+
+/**
+ * Os types do SDK (`PreApprovalRequest`/`PreApprovalPlanRequest`) não declaram
+ * `notification_url` — mas a API REST de assinaturas aceita, e é ela que
+ * sobrescreve a URL configurada no painel. (Os types de `payment`/`preference`
+ * do mesmo SDK já declaram o campo; é uma lacuna dos de preapproval.)
+ * Intersection estreita: acrescenta só o campo que falta, mantendo o resto do
+ * payload tipado — `T & { notification_url }` continua atribuível a `T`.
+ */
+type WithNotificationUrl<T> = T & { notification_url: string };
+
+type PreApprovalPlanBody = Parameters<PreApprovalPlan["create"]>[0]["body"];
+type PreApprovalBody = Parameters<PreApproval["create"]>[0]["body"];
 
 const DECLINE_MESSAGES: Record<string, string> = {
   cc_rejected_insufficient_amount: "Cartão sem saldo ou limite disponível. Tente outro cartão.",
@@ -68,17 +82,20 @@ function autoRecurringBody(plan: Plan, coupon: CouponRow | null): Record<string,
 
 async function createMpPlan(tenant: TenantRow, plan: Plan, coupon: CouponRow | null): Promise<string> {
   const preApprovalPlan = new PreApprovalPlan(getMpClient());
-  const newPlan = await preApprovalPlan.create({
-    body: {
-      reason: subscriptionReason(plan, coupon),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      auto_recurring: autoRecurringBody(plan, coupon) as any,
-      // Volta pro painel da PRÓPRIA loja (subdomínio ou custom_domain).
-      // Usar o domínio da plataforma levaria a /admin num host sem tenant
-      // (404 + sessão perdida, pois o cookie é host-only do subdomínio).
-      back_url: `${tenantSiteUrl(tenant)}/admin/assinatura`,
-    },
-  });
+  const body: WithNotificationUrl<PreApprovalPlanBody> = {
+    reason: subscriptionReason(plan, coupon),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    auto_recurring: autoRecurringBody(plan, coupon) as any,
+    // Volta pro painel da PRÓPRIA loja (subdomínio ou custom_domain).
+    // Usar o domínio da plataforma levaria a /admin num host sem tenant
+    // (404 + sessão perdida, pois o cookie é host-only do subdomínio).
+    back_url: `${tenantSiteUrl(tenant)}/admin/assinatura`,
+    // Explícito no payload (não só no painel do MP): assim acompanha o deploy
+    // e é verificável por teste. Vai pro APEX — é server-to-server e NÃO segue
+    // o host do tenant, ao contrário do back_url acima. Ver mpNotificationUrl().
+    notification_url: mpNotificationUrl(),
+  };
+  const newPlan = await preApprovalPlan.create({ body });
 
   if (!newPlan.id) throw new Error("MP did not return a plan id");
   return newPlan.id;
@@ -157,19 +174,23 @@ export async function createTransparentSubscription(
   const existing = await findReconcilableSubscription(preApproval, tenant.id);
   if (existing) return existing;
 
+  const body: WithNotificationUrl<PreApprovalBody> = {
+    reason: subscriptionReason(plan, coupon),
+    external_reference: String(tenant.id),
+    payer_email: payerEmail,
+    card_token_id: cardToken,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    auto_recurring: autoRecurringBody(plan, coupon) as any,
+    back_url: `${tenantSiteUrl(tenant)}/admin/assinatura`,
+    // Idem createMpPlan: explícito no payload e sempre no apex da plataforma.
+    notification_url: mpNotificationUrl(),
+    status: "authorized",
+  };
+
   let res;
   try {
     res = await preApproval.create({
-      body: {
-        reason: subscriptionReason(plan, coupon),
-        external_reference: String(tenant.id),
-        payer_email: payerEmail,
-        card_token_id: cardToken,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        auto_recurring: autoRecurringBody(plan, coupon) as any,
-        back_url: `${tenantSiteUrl(tenant)}/admin/assinatura`,
-        status: "authorized",
-      },
+      body,
       requestOptions: { idempotencyKey: `sub-${tenant.id}` },
     });
   } catch (err) {

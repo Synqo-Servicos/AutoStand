@@ -23,11 +23,7 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/blob", () => ({
   deleteFromBlob,
-  uploadToBlob: vi.fn(),
-  IMAGE_MIMES: [],
-  MAX_PHOTOS_PER_VEHICLE: 20,
-  PHOTO_MAX_BYTES: 1,
-  UploadValidationError: class extends Error {},
+  publicUrlForKey: vi.fn(),
 }));
 
 vi.mock("@/lib/api", () => ({
@@ -36,7 +32,10 @@ vi.mock("@/lib/api", () => ({
   withTenant: () => () => {},
 }));
 
-vi.mock("@/lib/validation", () => ({ photoReorderSchema: {} }));
+vi.mock("@/lib/validation", () => ({
+  photoReorderSchema: {},
+  photoCreateSchema: {},
+}));
 
 function req(body: unknown) {
   return { json: async () => body } as never;

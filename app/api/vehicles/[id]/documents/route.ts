@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, getApiUserId } from "@/lib/auth";
 import { addVehicleDocument, deleteVehicleDocument, getDocumentsByVehicle, getVehicle } from "@/lib/db";
-import {
-  DOC_MIMES, MB, UploadValidationError,
-  deleteFromBlob, uploadToBlob,
-} from "@/lib/blob";
-
-const DOC_UPLOAD_OPTIONS = {
-  allowedMimes: DOC_MIMES,
-  maxBytes: 20 * MB,
-} as const;
+import { UploadValidationError } from "@/lib/blob-constants";
+import { deleteFromBlob, publicUrlForKey } from "@/lib/blob";
+import { assertKeyInFolder, uploadFolder } from "@/lib/presign";
+import { ApiError, parseBody, withTenant } from "@/lib/api";
+import { documentCreateSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
-
-const ALLOWED_CATEGORIES = new Set([
-  "crlv", "laudo", "dut", "nf_peca", "os", "contrato", "historico", "outros",
-]);
 
 export async function GET(_req: NextRequest, { params }: Params) {
   const session = await auth();
@@ -28,57 +20,50 @@ export async function GET(_req: NextRequest, { params }: Params) {
   );
 }
 
-export async function POST(req: NextRequest, { params }: Params) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "tenant_admin" || !session.user.tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const tenantId = session.user.tenantId;
-  const userId = session.user.id ? Number(session.user.id) : null;
-  const { id } = await params;
-  const vehicleId = Number(id);
+/**
+ * Grava um documento já subido direto no S3 (ver /api/uploads/presign).
+ * Body: `{ key, name?, category, size?, mimeType? }` — JSON, não multipart.
+ *
+ * `size`/`mimeType` são metadados de exibição vindos do cliente; o zod os
+ * limita à allowlist e ao teto de 20MB. O que realmente governa o objeto no
+ * bucket é a assinatura, que fixou Content-Type e Content-Length no presign.
+ */
+export const POST = withTenant<{ id: string }>(async (req, { tenantId, params }) => {
+  const vehicleId = Number(params.id);
 
-  // Confirma ownership do veículo antes de aceitar upload (mesmo motivo
+  // Confirma ownership do veículo antes de aceitar o vínculo (mesmo motivo
   // da rota de fotos — evita FK órfã cross-tenant).
   if (!(await getVehicle(tenantId, vehicleId))) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    throw new ApiError("Not found", 404);
   }
 
-  const formData = await req.formData();
-  const file = formData.get("file") as File | null;
-  const name = (formData.get("name") as string | null)?.trim();
-  const category = (formData.get("category") as string | null)?.trim() ?? "outros";
+  const body = await parseBody(req, documentCreateSchema);
 
-  if (!file) return NextResponse.json({ error: "Arquivo obrigatório" }, { status: 400 });
-  if (!ALLOWED_CATEGORIES.has(category)) {
-    return NextResponse.json({ error: "Categoria inválida" }, { status: 400 });
-  }
-  const displayName = name && name.length > 0 ? name : file.name;
-  let url: string;
+  // A key tem que ser uma que ESTE servidor assinou pra ESTA pasta.
   try {
-    url = await uploadToBlob(
-      file,
-      `tenants/${tenantId}/vehicles/${vehicleId}/docs`,
-      DOC_UPLOAD_OPTIONS,
-    );
+    assertKeyInFolder(body.key, uploadFolder("document", tenantId, vehicleId));
   } catch (err) {
     if (err instanceof UploadValidationError) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
+      throw new ApiError(err.message, err.status);
     }
     throw err;
   }
+
+  const url = publicUrlForKey(body.key);
   const row = await addVehicleDocument({
     tenantId,
     vehicleId,
-    name: displayName,
-    category,
+    // Sem nome do cliente, cai no basename da key (o nome original do arquivo
+    // não chega mais aqui — ele nunca sai do browser).
+    name: body.name || body.key.split("/").pop()!,
+    category: body.category,
     url,
-    size: file.size,
-    mimeType: file.type || null,
-    uploadedBy: userId,
+    size: body.size ?? null,
+    mimeType: body.mimeType ?? null,
+    uploadedBy: await getApiUserId(),
   });
   return NextResponse.json(row, { status: 201 });
-}
+});
 
 export async function DELETE(req: NextRequest, { params: _params }: Params) {
   const session = await auth();

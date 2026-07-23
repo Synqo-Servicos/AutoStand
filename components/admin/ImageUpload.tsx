@@ -5,15 +5,18 @@ import Image from "next/image";
 import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
 import { Button, toast } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import { IMAGE_MIMES, MB } from "@/lib/blob-constants";
+import {
+  HERO_MAX_BYTES, IMAGE_MIMES, LOGO_MAX_BYTES, MB,
+} from "@/lib/blob-constants";
+import { uploadFile } from "@/lib/upload-client";
 import type { UploadKind } from "@/lib/validation";
 
 const ACCEPT = IMAGE_MIMES.join(",");
 
-/** Limites alinhados com app/api/upload/route.ts — pré-check no client. */
+/** Pré-check no client. O autoritativo é UPLOAD_RULES, no presign. */
 const LIMITS: Record<UploadKind, number> = {
-  logo: 4 * MB,
-  hero: 8 * MB,
+  logo: LOGO_MAX_BYTES,
+  hero: HERO_MAX_BYTES,
 };
 
 function formatMB(bytes: number): string {
@@ -55,11 +58,16 @@ export function ImageUpload({ kind, value, onChange, hint, aspect }: Props) {
 
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.set("file", file);
-      fd.set("kind", kind);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
+      // Direto pro S3 (presign + PUT) — o arquivo não passa pelo body da
+      // function, que na Vercel morre em 4,5MB. Depois só confirmamos a key.
+      const { key } = await uploadFile(file, { kind });
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, kind }),
+      });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Falha no upload.");
       onChange(data.url);
       toast.success("Imagem atualizada.");
