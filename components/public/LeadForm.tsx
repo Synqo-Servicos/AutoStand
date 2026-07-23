@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { Turnstile, isTurnstileEnabled } from "@/components/Turnstile";
 
 export function LeadForm({
   vehicleId,
@@ -19,10 +20,16 @@ export function LeadForm({
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  const onCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
+
+  const captchaEnabled = isTurnstileEnabled();
+  const canSubmit = !loading && (!captchaEnabled || captchaToken !== null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,7 +38,12 @@ export function LeadForm({
     const res = await fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, vehicle_id: vehicleId, source: "site" }),
+      body: JSON.stringify({
+        ...form,
+        vehicle_id: vehicleId,
+        source: "site",
+        turnstile_token: captchaToken,
+      }),
     });
     if (!res.ok) {
       setError("Não foi possível enviar agora. Tente novamente.");
@@ -98,9 +110,14 @@ export function LeadForm({
           className={inputClass}
         />
       </div>
+      {captchaEnabled && (
+        <div className="mt-4">
+          <Turnstile onVerify={setCaptchaToken} onExpire={onCaptchaExpire} />
+        </div>
+      )}
       <button
         type="submit"
-        disabled={loading}
+        disabled={!canSubmit}
         className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-[var(--brand-accent)] hover:bg-[var(--brand-accent-d)] text-white text-sm font-semibold py-2.5 rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}

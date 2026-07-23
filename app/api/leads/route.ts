@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createLead, listLeads } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
-import { ApiError, parseBody, withTenant } from "@/lib/api";
+import { ApiError, withTenant } from "@/lib/api";
 import { publicLeadSchema } from "@/lib/validation";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { notifyNewLead } from "@/lib/email/notify";
 
 // Admin: list this tenant's leads.
@@ -19,6 +20,9 @@ export const GET = withTenant(async (req, { tenantId }) => {
 
 // Public: a visitor submits an interest form. Tenant resolved by host.
 // Não usa withTenant porque o autor não tem sessão — tenant vem do host.
+// Endpoint público — protegido por rate limit (IP) + Turnstile, igual ao
+// /api/marketplace/lead. Sem o captcha, era a única porta pública aberta:
+// dava pra encher o /admin/leads da loja (e a caixa de e-mail do gestor).
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   const rl = await checkRateLimit("lead", ip);
@@ -29,12 +33,38 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Body inválido — JSON esperado." }, { status: 400 });
+  }
+
+  const captchaOk = await verifyTurnstile(
+    (body as { turnstile_token?: string }).turnstile_token,
+    ip,
+  );
+  if (!captchaOk) {
+    return NextResponse.json(
+      { error: "Verificação de segurança falhou. Recarregue a página e tente novamente." },
+      { status: 400 },
+    );
+  }
+
   const tenant = await getCurrentTenant();
   if (!tenant) {
     return NextResponse.json({ error: "Tenant não encontrado" }, { status: 404 });
   }
+
+  const parsed = publicLeadSchema.safeParse(body);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    const path = first.path.length ? first.path.join(".") : "body";
+    return NextResponse.json({ error: `${path}: ${first.message}` }, { status: 400 });
+  }
+  const input = parsed.data;
+
   try {
-    const input = await parseBody(req, publicLeadSchema);
     const lead = await createLead(tenant.id, {
       name: input.name,
       phone: input.phone,
