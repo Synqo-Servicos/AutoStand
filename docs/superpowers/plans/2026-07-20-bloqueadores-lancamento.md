@@ -607,3 +607,10 @@ Em vez do preview com credenciais de sandbox (bloqueado — creds do preview nã
 - ⚠️ **Não coberto ainda:** (a) **anti-duplo-débito** (Step 3) não foi exercido explicitamente — mecanismo (`findReconcilableSubscription` + idempotencyKey) está no mesmo caminho já provado, mas falta um reenvio deliberado do mesmo token; (b) **matriz de recusa forçada** `FUND`/`SECU`/`OTHE` + remount do Card Brick (Task 7) — os cartões de teste do MP só respondem em **sandbox**, então o diagnóstico de produção não força as recusas. Precisa do preview sandbox OU um cartão real que recuse (CVV/limite ruim) para o retry.
 
 **Conclusão:** o núcleo do Blocker #2 (cobrança correta ponta a ponta + webhook) está validado em produção. Resta a matriz de recusa (não-crítica para o go-live do happy path) e um teste explícito de idempotência.
+
+**2026-07-23 (fim do dia) — Task 6 reaplicada, Blocker #1 100%:**
+
+- ✅ **Secret `DATABASE_URL` do GitHub (Environment `Production`) corrigido pro Neon.** O `migrate.yml` voltou a rodar (`✅ Migrations aplicadas`, run verde) — antes apontava pro RDS deletado. Migrações destravadas em geral.
+- ✅ **Task 6 (`terms_accepted_at`) RE-APLICADA E DEPLOYADA** — PR #46 (merge `311364a`), revertendo o revert `e79f092`. Rollout na ordem segura: a migração 0004 (`ADD COLUMN terms_accepted_at timestamp` nullable) foi aplicada no Neon **rodando o `migrate.yml` na branch ANTES do merge**, então o deploy do código encontrou a coluna já existente. Smoke pós-deploy: `autoprime.autostand.com.br` → 200 (getTenantBySlug ok contra o schema novo), `/assinar` → 200, `/api/assinar` não regrediu. Blocker #1 (legal/LGPD) agora completo: aceite **exigido** (checkbox + enforcement) **e registrado** (timestamp por tenant).
+
+**Pendências remanescentes (nenhuma bloqueia o go-live):** rotação de credenciais (adiada pelo usuário), matriz de recusa forçada em sandbox + teste explícito de idempotência (opcionais), onboarding de custom domain no Turnstile (quando 1º tenant real usar), higiene de infra (restos ECS/CloudFront homolog, OAC no S3).
