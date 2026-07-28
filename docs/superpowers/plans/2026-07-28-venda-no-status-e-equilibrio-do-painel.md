@@ -670,8 +670,16 @@ export function RegistrarVendaModal({ vehicle, onClose, onSaved }: Props) {
   ];
 
   async function handleSubmit() {
-    setSaving(true);
     setError(null);
+    // O `required` do Input nunca dispara: não há <form> em volta e o botão é
+    // type="button". Sem esta guarda, campo vazio virava venda de R$ 0,00 —
+    // displayToCents("") devolve 0 e a API aceita 0 como valor válido.
+    const amount = displayToCents(amountStr);
+    if (amount <= 0) {
+      setError("Informe o valor da venda.");
+      return;
+    }
+    setSaving(true);
     try {
       const res = await fetch("/api/transactions", {
         method: "POST",
@@ -679,7 +687,7 @@ export function RegistrarVendaModal({ vehicle, onClose, onSaved }: Props) {
         body: JSON.stringify({
           vehicle_id:  vehicle.id,
           type:        "saida",
-          amount:      displayToCents(amountStr),
+          amount,
           date,
           buyer_name:  buyerName || null,
           buyer_phone: buyerPhone || null,
