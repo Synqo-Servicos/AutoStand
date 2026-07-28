@@ -10,11 +10,14 @@ import {
 } from "@/lib/constants";
 import { formatBRL, displayToCents, centsToDisplay } from "@/lib/money";
 import { PhotoUploader } from "./PhotoUploader";
+import { RegistrarVendaModal } from "./RegistrarVendaModal";
 import { Field, Input, Textarea, Select, Button, useConfirm, type SelectOption } from "@/components/ui";
 import type { VehicleWithPhotos } from "@/types/vehicle";
 
 interface Props {
   vehicle?: VehicleWithPhotos;
+  /** Já existe transação de saída pra este veículo — não pedir os dados de novo. */
+  hasSale?: boolean;
 }
 
 const brandOptions: SelectOption[] = [
@@ -28,7 +31,7 @@ const bodyTypeOptions: SelectOption[] = BODY_TYPES.map((b) => ({ value: b, label
 const conditionOptions: SelectOption[] = CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABELS[c] }));
 const statusOptions: SelectOption[] = VEHICLE_STATUS.map((s) => ({ value: s, label: STATUS_LABELS[s] }));
 
-export function VehicleForm({ vehicle }: Props) {
+export function VehicleForm({ vehicle, hasSale = false }: Props) {
   const router = useRouter();
   const isEdit = !!vehicle;
   const currentYear = new Date().getFullYear();
@@ -63,6 +66,10 @@ export function VehicleForm({ vehicle }: Props) {
   const [salePriceDisp, setSalePriceDisp] = useState(vehicle ? centsToDisplay(vehicle.sale_price) : "");
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState<string | null>(null);
+
+  // Status com que a tela abriu — é o que diz se a venda aconteceu *agora*.
+  const [initialStatus] = useState(vehicle?.status ?? "disponivel");
+  const [saleModal, setSaleModal] = useState(false);
 
   function set<K extends keyof typeof form>(key: K, value: typeof form[K]) {
     setForm(f => ({ ...f, [key]: value }));
@@ -101,9 +108,15 @@ export function VehicleForm({ vehicle }: Props) {
 
       if (!isEdit) {
         router.push(`/admin/veiculos/${data.id}`);
-      } else {
-        router.refresh();
+        return;
       }
+      // Virou vendido agora e ainda não há venda lançada → pedir os dados
+      // na hora, senão a venda some do financeiro.
+      if (form.status === "vendido" && initialStatus !== "vendido" && !hasSale) {
+        setSaleModal(true);
+        return;
+      }
+      router.refresh();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -123,6 +136,21 @@ export function VehicleForm({ vehicle }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
       {dialog}
+
+      {isEdit && vehicle && saleModal && (
+        <RegistrarVendaModal
+          vehicle={{
+            id: vehicle.id,
+            brand: vehicle.brand,
+            model: vehicle.model,
+            year: vehicle.year,
+            // form.sale_price, não vehicle.sale_price: pega o valor recém-salvo.
+            sale_price: form.sale_price,
+          }}
+          onClose={() => { setSaleModal(false); router.refresh(); }}
+          onSaved={() => { setSaleModal(false); router.refresh(); }}
+        />
+      )}
 
       {/* Fotos — só no modo edição */}
       {isEdit && (
