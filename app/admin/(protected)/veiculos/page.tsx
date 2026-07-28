@@ -13,7 +13,7 @@ export default async function VeiculosPage() {
   const vehicles = await listVehicles(tenant.id);
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl">
+    <div className="p-4 sm:p-8 w-full">
       <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
         <div className="min-w-0">
           <h1 className="font-display text-h2 font-semibold text-ink">Veículos</h1>

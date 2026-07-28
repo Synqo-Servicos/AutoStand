@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Vehicle } from "@/types/vehicle";
 import type { Seller } from "@/types/seller";
 import { centsToDisplay, displayToCents } from "@/lib/money";
+import { computeCommission } from "@/lib/commission";
 import { Button, Drawer, Field, Input, Select, Textarea, type SelectOption } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
@@ -44,10 +45,7 @@ export function TransactionSlideOver({ vehicles, onClose, onSaved }: Props) {
 
   const previewCommission = (() => {
     if (type !== "saida" || !selectedSeller || !amountStr) return null;
-    const cents = displayToCents(amountStr);
-    const pctPart = selectedSeller.commission_pct ? Math.round((cents * selectedSeller.commission_pct) / 10000) : 0;
-    const fixedPart = selectedSeller.commission_fixed_cents ?? 0;
-    return pctPart + fixedPart;
+    return computeCommission(displayToCents(amountStr), selectedSeller);
   })();
 
   async function handleSubmit() {

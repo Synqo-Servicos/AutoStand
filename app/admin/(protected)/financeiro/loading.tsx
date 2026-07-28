@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui";
 
 export default function FinanceiroLoading() {
   return (
-    <div className="p-4 sm:p-8 max-w-6xl space-y-5 sm:space-y-6">
+    <div className="p-4 sm:p-8 w-full space-y-5 sm:space-y-6">
       <header className="space-y-3 sm:flex sm:items-end sm:justify-between sm:gap-4 sm:space-y-0">
         <div className="space-y-2">
           <Skeleton variant="text" className="h-7 w-32" />

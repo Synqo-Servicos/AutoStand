@@ -46,3 +46,18 @@ export interface VehicleWithPhotos extends Vehicle {
 }
 
 export type VehicleInput = Omit<Vehicle, "id" | "created_at" | "updated_at">;
+
+/**
+ * Veículo marcado como vendido que ainda não tem transação de saída —
+ * a venda existe no estoque, mas não no financeiro. Derivado por query,
+ * não é estado gravado.
+ */
+export interface PendingSale {
+  id: number;
+  brand: string;
+  model: string;
+  year: number;
+  sale_price: number;
+  primary_photo_url: string | null;
+  updated_at: string;
+}

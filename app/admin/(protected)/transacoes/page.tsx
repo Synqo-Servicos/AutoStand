@@ -8,6 +8,8 @@ import { formatBRL } from "@/lib/money";
 import type { TransactionWithVehicle } from "@/types/transaction";
 import type { Vehicle } from "@/types/vehicle";
 import type { MonthlyData } from "@/types/dashboard";
+import { RegistrarVendaModal } from "@/components/admin/RegistrarVendaModal";
+import type { PendingSale } from "@/types/vehicle";
 
 const TYPE_LABEL: Record<string, string> = {
   entrada: "Entrada",
@@ -32,24 +34,28 @@ export default function TransacoesPage() {
   const [monthly,      setMonthly]      = useState<MonthlyData[]>([]);
   const [slideOver,    setSlideOver]    = useState(false);
   const [loading,      setLoading]      = useState(true);
+  const [pendentes,  setPendentes]  = useState<PendingSale[]>([]);
+  const [registrar,  setRegistrar]  = useState<PendingSale | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [tx, veh, dash] = await Promise.all([
+    const [tx, veh, dash, pend] = await Promise.all([
       fetch("/api/transactions").then(r => r.json()),
       fetch("/api/vehicles").then(r => r.json()),
       fetch("/api/dashboard").then(r => r.json()),
+      fetch("/api/transactions/pendentes").then(r => r.json()),
     ]);
     setTransactions(tx);
     setVehicles(veh);
     setMonthly(dash.monthly ?? []);
+    setPendentes(pend);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl">
+    <div className="p-4 sm:p-8 w-full">
       <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
         <div className="min-w-0">
           <h1 className="font-display text-h2 font-semibold text-ink">Transações</h1>
@@ -64,6 +70,37 @@ export default function TransacoesPage() {
           <span className="sm:hidden">Nova</span>
         </button>
       </div>
+
+      {pendentes.length > 0 && (
+        <section className="mb-6 rounded-xl border border-warning/40 bg-warning/10 overflow-hidden">
+          <div className="px-5 sm:px-6 py-4 border-b border-warning/30">
+            <h2 className="font-display text-h3 font-semibold text-ink">
+              Vendas a registrar ({pendentes.length})
+            </h2>
+            <p className="text-body-s text-n600 mt-0.5">
+              Marcados como vendidos, mas ainda sem lançamento no financeiro.
+            </p>
+          </div>
+          <ul className="divide-y divide-warning/30 max-h-80 overflow-y-auto">
+            {pendentes.map(p => (
+              <li key={p.id} className="flex items-center justify-between gap-3 px-5 sm:px-6 py-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-ink truncate">
+                    {p.brand} {p.model} {p.year}
+                  </p>
+                  <p className="text-xs text-n600">Anunciado por {formatBRL(p.sale_price)}</p>
+                </div>
+                <button
+                  onClick={() => setRegistrar(p)}
+                  className="shrink-0 inline-flex items-center gap-1.5 bg-ink text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-n800 transition-colors cursor-pointer"
+                >
+                  Registrar venda
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Monthly breakdown */}
       <div className="bg-white rounded-xl border border-n100 overflow-hidden mb-6">
@@ -155,6 +192,14 @@ export default function TransacoesPage() {
           vehicles={vehicles}
           onClose={() => setSlideOver(false)}
           onSaved={load}
+        />
+      )}
+
+      {registrar && (
+        <RegistrarVendaModal
+          vehicle={registrar}
+          onClose={() => { setRegistrar(null); load(); }}
+          onSaved={() => { setRegistrar(null); load(); }}
         />
       )}
     </div>

@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
-import { getDirectExpensesByVehicle, getDocumentsByVehicle, getVehicleWithPhotos } from "@/lib/db";
+import {
+  getDirectExpensesByVehicle, getDocumentsByVehicle, getVehicleWithPhotos, hasSaleTransaction,
+} from "@/lib/db";
 import { getAdminTenant } from "@/lib/tenant";
 import { capabilitiesFor } from "@/lib/plans";
 import { VehicleForm } from "@/components/admin/VehicleForm";
@@ -15,10 +17,11 @@ export default async function EditVeiculoPage({ params }: Params) {
   const { id } = await params;
   const tenant = await getAdminTenant();
   const vehicleId = Number(id);
-  const [vehicle, documents, expenses] = await Promise.all([
+  const [vehicle, documents, expenses, hasSale] = await Promise.all([
     getVehicleWithPhotos(tenant.id, vehicleId),
     getDocumentsByVehicle(tenant.id, vehicleId),
     getDirectExpensesByVehicle(tenant.id, vehicleId),
+    hasSaleTransaction(tenant.id, vehicleId),
   ]);
   if (!vehicle) notFound();
 
@@ -35,7 +38,7 @@ export default async function EditVeiculoPage({ params }: Params) {
           hasPhoto={!!vehicle.primary_photo_url}
         />
       </div>
-      <VehicleForm vehicle={vehicle} />
+      <VehicleForm vehicle={vehicle} hasSale={hasSale} />
       <DirectExpensesCard
         vehicleId={vehicle.id}
         costPrice={vehicle.cost_price}

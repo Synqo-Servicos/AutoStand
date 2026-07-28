@@ -2,7 +2,6 @@ import { Check, Lock } from "lucide-react";
 import { getAdminTenant } from "@/lib/tenant";
 import { getPlan } from "@/lib/plans";
 import type { PlanCapabilities } from "@/lib/plans";
-import { formatBRL } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +36,6 @@ export default async function AssinaturaPage() {
           <div>
             <p className="text-eyebrow font-semibold uppercase text-n600">Plano atual</p>
             <p className="mt-1 font-display text-h3 font-semibold text-ink">{plan.name}</p>
-            <p className="text-body-s text-n600">{formatBRL(plan.priceMonthly)}/mês</p>
           </div>
           <span
             className={`rounded-full px-3 py-1 text-body-s font-medium ring-1 ${

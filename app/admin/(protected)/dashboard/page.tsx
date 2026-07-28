@@ -23,7 +23,7 @@ export default async function DashboardPage() {
   const mes = `${MONTH_NAMES[now.getMonth()]}/${String(now.getFullYear()).slice(2)}`;
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl">
+    <div className="p-4 sm:p-8 w-full">
       <div className="mb-6 sm:mb-8">
         <h1 className="font-display text-h2 font-semibold text-ink">Dashboard</h1>
         <p className="text-sm text-n600 mt-1">Visão geral do mês de {mes}</p>

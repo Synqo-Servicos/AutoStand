@@ -3,7 +3,7 @@ import { sellers, transactions, vehicles } from "@/lib/schema";
 import type { TransactionRow } from "@/lib/schema";
 import type { Transaction, TransactionInput, TransactionWithVehicle } from "@/types/transaction";
 import { db, dbAll, dbGet } from "./client";
-import { computeCommission } from "./sellers";
+import { computeCommission } from "@/lib/commission";
 
 // — Filters / listing ———————————————————————————————————————————
 
@@ -84,6 +84,25 @@ export async function getTransaction(
     .where(and(eq(transactions.tenant_id, tenantId), eq(transactions.id, id)))
     .limit(1);
   return row ?? null;
+}
+
+/** Já existe venda lançada para este veículo? Usado pra não pedir os dados duas vezes. */
+export async function hasSaleTransaction(
+  tenantId: number,
+  vehicleId: number,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.tenant_id, tenantId),
+        eq(transactions.vehicle_id, vehicleId),
+        eq(transactions.type, "saida"),
+      ),
+    )
+    .limit(1);
+  return !!row;
 }
 
 export async function createTransaction(
