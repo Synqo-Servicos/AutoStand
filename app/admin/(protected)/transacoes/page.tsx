@@ -81,7 +81,7 @@ export default function TransacoesPage() {
               Marcados como vendidos, mas ainda sem lançamento no financeiro.
             </p>
           </div>
-          <ul className="divide-y divide-warning/30">
+          <ul className="divide-y divide-warning/30 max-h-80 overflow-y-auto">
             {pendentes.map(p => (
               <li key={p.id} className="flex items-center justify-between gap-3 px-5 sm:px-6 py-3">
                 <div className="min-w-0">
@@ -198,7 +198,7 @@ export default function TransacoesPage() {
       {registrar && (
         <RegistrarVendaModal
           vehicle={registrar}
-          onClose={() => setRegistrar(null)}
+          onClose={() => { setRegistrar(null); load(); }}
           onSaved={() => { setRegistrar(null); load(); }}
         />
       )}

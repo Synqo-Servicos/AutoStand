@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import type { Seller } from "@/types/seller";
 import { computeCommission } from "@/lib/commission";
 import { centsToDisplay, displayToCents } from "@/lib/money";
@@ -23,12 +24,14 @@ interface Props {
   onClose: () => void;
   /** Registrou com sucesso. */
   onSaved: () => void;
+  /** Já existe uma venda (saída) lançada pra este veículo — avisa, mas não bloqueia. */
+  hasExistingSale?: boolean;
 }
 
 // Radix Select não aceita "" como valor de Item — sentinela pra "sem vendedor".
 const NONE_SELLER = "__none__";
 
-export function RegistrarVendaModal({ vehicle, onClose, onSaved }: Props) {
+export function RegistrarVendaModal({ vehicle, onClose, onSaved, hasExistingSale = false }: Props) {
   const today = new Date().toISOString().slice(0, 10);
   const [amountStr,  setAmountStr]  = useState(centsToDisplay(vehicle.sale_price));
   const [date,       setDate]       = useState(today);
@@ -92,6 +95,11 @@ export function RegistrarVendaModal({ vehicle, onClose, onSaved }: Props) {
   }
 
   function handleDismiss() {
+    // Salvamento em andamento: um dismiss aqui não pode fingir que nada
+    // aconteceu — o POST pode completar depois do unmount e registrar a
+    // venda mesmo assim, deixando o veículo pronto pra um segundo registro
+    // (duplicata que ninguém consegue apagar depois).
+    if (saving) return;
     toast("Venda pendente. Você pode registrar depois em Transações.");
     onClose();
   }
@@ -107,7 +115,7 @@ export function RegistrarVendaModal({ vehicle, onClose, onSaved }: Props) {
       description={`${label} foi marcado como vendido. Confirme os dados para lançar no financeiro.`}
       footer={
         <>
-          <Button type="button" variant="ghost" onClick={handleDismiss}>
+          <Button type="button" variant="ghost" onClick={handleDismiss} disabled={saving}>
             Agora não
           </Button>
           <Button type="button" onClick={handleSubmit} loading={saving}>
@@ -117,6 +125,14 @@ export function RegistrarVendaModal({ vehicle, onClose, onSaved }: Props) {
       }
     >
       <div className="space-y-5">
+        {hasExistingSale && (
+          <div className="flex items-center gap-3 rounded-lg border border-warning/40 bg-warning/15 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-ink" />
+            <p className="text-body-s text-ink">
+              Já existe uma venda lançada para este veículo — confirme que esta é uma nova venda.
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field
             label="Valor da venda (R$)"

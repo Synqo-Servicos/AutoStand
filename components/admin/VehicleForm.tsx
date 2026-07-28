@@ -67,8 +67,9 @@ export function VehicleForm({ vehicle, hasSale = false }: Props) {
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
-  // Status com que a tela abriu — é o que diz se a venda aconteceu *agora*.
-  const [initialStatus] = useState(vehicle?.status ?? "disponivel");
+  // Último status salvo com sucesso — avança a cada save (não só no mount),
+  // pra distinguir "acabou de virar vendido" de "continua vendido".
+  const [trackedStatus, setTrackedStatus] = useState(vehicle?.status ?? "disponivel");
   const [saleModal, setSaleModal] = useState(false);
 
   function set<K extends keyof typeof form>(key: K, value: typeof form[K]) {
@@ -110,9 +111,12 @@ export function VehicleForm({ vehicle, hasSale = false }: Props) {
         router.push(`/admin/veiculos/${data.id}`);
         return;
       }
-      // Virou vendido agora e ainda não há venda lançada → pedir os dados
-      // na hora, senão a venda some do financeiro.
-      if (form.status === "vendido" && initialStatus !== "vendido" && !hasSale) {
+      // Virou vendido *nesta* transição (não apenas "está vendido") → pedir
+      // os dados na hora, senão a venda some do financeiro. Precisa capturar
+      // antes de avançar trackedStatus, senão a comparação vira sempre igual.
+      const enteredVendido = form.status === "vendido" && trackedStatus !== "vendido";
+      setTrackedStatus(form.status);
+      if (enteredVendido) {
         setSaleModal(true);
         return;
       }
@@ -147,6 +151,7 @@ export function VehicleForm({ vehicle, hasSale = false }: Props) {
             // form.sale_price, não vehicle.sale_price: pega o valor recém-salvo.
             sale_price: form.sale_price,
           }}
+          hasExistingSale={hasSale}
           onClose={() => { setSaleModal(false); router.refresh(); }}
           onSaved={() => { setSaleModal(false); router.refresh(); }}
         />
