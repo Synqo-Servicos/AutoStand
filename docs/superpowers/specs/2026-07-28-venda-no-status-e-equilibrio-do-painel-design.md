@@ -95,11 +95,12 @@ export interface PendingSale {
 ```ts
 interface Props {
   vehicle: { id: number; brand: string; model: string; year: number; sale_price: number };
-  open: boolean;
-  onClose: () => void;   // fechar sem registrar
+  onClose: () => void;   // fechou sem registrar
   onSaved: () => void;   // registrou com sucesso
 }
 ```
+
+Montado sob demanda pelos dois callers (`{aberto && <RegistrarVendaModal … />}`), no mesmo padrão do `TransactionSlideOver` — por isso não há prop `open`. Montar na hora garante que o valor pré-preenchido seja o preço de venda atual, e não um capturado quando a tela abriu.
 
 - `Modal` do kit, `size="xl"`, título **"Registrar venda"**, descrição `"{Marca} {Modelo} {Ano} foi marcado como vendido. Confirme os dados para lançar no financeiro."`
 - Campos, iguais aos de hoje: **valor** (pré-preenchido com `sale_price`, mesma máscara `displayToCents`/`centsToDisplay` do slide-over), **data** (padrão: hoje), **nome do comprador**, **telefone do comprador**, **vendedor** (lista de `/api/sellers` filtrada por `status === "ativo"`, com prévia da comissão via `computeCommission`), **observações**.
