@@ -58,8 +58,13 @@ export function RegistrarVendaModal({ vehicle, onClose, onSaved }: Props) {
   ];
 
   async function handleSubmit() {
-    setSaving(true);
     setError(null);
+    const amount = displayToCents(amountStr);
+    if (amount <= 0) {
+      setError("Informe o valor da venda.");
+      return;
+    }
+    setSaving(true);
     try {
       const res = await fetch("/api/transactions", {
         method: "POST",
@@ -67,7 +72,7 @@ export function RegistrarVendaModal({ vehicle, onClose, onSaved }: Props) {
         body: JSON.stringify({
           vehicle_id:  vehicle.id,
           type:        "saida",
-          amount:      displayToCents(amountStr),
+          amount,
           date,
           buyer_name:  buyerName || null,
           buyer_phone: buyerPhone || null,
