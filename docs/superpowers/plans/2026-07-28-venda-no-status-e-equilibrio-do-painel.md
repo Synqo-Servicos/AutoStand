@@ -135,8 +135,8 @@ Expected: exatamente 10 arquivos (sidebar + layout + 8 páginas), nenhuma linha 
 
 - [ ] **Step 5: Lint e types**
 
-Run: `npm run lint && npx tsc --noEmit`
-Expected: os dois sem erro.
+Run: `npx tsc --noEmit`; depois `npm run lint 2>&1 | tail -3`
+Expected: `tsc` sem nenhuma saída. O `npm run lint` **já falha na base deste repo** — 13 problemas (10 erros `react-hooks/set-state-in-effect` + 3 warnings), todos em arquivos pré-existentes. O gate do lint é *nenhum problema novo*: o total tem que continuar 13, e nenhum pode apontar para uma linha que você escreveu. Não conserte os erros pré-existentes — estão fora do escopo desta task.
 
 - [ ] **Step 6: Verificar no navegador**
 
@@ -200,8 +200,8 @@ Expected: nenhuma saída. (Os usos restantes ficam em `components/marketing/*`, 
 
 - [ ] **Step 4: Lint e types**
 
-Run: `npm run lint && npx tsc --noEmit`
-Expected: os dois sem erro. Se `tsc` reclamar de `formatBRL` não usado, o Step 2 não foi feito.
+Run: `npx tsc --noEmit`; depois `npm run lint 2>&1 | tail -3`
+Expected: `tsc` sem nenhuma saída. O `npm run lint` **já falha na base deste repo** — 13 problemas (10 erros `react-hooks/set-state-in-effect` + 3 warnings), todos em arquivos pré-existentes. O gate do lint é *nenhum problema novo*: o total tem que continuar 13, e nenhum pode apontar para uma linha que você escreveu. Não conserte os erros pré-existentes — estão fora do escopo desta task. Se `tsc` reclamar de `formatBRL` não usado, o Step 2 não foi feito.
 
 - [ ] **Step 5: Verificar no navegador**
 
@@ -349,8 +349,8 @@ E substituir o bloco das linhas 45-51 por:
 
 - [ ] **Step 8: Lint, types e suíte**
 
-Run: `npm run lint && npx tsc --noEmit && npm test`
-Expected: tudo verde.
+Run: `npx tsc --noEmit`; depois `npm run lint 2>&1 | tail -3`; depois `npm test`
+Expected: `tsc` sem nenhuma saída. `npm test` todo verde. O `npm run lint` **já falha na base deste repo** — 13 problemas (10 erros `react-hooks/set-state-in-effect` + 3 warnings), todos em arquivos pré-existentes. O gate do lint é *nenhum problema novo*: o total tem que continuar 13, e nenhum pode apontar para uma linha que você escreveu. Não conserte os erros pré-existentes — estão fora do escopo desta task.
 
 - [ ] **Step 9: Commit**
 
@@ -565,8 +565,8 @@ export const GET = withTenant(async (_req, { tenantId }) => {
 Run: `npx vitest run tests/api/transactions-pendentes.test.ts`
 Expected: PASS, 2 testes.
 
-Run: `npm run lint && npx tsc --noEmit && npm test`
-Expected: tudo verde.
+Run: `npx tsc --noEmit`; depois `npm run lint 2>&1 | tail -3`; depois `npm test`
+Expected: `tsc` sem nenhuma saída. `npm test` todo verde. O `npm run lint` **já falha na base deste repo** — 13 problemas (10 erros `react-hooks/set-state-in-effect` + 3 warnings), todos em arquivos pré-existentes. O gate do lint é *nenhum problema novo*: o total tem que continuar 13, e nenhum pode apontar para uma linha que você escreveu. Não conserte os erros pré-existentes — estão fora do escopo desta task.
 
 - [ ] **Step 8: Verificar a query com dado real**
 
@@ -821,8 +821,8 @@ export function RegistrarVendaModal({ vehicle, onClose, onSaved }: Props) {
 
 - [ ] **Step 2: Lint e types**
 
-Run: `npm run lint && npx tsc --noEmit`
-Expected: os dois sem erro. O componente ainda não tem caller — é esperado; as Tasks 6 e 7 o ligam.
+Run: `npx tsc --noEmit`; depois `npm run lint 2>&1 | tail -3`
+Expected: `tsc` sem nenhuma saída. O `npm run lint` **já falha na base deste repo** — 13 problemas (10 erros `react-hooks/set-state-in-effect` + 3 warnings), todos em arquivos pré-existentes. O gate do lint é *nenhum problema novo*: o total tem que continuar 13, e nenhum pode apontar para uma linha que você escreveu. Não conserte os erros pré-existentes — estão fora do escopo desta task. O componente ainda não tem caller — é esperado; as Tasks 6 e 7 o ligam.
 
 - [ ] **Step 3: Commit**
 
@@ -949,8 +949,8 @@ Montar sob demanda (`&& saleModal`) é o que garante o valor pré-preenchido cor
 
 - [ ] **Step 5: Lint, types e suíte**
 
-Run: `npm run lint && npx tsc --noEmit && npm test`
-Expected: tudo verde.
+Run: `npx tsc --noEmit`; depois `npm run lint 2>&1 | tail -3`; depois `npm test`
+Expected: `tsc` sem nenhuma saída. `npm test` todo verde. O `npm run lint` **já falha na base deste repo** — 13 problemas (10 erros `react-hooks/set-state-in-effect` + 3 warnings), todos em arquivos pré-existentes. O gate do lint é *nenhum problema novo*: o total tem que continuar 13, e nenhum pode apontar para uma linha que você escreveu. Não conserte os erros pré-existentes — estão fora do escopo desta task.
 
 - [ ] **Step 6: Verificar o fluxo feliz no navegador**
 
@@ -1084,8 +1084,8 @@ No fim do componente, junto do `{slideOver && ...}` existente:
 
 - [ ] **Step 5: Lint, types e suíte**
 
-Run: `npm run lint && npx tsc --noEmit && npm test`
-Expected: tudo verde.
+Run: `npx tsc --noEmit`; depois `npm run lint 2>&1 | tail -3`; depois `npm test`
+Expected: `tsc` sem nenhuma saída. `npm test` todo verde. O `npm run lint` **já falha na base deste repo** — 13 problemas (10 erros `react-hooks/set-state-in-effect` + 3 warnings), todos em arquivos pré-existentes. O gate do lint é *nenhum problema novo*: o total tem que continuar 13, e nenhum pode apontar para uma linha que você escreveu. Não conserte os erros pré-existentes — estão fora do escopo desta task.
 
 - [ ] **Step 6: Verificar o ciclo completo**
 
@@ -1114,8 +1114,8 @@ git commit -m "feat(admin): faixa de vendas a registrar na tela de transações"
 
 - [ ] **Suíte completa**
 
-Run: `npm run lint && npx tsc --noEmit && npm test`
-Expected: tudo verde.
+Run: `npx tsc --noEmit`; depois `npm run lint 2>&1 | tail -3`; depois `npm test`
+Expected: `tsc` sem nenhuma saída. `npm test` todo verde. O `npm run lint` **já falha na base deste repo** — 13 problemas (10 erros `react-hooks/set-state-in-effect` + 3 warnings), todos em arquivos pré-existentes. O gate do lint é *nenhum problema novo*: o total tem que continuar 13, e nenhum pode apontar para uma linha que você escreveu. Não conserte os erros pré-existentes — estão fora do escopo desta task.
 
 - [ ] **Passada de aceitação no navegador**, com a loja de teste:
 
