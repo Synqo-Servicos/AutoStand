@@ -31,7 +31,11 @@ Duas frentes menores acompanham:
 3. Confirmando, é criada a transação `saida` — que já dispara a comissão automática do vendedor e reafirma o status `vendido` (lógica existente, sem alteração).
 4. Fechando sem registrar, nada trava: o veículo fica vendido e entra na faixa **"Vendas a registrar"** no topo de *Transações*, com botão que reabre o mesmo modal.
 
-O modal **só abre se o veículo ainda não tiver transação `saida`**. Quem lança pelo botão "Nova transação" continua com o fluxo atual e nunca vê o pop-up.
+O modal abre **em toda virada genuína para `vendido`** — ou seja, quando o status era outro no último salvamento e passou a ser `vendido` agora. Quem lança pelo botão "Nova transação" continua com o fluxo atual e nunca vê o pop-up.
+
+Quando o veículo **já tem** uma venda lançada, o modal abre mesmo assim, com o aviso *"Já existe uma venda lançada para este veículo — confirme que esta é uma nova venda."* Não bloqueia o envio: é o caso da revenda. Um carro pode ser vendido, ter o status revertido para disponível (correção, ou recompra via `entrada`, que reverte o status automaticamente) e ser vendido de verdade meses depois — se a existência de uma venda antiga travasse o pop-up, essa segunda venda nunca seria registrada e também não entraria na fila de pendências, porque a consulta derivada a excluiria. Era exatamente o buraco de receita que esta frente existe para fechar.
+
+O controle da "virada" é um estado que **avança a cada salvamento bem-sucedido**, não o status capturado na montagem do formulário. Capturado só na montagem, ele sobreviveria ao `router.refresh()` e faria o modal reabrir a cada salvamento seguinte do mesmo veículo — inclusive um salvamento que só corrige a descrição.
 
 ### Fila de pendências: derivada, não persistida
 
@@ -106,6 +110,8 @@ Montado sob demanda pelos dois callers (`{aberto && <RegistrarVendaModal … />}
 - Campos, iguais aos de hoje: **valor** (pré-preenchido com `sale_price`, mesma máscara `displayToCents`/`centsToDisplay` do slide-over), **data** (padrão: hoje), **nome do comprador**, **telefone do comprador**, **vendedor** (lista de `/api/sellers` filtrada por `status === "ativo"`, com prévia da comissão via `computeCommission`), **observações**.
 - Submit: `POST /api/transactions` com `type: "saida"` e `vehicle_id` do veículo. Nenhuma mudança de API ou de validação — `transactionInputSchema` já cobre esse payload.
 - Rodapé: **"Agora não"** (ghost) e **"Registrar venda"** (primary, com `loading`).
+- **Valor obrigatório:** valor vazio ou zero mostra *"Informe o valor da venda."* e não chama a API. O `required` do campo nunca dispararia sozinho — não há `<form>` em volta e o botão é `type="button"` —, e `displayToCents("")` devolve 0, que a API aceita como válido. Sem essa guarda, uma venda real virava lançamento de R$ 0,00.
+- **Nenhuma via de fechamento funciona enquanto o salvamento está em voo** — nem "Agora não", nem Esc, nem clique fora, nem o X. Fechar no meio do request não cancelaria a requisição: a venda seria gravada enquanto a tela a trataria como pendente, e o registro seguinte pela faixa criaria uma **segunda** transação de saída. Nenhuma tela do painel apaga uma transação de saída, então essa duplicata só sairia com acesso direto ao banco — receita, custo e comissão dobrados no financeiro.
 - Ao fechar sem registrar: `toast` informativo — *"Venda pendente. Você pode registrar depois em Transações."* (`toast` já é exportado por `components/ui`).
 - Erro de API: mesma faixa vermelha usada no slide-over.
 
@@ -123,6 +129,8 @@ Em `transacoes/page.tsx`, acima de "Vendas por mês", renderizada apenas quando 
 
 - Título **"Vendas a registrar (N)"**, subtítulo *"Marcados como vendidos, mas ainda sem lançamento no financeiro."*
 - Uma linha por veículo: `{Marca} {Modelo} {Ano}` + preço anunciado + botão **"Registrar venda"**.
+- A lista rola dentro do próprio bloco, mostrando cerca de cinco linhas. Lojas que já vinham marcando "Vendido" sem lançar a venda chegam com o passivo inteiro aqui — sem teto, uma loja com 40 vendas antigas empurraria as transações para fora da primeira tela. A contagem total continua no título, então nada fica escondido.
+- Fechar o modal a partir da faixa recarrega os dados da página: sem isso a linha some do banco mas continua na tela, e o clique seguinte registraria a venda de novo.
 - Visual de atenção coerente com o `SubscriptionBanner`: `bg-warning/10`, `border-warning/40`, texto `text-ink`.
 - Salvou → `load()` recarrega tudo; a pendência some da lista sozinha.
 - O `load()` da página passa a incluir `fetch("/api/transactions/pendentes")` no `Promise.all` existente.

@@ -1137,3 +1137,27 @@ Expected: `tsc` sem nenhuma saída. `npm test` todo verde. O `npm run lint` **j�
 | `/admin/assinatura` | Nome do plano e status, sem preço |
 | Painel em 1920px | Folga simétrica, tabelas mais largas, sidebar proporcional |
 | Painel em 1440px e no mobile | Igual a antes |
+
+---
+
+## Ajustes pós-review (commit `e954e00`)
+
+O review final da branch levantou quatro pontos Important. O parceiro humano decidiu cada um; três viraram
+código, um virou "manter como está". Os blocos de código das Tasks 5-7 acima refletem o que foi **executado
+naquele momento** — estes ajustes vieram depois:
+
+1. **Trava de fechamento durante o salvamento** (`RegistrarVendaModal`, `transacoes/page.tsx`). As quatro vias de
+   fechar o modal (botão, Esc, clique fora, X) passam por `handleDismiss`, que agora é no-op enquanto `saving`;
+   o "Agora não" fica desabilitado; e o `onClose` da faixa chama `load()`. Motivo: fechar no meio do request não
+   cancela a requisição — a venda era gravada, a tela tratava como pendente, e o registro seguinte criava uma
+   **segunda** transação de saída. Nenhuma tela do painel apaga uma `saida`, então a duplicata só sai por acesso
+   direto ao banco.
+2. **`hasSale` deixou de ser trava e virou aviso** (`VehicleForm`, `RegistrarVendaModal`). O modal abre em toda
+   virada genuína para `vendido`; quando já existe venda lançada, exibe *"Já existe uma venda lançada para este
+   veículo — confirme que esta é uma nova venda."*. O status de referência passou a ser um estado que **avança a
+   cada salvamento bem-sucedido** (`trackedStatus`), com o booleano da transição capturado antes do avanço —
+   capturá-lo só na montagem faria o modal reabrir a cada salvamento posterior do mesmo veículo.
+3. **Faixa de pendências limitada** a ~5 linhas com rolagem própria (`transacoes/page.tsx`). Lojas que já vinham
+   marcando "Vendido" sem lançar a venda chegam com o passivo inteiro.
+4. **Larguras de `leads` e `personalizar`** — as duas páginas não tinham teto e passaram a respeitar o canvas de
+   1280px. Decisão: **manter**, por consistência com o resto do painel. Entram na conferida visual a 1920px.
