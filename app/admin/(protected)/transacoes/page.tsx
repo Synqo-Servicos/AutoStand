@@ -49,7 +49,7 @@ export default function TransacoesPage() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl">
+    <div className="p-4 sm:p-8 w-full">
       <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
         <div className="min-w-0">
           <h1 className="font-display text-h2 font-semibold text-ink">Transações</h1>

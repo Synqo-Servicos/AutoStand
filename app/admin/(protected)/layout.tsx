@@ -39,8 +39,12 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
       <AdminSidebar tenantName={tenant.name} />
       <div className="flex-1 min-w-0 lg:overflow-auto">
         {tenant.status !== "active" && <SubscriptionBanner />}
-        {children}
-        <PlatformFooter />
+        {/* Canvas centralizado: sem isto, cada página fica colada à esquerda e
+            sobra meia tela em branco à direita em monitores de 1920px+. */}
+        <div className="mx-auto w-full max-w-7xl">
+          {children}
+          <PlatformFooter />
+        </div>
       </div>
     </div>
   );

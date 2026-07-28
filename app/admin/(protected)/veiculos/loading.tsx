@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui";
 
 export default function VeiculosLoading() {
   return (
-    <div className="p-4 sm:p-8 max-w-6xl">
+    <div className="p-4 sm:p-8 w-full">
       <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
         <div className="space-y-2">
           <Skeleton variant="text" className="h-7 w-36" />

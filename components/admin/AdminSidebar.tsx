@@ -103,7 +103,7 @@ export function AdminSidebar({ tenantName }: { tenantName: string }) {
 
       {/* Sidebar: drawer no mobile, sticky no desktop */}
       <aside
-        className={`fixed lg:sticky inset-y-0 left-0 z-50 lg:z-auto top-0 lg:top-0 w-60 shrink-0 h-screen bg-white border-r border-n100 flex flex-col transition-transform duration-200 ease-out ${
+        className={`fixed lg:sticky inset-y-0 left-0 z-50 lg:z-auto top-0 lg:top-0 w-60 lg:w-64 xl:w-72 shrink-0 h-screen bg-white border-r border-n100 flex flex-col transition-transform duration-200 ease-out ${
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
         aria-label="Menu de navegação"
