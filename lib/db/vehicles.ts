@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { vehicle_documents, vehicle_photos, vehicles } from "@/lib/schema";
+import { transactions, vehicle_documents, vehicle_photos, vehicles } from "@/lib/schema";
 import type { VehicleDocumentRow, VehiclePhotoRow, VehicleRow } from "@/lib/schema";
-import type { VehicleInput, VehicleWithPhotos } from "@/types/vehicle";
+import type { PendingSale, VehicleInput, VehicleWithPhotos } from "@/types/vehicle";
 import { db } from "./client";
 
 // — Vehicles (tenant-scoped) ———————————————————————————————————————
@@ -45,6 +45,38 @@ export async function listVehicles(
     .from(vehicles)
     .where(and(...conditions))
     .orderBy(desc(vehicles.created_at));
+}
+
+/**
+ * Vendas registradas no estoque mas não no financeiro: veículo com status
+ * 'vendido' e sem transação 'saida'. Lista derivada de propósito — sai
+ * sozinha quando a transação é criada ou quando o status volta atrás.
+ */
+export async function listPendingSales(tenantId: number): Promise<PendingSale[]> {
+  return db
+    .select({
+      id: vehicles.id,
+      brand: vehicles.brand,
+      model: vehicles.model,
+      year: vehicles.year,
+      sale_price: vehicles.sale_price,
+      primary_photo_url: vehicles.primary_photo_url,
+      updated_at: vehicles.updated_at,
+    })
+    .from(vehicles)
+    .where(
+      and(
+        eq(vehicles.tenant_id, tenantId),
+        eq(vehicles.status, "vendido"),
+        sql`NOT EXISTS (
+          SELECT 1 FROM ${transactions} t
+          WHERE t.tenant_id  = ${vehicles.tenant_id}
+            AND t.vehicle_id = ${vehicles.id}
+            AND t.type       = 'saida'
+        )`,
+      ),
+    )
+    .orderBy(desc(vehicles.updated_at));
 }
 
 export async function getVehicle(tenantId: number, id: number): Promise<VehicleRow | null> {

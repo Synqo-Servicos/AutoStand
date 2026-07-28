@@ -86,6 +86,25 @@ export async function getTransaction(
   return row ?? null;
 }
 
+/** Já existe venda lançada para este veículo? Usado pra não pedir os dados duas vezes. */
+export async function hasSaleTransaction(
+  tenantId: number,
+  vehicleId: number,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.tenant_id, tenantId),
+        eq(transactions.vehicle_id, vehicleId),
+        eq(transactions.type, "saida"),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
 export async function createTransaction(
   tenantId: number,
   input: TransactionInput,
