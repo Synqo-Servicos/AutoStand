@@ -3,7 +3,7 @@ import { sellers, transactions, vehicles } from "@/lib/schema";
 import type { TransactionRow } from "@/lib/schema";
 import type { Transaction, TransactionInput, TransactionWithVehicle } from "@/types/transaction";
 import { db, dbAll, dbGet } from "./client";
-import { computeCommission } from "./sellers";
+import { computeCommission } from "@/lib/commission";
 
 // — Filters / listing ———————————————————————————————————————————
 

@@ -56,18 +56,6 @@ export async function deleteSeller(tenantId: number, id: number): Promise<void> 
   await db.delete(sellers).where(and(eq(sellers.tenant_id, tenantId), eq(sellers.id, id)));
 }
 
-/**
- * Calcula comissão devida ao vendedor por uma venda.
- * `commission_pct` em centésimos de % (300 = 3%), `commission_fixed_cents`
- * em centavos. Resultado em centavos. Função pura — fácil de testar.
- */
-export function computeCommission(
-  saleAmountCents: number,
-  seller: Pick<Seller, "commission_pct" | "commission_fixed_cents">,
-): number {
-  const pctPart = seller.commission_pct
-    ? Math.round((saleAmountCents * seller.commission_pct) / 10000)
-    : 0;
-  const fixedPart = seller.commission_fixed_cents ?? 0;
-  return pctPart + fixedPart;
-}
+// A regra mora em lib/commission.ts (puro, importável pelo cliente).
+// Reexportado aqui para não quebrar quem importa de @/lib/db.
+export { computeCommission, type CommissionRule } from "@/lib/commission";
