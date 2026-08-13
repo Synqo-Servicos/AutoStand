@@ -144,6 +144,9 @@ export async function createTransaction(
         buyer_name: input.buyer_name,
         buyer_phone: input.buyer_phone,
         notes: input.notes,
+        payable_id: input.payable_id ?? null,
+        due_date: input.due_date ?? null,
+        payment_method: input.payment_method ?? null,
       })
       .returning();
 
