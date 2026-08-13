@@ -27,7 +27,7 @@ Suíte em **289 testes passando**, `npx tsc --noEmit` limpo. Nada em produção.
 | 10 | Formulários + modal de pagamento | ⏸️ não iniciada | — |
 | 11 | Banner + badge | ⏸️ não iniciada | — |
 
-**A Task 6 estava sendo despachada quando a execução foi interrompida — nenhum arquivo dela foi escrito.** Retomar do zero.
+**Correção (mesma data, ao retomar):** a Task 6 **tinha** trabalho parcial no working tree — a linha acima, escrita na pausa, estava errada. O agente interrompido alcançou escrever o kind do presign, o `case` da pasta, as funções de dados, o teste do presign (28 passando) e a rota de anexos, tudo verde no `tsc`. Faltava commit, testes da rota e relatório. Ver a seção "Defeito #6" abaixo — esse trabalho parcial corrigiu uma falha de segurança do plano.
 
 ## O que já funciona
 
@@ -63,6 +63,8 @@ Corrigidos no próprio plano — mas quem retomar precisa saber que **o plano fo
 4. **`s3Delete` recebe key, não URL** — o helper certo para apagar anexo é `deleteFromBlob(url)` de `@/lib/blob`. Chamar `s3Delete` com a URL apagaria nada, silenciosamente. Já corrigido no texto da Task 6. *(commit `8f3348f`)*
 
 5. **Modal de pagamento usava `toISOString().slice(0,10)`** para a data padrão — isso é UTC, e às 21h em Maceió mostraria amanhã. Trocado por `Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" })`. *(commit `8f3348f`)*
+
+6. **A rota de anexos do plano aceitava `url` do body** (`url: z.string().url()`) — falha **cross-tenant**. Um body com URL arbitrária gravaria o objeto S3 de outra loja como anexo desta conta, e o `DELETE`, que confia no que está no banco, apagaria esse arquivo alheio via `deleteFromBlob(row.url)`. O correto é aceitar `key`, validar com `assertKeyInFolder(key, uploadFolder("payable", tenantId))` e derivar a URL no servidor com `publicUrlForKey` — padrão que `app/api/vehicles/[id]/photos/route.ts` já usava. Encontrado pelo implementador da Task 6, não pelo plano nem pela revisão.
 
 ## Achados menores adiados (para a revisão final triar)
 

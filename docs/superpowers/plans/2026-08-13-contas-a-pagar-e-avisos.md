@@ -1614,9 +1614,22 @@ import { addPayableAttachment, deletePayableAttachment, getPayable } from "@/lib
 import { ApiError, parseBody, withTenant } from "@/lib/api";
 import { deleteFromBlob } from "@/lib/blob";
 
+/**
+ * O body traz `key`, NUNCA `url` — mesma convenção de
+ * `app/api/vehicles/[id]/photos/route.ts`. O cliente sobe direto pro S3 via
+ * /api/uploads/presign (kind "payable") e devolve só a key; o servidor deriva
+ * a URL pública com `publicUrlForKey`.
+ *
+ * Aceitar `url` do body seria falha cross-tenant: um body com URL arbitrária
+ * gravaria o objeto S3 de OUTRA loja como anexo desta conta — e o DELETE, que
+ * confia no que está no banco, apagaria esse arquivo alheio via
+ * `deleteFromBlob(row.url)`. `assertKeyInFolder` prende a key em
+ * `tenants/{tenantId}/payables`, então a URL nunca escapa do que este tenant
+ * de fato subiu.
+ */
 const attachmentSchema = z.object({
+  key: z.string().min(1),
   name: z.string().trim().min(1).max(160),
-  url: z.string().url(),
   size: z.number().int().positive().nullable().optional(),
   mime_type: z.string().max(100).nullable().optional(),
   transaction_id: z.number().int().positive().nullable().optional(),
