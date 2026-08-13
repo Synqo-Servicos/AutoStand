@@ -20,3 +20,4 @@ export * from "./dashboard";
 export * from "./partners";
 export * from "./about";
 export * from "./coupons";
+export * from "./payables";
