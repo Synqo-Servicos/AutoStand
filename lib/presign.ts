@@ -65,6 +65,8 @@ export function uploadFolder(
     case "logo":
     case "hero":
       return `tenants/${tenantId}/branding/${kind}`;
+    case "payable":
+      return `tenants/${tenantId}/payables`;
   }
 }
 

@@ -1,6 +1,9 @@
 import { and, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { db } from "./client";
-import { payables, transactions, type PayableRow } from "@/lib/schema";
+import {
+  payable_attachments, payables, transactions,
+  type PayableAttachmentRow, type PayableRow,
+} from "@/lib/schema";
 import {
   buildBills, defaultWindow,
   type Bill, type PaidRef, type PayableRule,
@@ -178,4 +181,43 @@ export async function hasPaymentFor(
 export async function countOverdue(tenantId: number, today: string): Promise<number> {
   const bills = await listBills(tenantId, today);
   return bills.filter((b) => b.status === "atrasado").length;
+}
+
+/** Boleto (transaction_id nulo) e comprovantes de uma conta, mais antigos primeiro. */
+export async function listPayableAttachments(
+  tenantId: number, payableId: number,
+): Promise<PayableAttachmentRow[]> {
+  return db.select().from(payable_attachments)
+    .where(and(
+      eq(payable_attachments.tenant_id, tenantId),
+      eq(payable_attachments.payable_id, payableId),
+    ))
+    .orderBy(payable_attachments.created_at);
+}
+
+export async function addPayableAttachment(
+  tenantId: number,
+  payableId: number,
+  input: {
+    name: string; url: string; size: number | null;
+    mime_type: string | null; transaction_id: number | null; uploaded_by: number | null;
+  },
+): Promise<PayableAttachmentRow> {
+  const [row] = await db.insert(payable_attachments)
+    .values({ tenant_id: tenantId, payable_id: payableId, ...input })
+    .returning();
+  return row;
+}
+
+/** Tenant-scoped: só apaga a linha se o anexo for deste tenant. */
+export async function deletePayableAttachment(
+  tenantId: number, attachmentId: number,
+): Promise<PayableAttachmentRow | null> {
+  const [row] = await db.delete(payable_attachments)
+    .where(and(
+      eq(payable_attachments.tenant_id, tenantId),
+      eq(payable_attachments.id, attachmentId),
+    ))
+    .returning();
+  return row ?? null;
 }
