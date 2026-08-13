@@ -13,6 +13,7 @@
 import { z } from "zod";
 import {
   CONDITIONS, FUELS, LEAD_INTERACTION_MANUAL_TYPES, LEAD_SOURCES, LEAD_STATUS,
+  MAX_INSTALLMENTS, PAYABLE_FREQUENCIES, PAYMENT_METHODS,
   TRANSACTION_TYPES, TRANSMISSIONS, TX_REQUIRES_VEHICLE, VEHICLE_STATUS,
 } from "@/lib/constants";
 import { DOC_MAX_BYTES, DOC_MIMES, PRESIGN_KINDS } from "@/lib/blob-constants";
@@ -94,6 +95,56 @@ export const transactionUpdateSchema = z.object({
   category: trimmed(80).nullable().optional(),
   buyer_name: trimmed(120).nullable().optional(),
   buyer_phone: trimmed(40).nullable().optional(),
+  notes: trimmed(2000).nullable().optional(),
+});
+
+// ---------- Contas a pagar ----------
+
+/**
+ * Objeto base SEM refinement. Existe separado porque `.partial()` do Zod 4
+ * lança "cannot be used on object schemas containing refinements" — e
+ * `.innerType()` não existe nesta versão. Derivar create e update daqui é
+ * a única forma de compartilhar os campos sem duplicá-los.
+ */
+const payableBaseSchema = z.object({
+  type: z.enum(["despesa_fixa", "despesa_var"]),
+  category: trimmed(80).nullable().optional(),
+  description: trimmed(120).nullable().optional(),
+  supplier: trimmed(120).nullable().optional(),
+  amount_cents: nonNegativeInt.nullable().optional(),
+  frequency: z.enum(PAYABLE_FREQUENCIES),
+  first_due_date: isoDate,
+  installments: z.number().int().min(1).max(MAX_INSTALLMENTS).nullable().optional(),
+  payment_method: z.enum(PAYMENT_METHODS).nullable().optional(),
+  notes: trimmed(2000).nullable().optional(),
+});
+
+/** 'unica' tem exatamente uma ocorrência — parcelamento não faz sentido. */
+function refineUnicaSemParcelas(
+  data: { frequency?: string; installments?: number | null },
+  ctx: z.RefinementCtx,
+) {
+  if (data.frequency === "unica" && data.installments && data.installments > 1) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["installments"],
+      message: "conta única não pode ser parcelada — use frequência mensal",
+    });
+  }
+}
+
+export const payableInputSchema = payableBaseSchema.superRefine(refineUnicaSemParcelas);
+
+export const payableUpdateSchema = payableBaseSchema
+  .partial()
+  .extend({ active: z.boolean().optional() })
+  .superRefine(refineUnicaSemParcelas);
+
+export const payablePaymentSchema = z.object({
+  due_date: isoDate,
+  amount: nonNegativeInt.refine((v) => v > 0, "valor deve ser maior que zero"),
+  date: isoDate,
+  payment_method: z.enum(PAYMENT_METHODS).nullable().optional(),
   notes: trimmed(2000).nullable().optional(),
 });
 
