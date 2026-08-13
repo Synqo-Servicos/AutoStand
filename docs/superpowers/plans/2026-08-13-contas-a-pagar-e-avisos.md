@@ -1032,7 +1032,13 @@ Em `lib/validation.ts`, após `transactionUpdateSchema`:
 ```ts
 // ---------- Contas a pagar ----------
 
-export const payableInputSchema = z.object({
+/**
+ * Objeto base SEM refinement. Existe separado porque `.partial()` do Zod 4
+ * lança "cannot be used on object schemas containing refinements" — e
+ * `.innerType()` não existe nesta versão. Derivar create e update daqui é
+ * a única forma de compartilhar os campos sem duplicá-los.
+ */
+const payableBaseSchema = z.object({
   type: z.enum(["despesa_fixa", "despesa_var"]),
   category: trimmed(80).nullable().optional(),
   description: trimmed(120).nullable().optional(),
@@ -1043,8 +1049,13 @@ export const payableInputSchema = z.object({
   installments: z.number().int().min(1).max(MAX_INSTALLMENTS).nullable().optional(),
   payment_method: z.enum(PAYMENT_METHODS).nullable().optional(),
   notes: trimmed(2000).nullable().optional(),
-}).superRefine((data, ctx) => {
-  // 'unica' tem exatamente uma ocorrência — parcelamento não faz sentido.
+});
+
+/** 'unica' tem exatamente uma ocorrência — parcelamento não faz sentido. */
+function refineUnicaSemParcelas(
+  data: { frequency?: string; installments?: number | null },
+  ctx: z.RefinementCtx,
+) {
   if (data.frequency === "unica" && data.installments && data.installments > 1) {
     ctx.addIssue({
       code: "custom",
@@ -1052,12 +1063,14 @@ export const payableInputSchema = z.object({
       message: "conta única não pode ser parcelada — use frequência mensal",
     });
   }
-});
+}
 
-export const payableUpdateSchema = payableInputSchema
-  .innerType()
+export const payableInputSchema = payableBaseSchema.superRefine(refineUnicaSemParcelas);
+
+export const payableUpdateSchema = payableBaseSchema
   .partial()
-  .extend({ active: z.boolean().optional() });
+  .extend({ active: z.boolean().optional() })
+  .superRefine(refineUnicaSemParcelas);
 
 export const payablePaymentSchema = z.object({
   due_date: isoDate,
