@@ -1319,16 +1319,21 @@ const createTransaction = vi.fn();
 
 vi.mock("@/lib/db", () => ({ getPayable, hasPaymentFor, createTransaction }));
 
-vi.mock("@/lib/api", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return {
-    ...actual,
-    withTenant:
-      (handler: (req: unknown, ctx: { tenantId: number; params: Record<string, string> }) => unknown) =>
-      (req: unknown, routeCtx: { params: Promise<Record<string, string>> }) =>
-        Promise.resolve(routeCtx.params).then((params) => handler(req, { tenantId: 7, params })),
-  };
-});
+// Mocka @/lib/auth e usa o `withTenant` REAL — padrão já estabelecido em
+// tests/api/uploads-presign.test.ts e tests/api/vehicle-photos-delete.test.ts.
+//
+// Duas razões, ambas verificadas empiricamente:
+//  1. `vi.importActual("@/lib/api")` quebra: a cadeia @/lib/api → @/lib/auth →
+//     next-auth importa "next/server" sem extensão, que o resolvedor ESM do
+//     Node usado pelo vitest não resolve.
+//  2. Um `withTenant` falso não teria o try/catch que converte ApiError em
+//     resposta HTTP — e é exatamente isso que os casos 400/404/409 abaixo
+//     precisam exercitar. Com o wrapper real, um `throw` errado na rota
+//     falha o teste de verdade.
+vi.mock("@/lib/auth", () => ({
+  auth: vi.fn(),
+  getApiTenantId: vi.fn().mockResolvedValue(7),
+}));
 
 const post = (body: unknown) => ({ json: async () => body, url: "http://x" }) as never;
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) }) as never;
