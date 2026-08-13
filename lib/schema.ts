@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { LayoutConfig } from "./layout";
 
 /**
@@ -242,12 +242,101 @@ export const transactions = pgTable("transactions", {
   buyer_name: text("buyer_name"),
   buyer_phone: text("buyer_phone"),
   notes: text("notes"),
+  /** Vencimento que esta transação quita. Null em despesa avulsa. */
+  payable_id: integer("payable_id").references(() => payables.id, { onDelete: "set null" }),
+  due_date: text("due_date"),
+  /** Forma de pagamento usada — herdada da payable, editável. */
+  payment_method: text("payment_method"),
   created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   // Relatório financeiro filtra por (tenant_id, date) num intervalo.
   byTenantDate: index("idx_tx_tenant_date").on(table.tenant_id, table.date),
   // Algumas consultas filtram por tipo (vendas, comissões, etc.).
   byTenantType: index("idx_tx_tenant_type").on(table.tenant_id, table.type),
+}));
+
+// --- Contas a pagar (payables) ---
+
+/**
+ * A REGRA de uma conta — não a ocorrência. "O aluguel de agosto" é
+ * derivado em lib/recurring.ts e nunca persistido, no mesmo idioma de
+ * listPendingSales: pagar cria a transação e a pendência sai sozinha.
+ *
+ * Nunca deletada — apenas `active = false`. Isso preserva o histórico
+ * financeiro e evita que um comprovante de pagamento real desapareça
+ * junto com a regra.
+ */
+export const payables = pgTable("payables", {
+  id: serial("id").primaryKey(),
+  tenant_id: integer("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  /** 'despesa_fixa' | 'despesa_var' — espelha transactions.type. */
+  type: text("type").notNull(),
+  /** Categoria de EXPENSE_CATEGORIES ou texto livre digitado pelo lojista. */
+  category: text("category"),
+  description: text("description"),
+  /** Beneficiário: "Imobiliária Costa", "Equatorial". */
+  supplier: text("supplier"),
+  /** Valor PREVISTO em centavos. O cobrado é digitado ao pagar. */
+  amount_cents: integer("amount_cents"),
+  /** 'unica' | 'mensal' | 'anual' */
+  frequency: text("frequency").notNull(),
+  /**
+   * Âncora da recorrência ('YYYY-MM-DD'). Substitui o trio
+   * due_day + due_month + start_date: além de economizar colunas, elimina
+   * o estado ambíguo de "due_day 10 com início dia 20" — a ocorrência
+   * daquele mês existe ou já venceu?
+   */
+  first_due_date: text("first_due_date").notNull(),
+  /** Total de parcelas; null = indefinido. Substitui end_date (diriam o mesmo). */
+  installments: integer("installments"),
+  /** 'boleto' | 'pix' | 'debito_automatico' | 'cartao' | 'transferencia' | 'dinheiro' */
+  payment_method: text("payment_method"),
+  active: boolean("active").notNull().default(true),
+  notes: text("notes"),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  byTenantActive: index("idx_payables_tenant_active").on(table.tenant_id, table.active),
+}));
+
+/** Boleto da conta (transaction_id nulo) ou comprovante do pagamento. */
+export const payable_attachments = pgTable("payable_attachments", {
+  id: serial("id").primaryKey(),
+  tenant_id: integer("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  payable_id: integer("payable_id")
+    .notNull()
+    .references(() => payables.id, { onDelete: "cascade" }),
+  transaction_id: integer("transaction_id").references(() => transactions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  size: integer("size"),
+  mime_type: text("mime_type"),
+  uploaded_by: integer("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  byTenantPayable: index("idx_payable_att_tenant_payable").on(table.tenant_id, table.payable_id),
+}));
+
+/**
+ * Trava de idempotência dos avisos. Vercel Cron é at-least-once: sem o
+ * índice único, uma segunda execução no mesmo dia reenviaria tudo.
+ * O fluxo reivindica (INSERT ON CONFLICT DO NOTHING) ANTES de enviar.
+ */
+export const sent_notifications = pgTable("sent_notifications", {
+  id: serial("id").primaryKey(),
+  tenant_id: integer("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  /** 'vencimento' */
+  kind: text("kind").notNull(),
+  /** "{payable_id}:{due_date}:{estagio}" — estagio ∈ d3 | d0 | atraso-7 | … */
+  ref_key: text("ref_key").notNull(),
+  sent_at: timestamp("sent_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  uniqRef: uniqueIndex("uniq_sent_notif").on(table.tenant_id, table.kind, table.ref_key),
 }));
 
 // --- Sellers (vendedores da concessionária) ---
@@ -418,3 +507,7 @@ export type TenantAboutItemRow = typeof tenant_about_items.$inferSelect;
 export type NewTenantAboutItem = typeof tenant_about_items.$inferInsert;
 export type CouponRow = typeof coupons.$inferSelect;
 export type NewCoupon = typeof coupons.$inferInsert;
+export type PayableRow = typeof payables.$inferSelect;
+export type NewPayable = typeof payables.$inferInsert;
+export type PayableAttachmentRow = typeof payable_attachments.$inferSelect;
+export type SentNotificationRow = typeof sent_notifications.$inferSelect;
