@@ -18,7 +18,7 @@ aliases:
 
 | | **Básico** | **Pro** ⭐ | **Premium** |
 |---|---|---|---|
-| Preço/mês | R$ 169,90 | R$ 349,90 | R$ 499,90 |
+| Preço/mês | R$ 169,90 | R$ 249,90 | R$ 349,90 |
 | Site + vitrine + CRM de leads | ✓ | ✓ | ✓ |
 | Cores da marca | ✓ | ✓ | ✓ |
 | Subdomínio `loja.autostand.com.br` | ✓ | ✓ | ✓ |
@@ -59,6 +59,7 @@ Helpers: `getPlan(slug)`, `capabilitiesFor(slug)`. Tenant sem `plan` definido ca
 ## Cobrança
 
 - **Sem trial** — o cliente paga a 1ª mensalidade no cadastro e o site vai ao ar. A concessionária demo (`demo.autostand.com.br`) é a vitrine de "experimente antes".
+- **Domínio próprio incluído no Pro/Premium**, sem cobrança à parte — um `.com.br` custa ~R$3,33/mês e não sustenta linha de cobrança própria, e `customDomain` é a feature-âncora do Pro. Cliente sem domínio: registra-se e repassa-se **no custo, uma vez só**, com o registro **no nome do cliente** (evita reter o ativo dele num churn).
 - Plano anual com desconto (2 meses grátis) — recomendado, a adicionar.
 - **Links de parceiro** aplicam cupom de desconto — ver [[Milestone 2]] Fase 7.
 

@@ -61,4 +61,4 @@ Ver [[Decisões]] para o racional completo. Em resumo:
 ## Pendências de negócio
 
 - ~~Conta Stripe + chaves de API~~ → migrado para **Mercado Pago**; credenciais (`MERCADOPAGO_*`) já configuradas nos GitHub Environments. Falta **validar uma assinatura real ponta-a-ponta em prod**.
-- Validar os preços (R$ 169,90 / R$ 349,90 / R$ 499,90) com prospects reais.
+- Validar os preços (R$ 169,90 / R$ 249,90 / R$ 349,90) com prospects reais.

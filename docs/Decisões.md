@@ -44,11 +44,13 @@ aliases:
 
 ## Precificação
 
-Tiers a **R$ 169,90 / R$ 349,90 / R$ 499,90** (vigente jun/2026 — fonte: `lib/plans.ts`; valores anteriores R$149/349/599 ajustados). Racional:
+Tiers a **R$ 169,90 / R$ 249,90 / R$ 349,90** (vigente ago/2026 — fonte: `lib/plans.ts`; histórico: R$149/349/599 → R$169,90/349,90/499,90 em jun/2026 → atual). Racional:
 
 - Precificar **pelo valor**, não pelo custo — uma concessionária que vende 1 carro a mais por causa do site já pagou o ano.
 - Custo marginal de infra por tenant é baixo (~R$10–30/mês); o custo real que escala é o **tempo de suporte** — daí a importância da customização self-service.
 - Argumento de venda: **mensalidade fixa, sem comissão por venda** (vs. Webmotors/iCarros).
+- **Escada compactada (ago/2026):** o degrau Básico→Pro era +106%, o que travava a migração pro tier-alvo. Agora 1x / 1,47x / 2,06x — o upgrade pro Pro custa +R$80. O topo caiu porque R$499,90 estava acima do que a revenda independente aceita.
+- **Domínio próprio fica incluído no Pro**, sem cobrança à parte: um `.com.br` custa ~R$3,33/mês, não sustenta linha de cobrança própria, e `customDomain` é a feature-âncora do tier. Quando o cliente não tem domínio, registra-se e repassa-se **no custo, uma vez só** — e o registro fica no nome do cliente, não da Synqo.
 
 ## Arquitetura / Técnico
 
