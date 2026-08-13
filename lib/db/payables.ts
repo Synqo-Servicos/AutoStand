@@ -27,6 +27,50 @@ export interface PayableInput {
   notes: string | null;
 }
 
+/**
+ * Allowlist dos campos graváveis — mesmo padrão de
+ * pickWritableTenantFields/pickCreatableTenantFields em lib/db/tenants.ts.
+ * `tenant_id` e `id` NUNCA aparecem aqui: bloqueia mass-assignment no dia em
+ * que uma rota HTTP passar um body de requisição adiante sem filtrar.
+ */
+const PAYABLE_CREATE_FIELDS = [
+  "type", "category", "description", "supplier", "amount_cents",
+  "frequency", "first_due_date", "installments", "payment_method", "notes",
+] as const;
+
+/** Update aceita tudo que create aceita, mais `active` (encerrar a conta). */
+const PAYABLE_WRITABLE_FIELDS = [...PAYABLE_CREATE_FIELDS, "active"] as const;
+
+// `PayableInput` é uma interface escrita à mão, não um tipo mapeado (ao
+// contrário de `NewTenant`, que vem de `$inferInsert`) — TS não infere
+// índice de string implícito pra ela, então o generic constraint
+// `T extends Record<string, unknown>` de tenants.ts não compila aqui. Em
+// vez disso, `pickFields` opera em `Record<string, unknown>` sem generics
+// e os dois wrappers tipados fazem a conversão pela borda (`unknown`
+// primeiro, como o próprio compilador sugere).
+function pickFields(
+  input: Record<string, unknown>,
+  allow: readonly string[],
+): Record<string, unknown> {
+  const safe: Record<string, unknown> = {};
+  for (const key of allow) {
+    if (key in input) safe[key] = input[key];
+  }
+  return safe;
+}
+
+/** Filtra input p/ os campos aceitos na CRIAÇÃO. */
+function pickCreatablePayableFields(input: PayableInput): PayableInput {
+  return pickFields(input as unknown as Record<string, unknown>, PAYABLE_CREATE_FIELDS) as unknown as PayableInput;
+}
+
+/** Filtra input p/ os campos graváveis num UPDATE. */
+function pickWritablePayableFields(
+  input: Partial<PayableInput> & { active?: boolean },
+): Partial<PayableInput> & { active?: boolean } {
+  return pickFields(input as unknown as Record<string, unknown>, PAYABLE_WRITABLE_FIELDS) as unknown as Partial<PayableInput> & { active?: boolean };
+}
+
 export async function listPayables(
   tenantId: number,
   opts: { includeInactive?: boolean } = {},
@@ -95,7 +139,8 @@ export async function listBills(tenantId: number, today: string): Promise<BillWi
 }
 
 export async function createPayable(tenantId: number, input: PayableInput): Promise<PayableRow> {
-  const [row] = await db.insert(payables).values({ tenant_id: tenantId, ...input }).returning();
+  const safe = pickCreatablePayableFields(input);
+  const [row] = await db.insert(payables).values({ ...safe, tenant_id: tenantId }).returning();
   return row;
 }
 
@@ -105,8 +150,9 @@ export async function updatePayable(
   id: number,
   input: Partial<PayableInput> & { active?: boolean },
 ): Promise<PayableRow | null> {
-  if (Object.keys(input).length > 0) {
-    await db.update(payables).set(input)
+  const safe = pickWritablePayableFields(input);
+  if (Object.keys(safe).length > 0) {
+    await db.update(payables).set(safe)
       .where(and(eq(payables.tenant_id, tenantId), eq(payables.id, id)));
   }
   return getPayable(tenantId, id);
