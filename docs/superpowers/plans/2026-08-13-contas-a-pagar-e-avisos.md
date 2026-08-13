@@ -1264,7 +1264,8 @@ git commit -m "feat(financeiro): rotas de CRUD das contas a pagar"
 
 **Files:**
 - Create: `app/api/payables/[id]/pagar/route.ts`
-- Modify: `lib/db/transactions.ts` (aceitar os 3 campos novos)
+- Modify: `types/transaction.ts` (os 3 campos no tipo)
+- Modify: `lib/db/transactions.ts` (gravar os 3 campos)
 - Test: `tests/api/payables-pagar.test.ts`
 
 **Interfaces:**
@@ -1273,15 +1274,18 @@ git commit -m "feat(financeiro): rotas de CRUD das contas a pagar"
 
 - [ ] **Step 1: Estender `createTransaction`**
 
-Em `lib/db/transactions.ts`, adicionar ao tipo `TransactionInput` (junto de `notes`):
+O tipo vive em `types/transaction.ts:4`, **não** em `lib/db/transactions.ts` — `TransactionInput` é `Omit<Transaction, "id" | "created_at">`. Adicionar à interface `Transaction`, junto de `notes`:
 
 ```ts
+  /** Vencimento que esta transação quita. Null em despesa avulsa. */
   payable_id?: number | null;
   due_date?: string | null;
   payment_method?: string | null;
 ```
 
-E ao `.values({...})` do insert, junto de `notes`:
+> **Opcionais de propósito.** `TransactionInput` deriva de `Transaction` por `Omit`, então campo obrigatório aqui quebraria todos os callers existentes (`app/api/transactions/route.ts`, criação de comissão) que não conhecem estes campos.
+
+E em `lib/db/transactions.ts`, ao `.values({...})` do insert, junto de `notes`:
 
 ```ts
         payable_id: input.payable_id ?? null,
@@ -2127,12 +2131,12 @@ Criar `components/admin/ContasAPagarTab.tsx`:
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, CalendarClock, CheckCircle2, Plus } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2 } from "lucide-react";
 import type { PayableRow } from "@/lib/schema";
 import type { BillWithPayable } from "@/lib/db/payables";
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/constants";
 import { formatBRL } from "@/lib/money";
-import { Button, EmptyState } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 
 const GROUPS = [
   { id: "atrasado",  label: "Atrasadas",          tone: "text-danger" },
@@ -2180,9 +2184,6 @@ export function ContasAPagarTab({
         <p className="text-sm text-n600">
           Em aberto na janela: <strong className="text-ink">{formatBRL(totalAberto)}</strong>
         </p>
-        <Button leadingIcon={<Plus className="w-4 h-4" />} onClick={() => { /* Task 10 */ }}>
-          Nova conta
-        </Button>
       </div>
 
       {grouped.map((group) => (
@@ -2504,7 +2505,9 @@ export function RegistrarPagamentoModal({
   bill, onClose,
 }: { bill: BillWithPayable; onClose: () => void }) {
   const router = useRouter();
-  const today = new Date().toISOString().slice(0, 10);
+  // pt-BR + timeZone explícito: `toISOString().slice(0,10)` devolveria a data
+  // em UTC, e às 21h de Maceió já seria "amanhã" no campo.
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
   const [amount, setAmount] = useState(bill.amount_cents ? centsToDisplay(bill.amount_cents) : "");
   const [date, setDate] = useState(today);
@@ -2606,7 +2609,7 @@ export function RegistrarPagamentoModal({
 
 Em `components/admin/ContasAPagarTab.tsx`:
 
-1. Importar `PayableForm` e `RegistrarPagamentoModal`.
+1. Importar `PayableForm`, `RegistrarPagamentoModal`, `Button` de `@/components/ui` e `Plus` de `lucide-react`.
 2. Adicionar o estado:
 
 ```tsx
@@ -2614,7 +2617,14 @@ const [novaConta, setNovaConta] = useState(false);
 const [pagando, setPagando] = useState<BillWithPayable | null>(null);
 ```
 
-3. Trocar o `onClick` do botão "Nova conta" por `() => setNovaConta(true)`.
+3. Adicionar o botão no cabeçalho, ao lado do total em aberto:
+
+```tsx
+<Button leadingIcon={<Plus className="w-4 h-4" />} onClick={() => setNovaConta(true)}>
+  Nova conta
+</Button>
+```
+
 4. Dentro de cada `<li>`, antes do valor, quando `b.status !== "pago"`:
 
 ```tsx
