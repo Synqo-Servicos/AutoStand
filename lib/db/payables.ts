@@ -1,8 +1,8 @@
-import { and, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
 import { db } from "./client";
 import {
-  payable_attachments, payables, transactions,
-  type PayableAttachmentRow, type PayableRow,
+  payable_attachments, payables, sent_notifications, tenants, transactions,
+  type PayableAttachmentRow, type PayableRow, type TenantRow,
 } from "@/lib/schema";
 import {
   buildBills, defaultWindow,
@@ -220,4 +220,42 @@ export async function deletePayableAttachment(
     ))
     .returning();
   return row ?? null;
+}
+
+/**
+ * Reivindica os avisos do dia. Devolve APENAS as chaves que este processo
+ * conseguiu inserir — as já existentes foram enviadas por outra execução.
+ *
+ * Vercel Cron é at-least-once. Reivindicar ANTES de enviar é a única
+ * ordem que erra pro lado recuperável: enviar-e-depois-registrar duplica
+ * e-mail numa segunda execução, e registrar-sem-enviar cala pra sempre.
+ * Mesmo padrão do claimTenantForCheckout.
+ */
+export async function claimNotifications(
+  tenantId: number, kind: string, refKeys: string[],
+): Promise<string[]> {
+  if (refKeys.length === 0) return [];
+  const inserted = await db
+    .insert(sent_notifications)
+    .values(refKeys.map((ref_key) => ({ tenant_id: tenantId, kind, ref_key })))
+    .onConflictDoNothing()
+    .returning({ ref_key: sent_notifications.ref_key });
+  return inserted.map((r) => r.ref_key);
+}
+
+/** Devolve os claims quando o envio falha, para o cron de amanhã retentar. */
+export async function releaseNotifications(
+  tenantId: number, kind: string, refKeys: string[],
+): Promise<void> {
+  if (refKeys.length === 0) return;
+  await db.delete(sent_notifications).where(and(
+    eq(sent_notifications.tenant_id, tenantId),
+    eq(sent_notifications.kind, kind),
+    inArray(sent_notifications.ref_key, refKeys),
+  ));
+}
+
+/** Tenants elegíveis ao digest — suspenso e diagnóstico ficam de fora. */
+export async function listTenantsForBillDigest(): Promise<TenantRow[]> {
+  return db.select().from(tenants).where(eq(tenants.status, "active"));
 }
