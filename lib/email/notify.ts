@@ -1,6 +1,7 @@
 import { getSuperAdminEmails, getTenantAdminEmail } from "@/lib/db";
 import { tenantSiteUrl } from "@/lib/marketplace";
 import type { TenantRow } from "@/lib/schema";
+import { isEmailEnabled } from "./config";
 import { sendEmail } from "./send";
 import * as tpl from "./templates";
 
@@ -81,7 +82,15 @@ export async function notifyPaymentStatus(tenant: TenantRow, status: string): Pr
  *
  * Nota: `sendEmail` em si é best-effort (nunca lança, devolve `false` em falha),
  * então convertemos esse `false` em exceção para que a falha realmente propague
- * até o chamador.
+ * até o chamador — MAS só quando o provider está habilitado. `isEmailEnabled()`
+ * falso (sem GMAIL_APP_PASSWORD, ex.: homolog) é um estado intencional e
+ * permanente (ver `lib/email/config.ts`), não uma falha transitória: se
+ * tratássemos os dois casos como a mesma exceção, o cron reteria o claim e
+ * retentaria todo dia, para sempre, sem que retry nenhum resolvesse — ruído
+ * indefinido que ainda esconderia um alerta real de falha de infra por baixo
+ * de um alerta permanente de "sem credencial". Por isso "desligado" segue o
+ * mesmo caminho de no-op gracioso dos outros early-returns (bills vazio,
+ * sem destinatário) e só falha REAL de envio, com o provider ligado, lança.
  */
 export async function notifyUpcomingBills(
   tenant: TenantRow,
@@ -90,6 +99,7 @@ export async function notifyUpcomingBills(
   if (bills.length === 0) return;
   const to = await tenantRecipient(tenant);
   if (!to) return;
+  if (!isEmailEnabled()) return;
 
   const r = tpl.upcomingBills({
     dealershipName: tenant.name,

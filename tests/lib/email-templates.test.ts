@@ -71,7 +71,11 @@ describe("upcomingBills", () => {
 
   it("mostra travessão quando não há valor previsto", () => {
     const r = upcomingBills({ dealershipName: "Auto Brasil", panelUrl: "https://x", bills });
-    expect(r.html).toContain("Energia");
+    // A linha da "Energia" (amountCents: null) tem que ter a célula de valor
+    // preenchida com o travessão — não "R$ NaN", não vazio, não outra coisa.
+    const linhaEnergia = r.html.slice(r.html.indexOf("Energia"), r.html.indexOf("</tr>", r.html.indexOf("Energia")));
+    expect(linhaEnergia).toMatch(/text-align:right;white-space:nowrap">\s*—\s*<\/td>/);
+    expect(linhaEnergia).not.toContain("R$");
   });
 
   it("escapa HTML no nome do fornecedor", () => {

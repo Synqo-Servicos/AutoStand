@@ -4,8 +4,10 @@ import type { TenantRow } from "@/lib/schema";
 const sendEmail = vi.fn();
 const getSuperAdminEmails = vi.fn();
 const getTenantAdminEmail = vi.fn();
+const isEmailEnabled = vi.fn();
 
 vi.mock("@/lib/email/send", () => ({ sendEmail }));
+vi.mock("@/lib/email/config", () => ({ isEmailEnabled }));
 vi.mock("@/lib/db", () => ({ getSuperAdminEmails, getTenantAdminEmail }));
 vi.mock("@/lib/marketplace", () => ({
   tenantSiteUrl: (t: { slug: string }) => `https://${t.slug}.autostand.com.br`,
@@ -86,6 +88,52 @@ describe("notifyPaymentStatus", () => {
   it("status desconhecido: nada", async () => {
     const { notifyPaymentStatus } = await import("@/lib/email/notify");
     await notifyPaymentStatus(TENANT, "whatever");
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("notifyUpcomingBills", () => {
+  const bills = [
+    { label: "Aluguel", dueDate: "2026-08-16", amountCents: 450_000, status: "a_vencer" as const },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sendEmail.mockResolvedValue(true);
+    getTenantAdminEmail.mockResolvedValue(null);
+    isEmailEnabled.mockReturnValue(true);
+  });
+
+  it("caminho feliz: envia pro destinatário certo com o assunto do template, sem lançar", async () => {
+    const { notifyUpcomingBills } = await import("@/lib/email/notify");
+    await expect(notifyUpcomingBills(TENANT, bills)).resolves.toBeUndefined();
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "loja@autoprime.com", subject: "1 conta a vencer — Auto Prime" }),
+    );
+  });
+
+  it("bills vazio: retorna sem chamar sendEmail", async () => {
+    const { notifyUpcomingBills } = await import("@/lib/email/notify");
+    await notifyUpcomingBills(TENANT, []);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("sem destinatário (contact_email e admin ausentes): retorna sem chamar sendEmail", async () => {
+    const { notifyUpcomingBills } = await import("@/lib/email/notify");
+    await notifyUpcomingBills({ ...TENANT, contact_email: null }, bills);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("falha real de envio (provider ligado): a promise REJEITA — contrato do qual o cron da Task 8 depende", async () => {
+    sendEmail.mockResolvedValue(false);
+    const { notifyUpcomingBills } = await import("@/lib/email/notify");
+    await expect(notifyUpcomingBills(TENANT, bills)).rejects.toThrow();
+  });
+
+  it("e-mail desligado (sem credencial): no-op gracioso, não lança e não chama sendEmail", async () => {
+    isEmailEnabled.mockReturnValue(false);
+    const { notifyUpcomingBills } = await import("@/lib/email/notify");
+    await expect(notifyUpcomingBills(TENANT, bills)).resolves.toBeUndefined();
     expect(sendEmail).not.toHaveBeenCalled();
   });
 });
