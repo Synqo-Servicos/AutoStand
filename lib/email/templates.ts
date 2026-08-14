@@ -122,3 +122,59 @@ export function superadminPaymentFailure(p: { dealershipName: string; status: st
     ),
   };
 }
+
+// — Contas a vencer → gestor da concessionária ————————————————————————
+
+export interface BillLine {
+  label: string;
+  dueDate: string;                                   // 'YYYY-MM-DD'
+  amountCents: number | null;
+  status: "a_vencer" | "vence_hoje" | "atrasado";
+}
+
+function brDate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function brMoney(cents: number | null): string {
+  if (cents === null) return "—";
+  return `R$ ${(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+export function upcomingBills(p: {
+  dealershipName: string;
+  panelUrl: string;
+  bills: BillLine[];
+}): RenderedEmail {
+  const overdue = p.bills.filter((b) => b.status === "atrasado").length;
+  const subject = overdue > 0
+    ? `${overdue} conta${overdue > 1 ? "s" : ""} atrasada${overdue > 1 ? "s" : ""} — ${p.dealershipName}`
+    : `${p.bills.length} conta${p.bills.length > 1 ? "s" : ""} a vencer — ${p.dealershipName}`;
+
+  const rows = p.bills.map((b) => {
+    const cor = b.status === "atrasado" ? "#DC2626" : b.status === "vence_hoje" ? "#B45309" : "#1E293B";
+    const rotulo = b.status === "atrasado" ? "atrasada" : b.status === "vence_hoje" ? "vence hoje" : "a vencer";
+    return `<tr>
+      <td style="padding:8px 0;border-bottom:1px solid #e2e8f0">
+        <strong style="color:${cor}">${esc(b.label)}</strong><br>
+        <span style="color:#64748b;font-size:13px">${brDate(b.dueDate)} · ${rotulo}</span>
+      </td>
+      <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap">
+        ${brMoney(b.amountCents)}
+      </td>
+    </tr>`;
+  }).join("");
+
+  return {
+    subject,
+    html: layout(`
+      <p>Olá! Um resumo das contas de <strong>${esc(p.dealershipName)}</strong>:</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0">${rows}</table>
+      ${button(p.panelUrl, "Abrir o financeiro")}
+      <p style="color:#94a3b8;font-size:12px">
+        Você recebe este aviso 3 dias antes do vencimento, no dia, e semanalmente enquanto houver atraso.
+      </p>
+    `),
+  };
+}
