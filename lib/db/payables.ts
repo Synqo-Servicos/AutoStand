@@ -204,7 +204,7 @@ export async function addPayableAttachment(
   },
 ): Promise<PayableAttachmentRow> {
   const [row] = await db.insert(payable_attachments)
-    .values({ tenant_id: tenantId, payable_id: payableId, ...input })
+    .values({ ...input, tenant_id: tenantId, payable_id: payableId })
     .returning();
   return row;
 }

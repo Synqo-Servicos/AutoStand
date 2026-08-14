@@ -148,3 +148,33 @@ describe("createPayable", () => {
     expect(row.tenant_id).toBe(7);
   });
 });
+
+describe("addPayableAttachment", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("descarta tenant_id/payable_id maliciosos no input — sempre usa os argumentos", async () => {
+    insertReturning.mockResolvedValueOnce([{
+      id: 10, tenant_id: 7, payable_id: 1, name: "boleto.pdf",
+      url: "https://cdn.autostand.com.br/tenants/7/payables/1-a.pdf",
+      size: 1024, mime_type: "application/pdf", transaction_id: null,
+      uploaded_by: null, created_at: "2026-08-13T00:00:00Z",
+    }]);
+
+    const { addPayableAttachment } = await import("@/lib/db/payables");
+    const input = {
+      name: "boleto.pdf",
+      url: "https://cdn.autostand.com.br/tenants/7/payables/1-a.pdf",
+      size: 1024, mime_type: "application/pdf",
+      transaction_id: null, uploaded_by: null,
+      tenant_id: 999, payable_id: 888, // tentativa de mass-assignment
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = await addPayableAttachment(7, 1, input as any);
+
+    const valuesArg = insertValues.mock.calls[0][0];
+    expect(valuesArg.tenant_id).toBe(7);
+    expect(valuesArg.payable_id).toBe(1);
+    expect(row.tenant_id).toBe(7);
+    expect(row.payable_id).toBe(1);
+  });
+});
