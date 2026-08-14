@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { PLAN_SLUGS, PLANS, type PlanSlug } from "@/lib/plans";
 import { normalizeSlug, slugError } from "@/lib/slug";
 import { Turnstile, isTurnstileEnabled } from "@/components/Turnstile";
-import { formatBRL } from "@/lib/money";
+import { formatBRLFull } from "@/lib/money";
 import { isValidDocument, formatDocument, normalizeDocument } from "@/lib/br-document";
 
 const inputClass =
@@ -144,7 +144,7 @@ export function SignupForm({
                   {PLANS[s].name}
                 </span>
                 <span className="block text-body-s text-n600">
-                  {formatBRL(PLANS[s].priceMonthly)}/mês
+                  {formatBRLFull(PLANS[s].priceMonthly)}/mês
                 </span>
               </button>
             );

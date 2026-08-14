@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { centsToDisplay, displayToCents, formatBRL } from "@/lib/money";
+import { centsToDisplay, displayToCents, formatBRLFull } from "@/lib/money";
 import { EXPENSE_CATEGORIES, TRANSACTION_LABELS } from "@/lib/constants";
 import { Button, Field, Input, Modal, Select, Textarea, useConfirm, toast } from "@/components/ui";
 import type { OperationalExpenseRow } from "@/lib/db";
@@ -76,7 +76,7 @@ export function OperationalExpenseList({ initialRows, month }: Props) {
 
         <div className="px-5 py-3 bg-n50 border-b border-n100 flex items-center justify-between text-sm">
           <span className="text-n600">Total no período</span>
-          <span className="font-semibold text-ink tabular-nums">{formatBRL(total)}</span>
+          <span className="font-semibold text-ink tabular-nums">{formatBRLFull(total)}</span>
         </div>
 
         {rows.length === 0 ? (
@@ -97,7 +97,7 @@ export function OperationalExpenseList({ initialRows, month }: Props) {
                   <p className="font-medium text-ink truncate">{r.category ?? "—"}</p>
                   {r.notes && <p className="text-xs text-n600 truncate">{r.notes}</p>}
                 </div>
-                <span className="font-medium text-ink whitespace-nowrap">{formatBRL(r.amount)}</span>
+                <span className="font-medium text-ink whitespace-nowrap">{formatBRLFull(r.amount)}</span>
                 <Button
                   type="button"
                   variant="ghost"

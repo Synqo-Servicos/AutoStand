@@ -8,6 +8,15 @@ import type { BillLine } from "@/lib/email/templates";
 
 const KIND = "vencimento";
 
+/**
+ * O claim de idempotência (claimNotifications) é gravado ANTES do envio do
+ * e-mail. Um timeout no meio do laço de tenants deixaria claims já
+ * reivindicados sem e-mail enviado e sem `releaseNotifications` — aquele
+ * aviso ficaria calado pra sempre, não só no dia do timeout. 60s é a folga
+ * de segurança contra esse silêncio permanente.
+ */
+export const maxDuration = 60;
+
 function todayISO(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 }

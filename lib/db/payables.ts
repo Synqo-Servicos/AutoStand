@@ -177,10 +177,16 @@ export async function hasPaymentFor(
   return !!row;
 }
 
-/** Alimenta o badge da sidebar e o banner do dashboard. */
+/**
+ * Alimenta o badge da sidebar com a MESMA contagem do banner do dashboard
+ * (ContasVencendoBanner): "atrasado" + "vence_hoje", o conjunto acionável
+ * hoje. `aguardando_conciliacao` fica de fora dos dois — o sistema não
+ * sabe se o débito automático ocorreu, e tratar como inadimplência geraria
+ * alarme falso todo mês.
+ */
 export async function countOverdue(tenantId: number, today: string): Promise<number> {
   const bills = await listBills(tenantId, today);
-  return bills.filter((b) => b.status === "atrasado").length;
+  return bills.filter((b) => b.status === "atrasado" || b.status === "vence_hoje").length;
 }
 
 /** Boleto (transaction_id nulo) e comprovantes de uma conta, mais antigos primeiro. */

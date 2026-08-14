@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PLAN_SLUGS, PLANS, type PlanSlug } from "@/lib/plans";
-import { formatBRL } from "@/lib/money";
+import { formatBRLFull } from "@/lib/money";
 
 /** Texto de venda de cada plano (a fonte da verdade das capabilities é lib/plans.ts). */
 const PLAN_COPY: Record<PlanSlug, { tagline: string; features: string[] }> = {
@@ -66,7 +66,7 @@ export function PricingCards({ partnerCode }: { partnerCode?: string }) {
             </p>
 
             <div className="mt-5 flex items-baseline gap-1">
-              <span className="font-display text-h1 font-bold">{formatBRL(plan.priceMonthly)}</span>
+              <span className="font-display text-h1 font-bold">{formatBRLFull(plan.priceMonthly)}</span>
               <span className={`text-body-s ${highlight ? "text-n400" : "text-n600"}`}>/mês</span>
             </div>
 
