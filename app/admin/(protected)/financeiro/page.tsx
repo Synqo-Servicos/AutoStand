@@ -5,13 +5,16 @@ import {
   getFinanceiroPorVeiculo,
   getFinanceiroResumo,
   getOperationalExpenses,
+  listBills,
+  listPayables,
 } from "@/lib/db";
-import { formatBRL } from "@/lib/money";
+import { formatBRLFull } from "@/lib/money";
 import { OperationalExpenseList } from "@/components/admin/OperationalExpenseList";
+import { ContasAPagarTab } from "@/components/admin/ContasAPagarTab";
 
 export const dynamic = "force-dynamic";
 
-type Tab = "resumo" | "veiculos" | "operacionais";
+type Tab = "resumo" | "veiculos" | "operacionais" | "contas";
 
 type SearchParams = Promise<{ tab?: string; month?: string }>;
 
@@ -19,6 +22,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "resumo",       label: "Resumo" },
   { id: "veiculos",     label: "Por veículo" },
   { id: "operacionais", label: "Despesas operacionais" },
+  { id: "contas",       label: "Contas a pagar" },
 ];
 
 export default async function FinanceiroPage({ searchParams }: { searchParams: SearchParams }) {
@@ -29,6 +33,11 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
   const month = (sp.month ?? defaultMonth).slice(0, 7);
 
   const tenant = await getAdminTenant();
+
+  const todayISO = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const [bills, payablesList] = tab === "contas"
+    ? await Promise.all([listBills(tenant.id, todayISO), listPayables(tenant.id)])
+    : [[], []];
 
   return (
     <div className="p-4 sm:p-8 w-full space-y-5 sm:space-y-6">
@@ -74,6 +83,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
       {tab === "resumo"       && <ResumoTab tenantId={tenant.id} month={month} />}
       {tab === "veiculos"     && <VeiculosTab tenantId={tenant.id} month={month} />}
       {tab === "operacionais" && <OperacionaisTab tenantId={tenant.id} month={month} />}
+      {tab === "contas"       && <ContasAPagarTab bills={bills} payables={payablesList} />}
     </div>
   );
 }
@@ -105,12 +115,12 @@ async function ResumoTab({ tenantId, month }: { tenantId: number; month: string 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Kpi icon={ArrowUpRight} label="Receita"        value={formatBRL(r.receita)} color="signal" />
+        <Kpi icon={ArrowUpRight} label="Receita"        value={formatBRLFull(r.receita)} color="signal" />
         <Kpi icon={Car}          label="Veículos vendidos" value={String(r.vendasUnits)} color="ink" />
         <Kpi icon={ArrowDownRight} label="Despesas totais"
-             value={formatBRL(r.despesasDir + r.despesasOp + r.custos)} color="danger" />
+             value={formatBRLFull(r.despesasDir + r.despesasOp + r.custos)} color="danger" />
         <Kpi icon={Wallet}      label="Lucro líquido"
-             value={`${formatBRL(r.lucroLiquido)} (${margemPct.toFixed(1)}%)`}
+             value={`${formatBRLFull(r.lucroLiquido)} (${margemPct.toFixed(1)}%)`}
              color={r.lucroLiquido >= 0 ? "success" : "danger"} />
       </div>
 
@@ -120,13 +130,13 @@ async function ResumoTab({ tenantId, month }: { tenantId: number; month: string 
           <p className="text-xs text-n400 mt-0.5">Período: {month}</p>
         </header>
         <div className="divide-y divide-n100 text-sm">
-          <Line label="Receita de vendas" value={formatBRL(r.receita)} />
-          <Line label="Custo dos veículos vendidos" value={`− ${formatBRL(r.custos)}`} muted />
-          <Line label="= Lucro bruto" value={formatBRL(r.lucroBruto)} bold />
-          <Line label="Despesas diretas (preparação, reparos…)" value={`− ${formatBRL(r.despesasDir)}`} muted />
-          <Line label="Despesas operacionais (estrutura, marketing, comissão)" value={`− ${formatBRL(r.despesasOp)}`} muted />
+          <Line label="Receita de vendas" value={formatBRLFull(r.receita)} />
+          <Line label="Custo dos veículos vendidos" value={`− ${formatBRLFull(r.custos)}`} muted />
+          <Line label="= Lucro bruto" value={formatBRLFull(r.lucroBruto)} bold />
+          <Line label="Despesas diretas (preparação, reparos…)" value={`− ${formatBRLFull(r.despesasDir)}`} muted />
+          <Line label="Despesas operacionais (estrutura, marketing, comissão)" value={`− ${formatBRLFull(r.despesasOp)}`} muted />
           <Line label="= Lucro líquido"
-                value={`${formatBRL(r.lucroLiquido)} (${margemPct.toFixed(1)}%)`}
+                value={`${formatBRLFull(r.lucroLiquido)} (${margemPct.toFixed(1)}%)`}
                 bold
                 highlight={r.lucroLiquido >= 0 ? "positive" : "negative"} />
         </div>
@@ -174,11 +184,11 @@ async function VeiculosTab({ tenantId, month }: { tenantId: number; month: strin
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-n600 whitespace-nowrap">{r.sale_date}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatBRL(r.receita)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-n600">{formatBRL(r.custo)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-n600">{formatBRL(r.despesas_diretas)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{formatBRLFull(r.receita)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-n600">{formatBRLFull(r.custo)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-n600">{formatBRLFull(r.despesas_diretas)}</td>
                   <td className={`px-4 py-3 text-right tabular-nums font-semibold ${r.margem_real >= 0 ? "text-success" : "text-danger"}`}>
-                    {formatBRL(r.margem_real)}
+                    {formatBRLFull(r.margem_real)}
                   </td>
                   <td className={`px-4 py-3 text-right tabular-nums ${r.margem_real >= 0 ? "text-success" : "text-danger"}`}>
                     {pct.toFixed(1)}%

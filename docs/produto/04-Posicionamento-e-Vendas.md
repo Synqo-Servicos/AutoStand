@@ -74,7 +74,7 @@ atendimento consultivo e evolução contínua do produto.
 
 | | **Básico** | **Pro** ⭐ *(mais escolhido)* | **Premium** |
 |---|---|---|---|
-| **Preço/mês** | **R$ 169,90** | **R$ 349,90** | **R$ 499,90** |
+| **Preço/mês** | **R$ 169,90** | **R$ 249,90** | **R$ 349,90** |
 | Site + vitrine + CRM de leads | ✓ | ✓ | ✓ |
 | Cores da marca | ✓ | ✓ | ✓ |
 | Subdomínio `loja.autostand.com.br` | ✓ | ✓ | ✓ |

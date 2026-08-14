@@ -13,6 +13,10 @@ export interface Transaction {
   buyer_name: string | null;
   buyer_phone: string | null;
   notes: string | null;
+  /** Vencimento que esta transação quita. Null em despesa avulsa. */
+  payable_id?: number | null;
+  due_date?: string | null;
+  payment_method?: string | null;
   created_at: string;
 }
 

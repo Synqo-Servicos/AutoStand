@@ -38,7 +38,7 @@ export const SAFE_EXTS = Object.values(EXT_BY_MIME);
  * Tipos de upload aceitos pelo presign. Cada um tem allowlist de MIME e
  * limite próprios — a assinatura fixa os dois, então isto É a validação.
  */
-export const PRESIGN_KINDS = ["photo", "document", "logo", "hero"] as const;
+export const PRESIGN_KINDS = ["photo", "document", "logo", "hero", "payable"] as const;
 export type PresignKind = (typeof PRESIGN_KINDS)[number];
 
 export interface UploadRule {
@@ -53,6 +53,7 @@ export const UPLOAD_RULES: Record<PresignKind, UploadRule> = {
   document: { allowedMimes: DOC_MIMES,   maxBytes: DOC_MAX_BYTES,   needsVehicle: true },
   logo:     { allowedMimes: IMAGE_MIMES, maxBytes: LOGO_MAX_BYTES,  needsVehicle: false },
   hero:     { allowedMimes: IMAGE_MIMES, maxBytes: HERO_MAX_BYTES,  needsVehicle: false },
+  payable:  { allowedMimes: DOC_MIMES,   maxBytes: DOC_MAX_BYTES,   needsVehicle: false },
 };
 
 /**

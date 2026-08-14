@@ -35,7 +35,9 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/leads",      label: "Leads",      icon: Users },
       { href: "/admin/transacoes", label: "Transações", icon: ArrowLeftRight },
       { href: "/admin/vendedores", label: "Vendedores", icon: UserCircle2 },
-      { href: "/admin/financeiro", label: "Financeiro", icon: PiggyBank },
+      // O badge de contas vencendo mora na aba "Contas", não no Resumo
+      // (aba default de /admin/financeiro) — o clique já entra no lugar certo.
+      { href: "/admin/financeiro?tab=contas", label: "Financeiro", icon: PiggyBank },
     ],
   },
   {
@@ -55,7 +57,9 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export function AdminSidebar({ tenantName }: { tenantName: string }) {
+export function AdminSidebar({
+  tenantName, overdueCount,
+}: { tenantName: string; overdueCount?: number }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -131,7 +135,10 @@ export function AdminSidebar({ tenantName }: { tenantName: string }) {
               <p className="px-6 mb-1.5 text-eyebrow text-n500">{group.label}</p>
               <ul className="px-3 space-y-0.5">
                 {group.items.map(({ href, label, icon: Icon }) => {
-                  const active = pathname.startsWith(href);
+                  // `pathname` (usePathname) nunca inclui querystring — compara
+                  // só a parte de path, senão o item de Financeiro (que agora
+                  // aponta pra "?tab=contas") nunca fica marcado como ativo.
+                  const active = pathname.startsWith(href.split("?")[0]);
                   return (
                     <li key={href}>
                       <Link
@@ -146,6 +153,11 @@ export function AdminSidebar({ tenantName }: { tenantName: string }) {
                       >
                         <Icon className="w-4 h-4 shrink-0" />
                         {label}
+                        {href.split("?")[0] === "/admin/financeiro" && overdueCount ? (
+                          <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-danger text-white text-[11px] font-semibold">
+                            {overdueCount}
+                          </span>
+                        ) : null}
                       </Link>
                     </li>
                   );

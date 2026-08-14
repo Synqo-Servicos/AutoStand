@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getUserById } from "@/lib/db";
+import { countOverdue, getUserById } from "@/lib/db";
 import { getAdminTenant } from "@/lib/tenant";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { SubscriptionBanner } from "@/components/admin/SubscriptionBanner";
@@ -34,9 +34,12 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
   const user = await getUserById(Number(session.user.id));
   if (user?.must_change_password) redirect("/admin/trocar-senha");
 
+  const todayISO = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const overdueCount = await countOverdue(tenant.id, todayISO);
+
   return (
     <div className="min-h-screen bg-n50 lg:flex">
-      <AdminSidebar tenantName={tenant.name} />
+      <AdminSidebar tenantName={tenant.name} overdueCount={overdueCount} />
       <div className="flex-1 min-w-0 lg:overflow-auto">
         {tenant.status !== "active" && <SubscriptionBanner />}
         {/* Canvas centralizado: sem isto, cada página fica colada à esquerda e

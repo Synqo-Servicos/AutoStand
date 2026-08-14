@@ -50,7 +50,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
   pro: {
     slug: "pro",
     name: "Pro",
-    priceMonthly: 34990,   // R$ 349,90
+    priceMonthly: 24990,   // R$ 249,90
     mpPlanId: process.env.MERCADOPAGO_PLAN_PRO,
     capabilities: {
       customColors: true,
@@ -64,7 +64,7 @@ export const PLANS: Record<PlanSlug, Plan> = {
   premium: {
     slug: "premium",
     name: "Premium",
-    priceMonthly: 49990,   // R$ 499,90
+    priceMonthly: 34990,   // R$ 349,90
     mpPlanId: process.env.MERCADOPAGO_PLAN_PREMIUM,
     capabilities: {
       customColors: true,

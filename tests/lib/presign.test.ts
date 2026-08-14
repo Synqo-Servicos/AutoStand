@@ -205,6 +205,28 @@ describe("publicUrlForKey", () => {
   });
 });
 
+describe("kind payable", () => {
+  it("aceita PDF até o limite de documento", () => {
+    expect(() => validatePresignInput({
+      kind: "payable", contentType: "application/pdf", size: 1024,
+    }, 7)).not.toThrow();
+  });
+
+  it("recusa arquivo acima do limite", () => {
+    expect(() => validatePresignInput({
+      kind: "payable", contentType: "application/pdf", size: DOC_MAX_BYTES + 1,
+    }, 7)).toThrow(UploadValidationError);
+  });
+
+  it("não exige vehicleId", () => {
+    expect(() => uploadFolder("payable", 7)).not.toThrow();
+  });
+
+  it("guarda em pasta própria por tenant", () => {
+    expect(uploadFolder("payable", 7)).toBe("tenants/7/payables");
+  });
+});
+
 describe("assertKeyInFolder — guard das rotas de persistência", () => {
   const folder = "tenants/7/vehicles/42";
 

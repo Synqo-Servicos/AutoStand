@@ -5,6 +5,15 @@ name: Run DB Migrations
 # entrar nem imagem pra buildar. `DATABASE_URL` vem dos secrets do GitHub
 # Environment escolhido. Manual, por ambiente. Rodar ANTES do deploy quando
 # uma migration nova precisa existir no banco.
+#
+# Só existe `production`: o ambiente `homologation` foi removido em 14/08/2026,
+# porque seu DATABASE_URL apontava para o RDS deletado em 20/07 e qualquer run
+# nele morria em ENOTFOUND. Não há banco de staging hoje — para ensaiar uma
+# migration, criar um branch no Neon e apontar um ambiente novo para ele.
+#
+# IMPORTANTE: dispare a partir da branch que CONTÉM a migration nova
+# ("Use workflow from" no dispatch), não da `main` — senão o job passa sem
+# aplicar nada.
 on:
   workflow_dispatch:
     inputs:
@@ -13,7 +22,6 @@ on:
         type: choice
         required: true
         options:
-          - homologation
           - production
 
 permissions:

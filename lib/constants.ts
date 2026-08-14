@@ -125,6 +125,34 @@ export const EXPENSE_GROUP_LABELS: Record<ExpenseGroup, string> = {
 /** Lista chapada de todas as categorias para uso em selects simples. */
 export const ALL_EXPENSE_CATEGORIES: string[] = Object.values(EXPENSE_CATEGORIES).flat();
 
+// --- Contas a pagar ---
+
+export const PAYABLE_FREQUENCIES = ["unica", "mensal", "anual"] as const;
+export type PayableFrequency = (typeof PAYABLE_FREQUENCIES)[number];
+
+export const PAYABLE_FREQUENCY_LABELS: Record<PayableFrequency, string> = {
+  unica:  "Única",
+  mensal: "Mensal",
+  anual:  "Anual",
+};
+
+export const PAYMENT_METHODS = [
+  "boleto", "pix", "debito_automatico", "cartao", "transferencia", "dinheiro",
+] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  boleto:            "Boleto",
+  pix:               "PIX",
+  debito_automatico: "Débito automático",
+  cartao:            "Cartão",
+  transferencia:     "Transferência",
+  dinheiro:          "Dinheiro",
+};
+
+/** Teto de parcelas — 30 anos de mensais. Guarda o laço de expansão. */
+export const MAX_INSTALLMENTS = 360;
+
 /** Tipos de transação que exigem um veículo associado. */
 export const TX_REQUIRES_VEHICLE: ReadonlySet<TransactionType> = new Set([
   "entrada", "saida", "despesa_direta",

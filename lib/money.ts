@@ -5,6 +5,21 @@ export function centsToDisplay(cents: number): string {
   });
 }
 
+/**
+ * Como centsToDisplay, mas sempre com 2 casas decimais — pra inputs
+ * editáveis de valor onde `centsToDisplay` teria arredondado pro inteiro
+ * mais próximo. Contas a pagar é o primeiro domínio do app onde centavos
+ * são a norma (energia, água, DAS, INSS) em vez da exceção; um campo de
+ * valor que faz round-trip por `centsToDisplayFull(displayToCents(x))` no
+ * onBlur preserva "137,42" em vez de virar "137".
+ */
+export function centsToDisplayFull(cents: number): string {
+  return (cents / 100).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function formatBRL(cents: number): string {
   return `R$ ${centsToDisplay(cents)}`;
 }
