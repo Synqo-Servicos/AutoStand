@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, CalendarClock, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarSearch, CheckCircle2 } from "lucide-react";
 import type { PayableRow } from "@/lib/schema";
 import type { BillWithPayable } from "@/lib/db/payables";
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/constants";
@@ -44,6 +44,21 @@ export function ContasAPagarTab({
         icon={CalendarClock}
         title="Nenhuma conta cadastrada"
         description="Cadastre aluguel, energia, impostos e outras contas para receber aviso antes do vencimento."
+      />
+    );
+  }
+
+  // Há contas cadastradas, mas nenhuma ocorrência cai na janela exibida
+  // (defaultWindow em lib/recurring.ts: dos últimos 2 meses até o fim do mês
+  // que vem). Acontece de verdade com contas anuais de vencimento distante
+  // (IPVA, IPTU, seguro) — sem este estado, a tela fica em branco e parece
+  // que o cadastro não salvou.
+  if (grouped.length === 0) {
+    return (
+      <EmptyState
+        icon={CalendarSearch}
+        title="Nenhuma conta vence neste período"
+        description="Você já tem contas cadastradas, mas nenhuma delas vence na janela mostrada aqui — dos últimos 2 meses até o fim do mês que vem. Contas anuais ou com vencimento mais distante (IPVA, IPTU, seguro) entram na lista conforme a data se aproxima."
       />
     );
   }
