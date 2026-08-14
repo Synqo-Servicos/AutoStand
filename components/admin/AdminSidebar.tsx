@@ -55,7 +55,9 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export function AdminSidebar({ tenantName }: { tenantName: string }) {
+export function AdminSidebar({
+  tenantName, overdueCount,
+}: { tenantName: string; overdueCount?: number }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -146,6 +148,11 @@ export function AdminSidebar({ tenantName }: { tenantName: string }) {
                       >
                         <Icon className="w-4 h-4 shrink-0" />
                         {label}
+                        {href === "/admin/financeiro" && overdueCount ? (
+                          <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-danger text-white text-[11px] font-semibold">
+                            {overdueCount}
+                          </span>
+                        ) : null}
                       </Link>
                     </li>
                   );

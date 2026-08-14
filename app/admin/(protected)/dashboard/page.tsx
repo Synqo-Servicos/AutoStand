@@ -1,10 +1,11 @@
-import { getDashboardStats, getUserById } from "@/lib/db";
+import { getDashboardStats, getUserById, listBills } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getAdminTenant } from "@/lib/tenant";
 import { DashboardCard } from "@/components/admin/DashboardCard";
 import { MonthlyTable } from "@/components/admin/MonthlyTable";
 import { StockBreakdown } from "@/components/admin/StockBreakdown";
 import { OnboardingChecklist } from "@/components/admin/OnboardingChecklist";
+import { ContasVencendoBanner } from "@/components/admin/ContasVencendoBanner";
 import { formatBRL } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,8 @@ export default async function DashboardPage() {
   const stats = await getDashboardStats(tenant.id);
   const session = await auth();
   const user = session?.user?.id ? await getUserById(Number(session.user.id)) : null;
+  const todayISO = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const bills = await listBills(tenant.id, todayISO);
   const disponivel = stats.stockByStatus.find(s => s.status === "disponivel")?.count ?? 0;
   const reservado  = stats.stockByStatus.find(s => s.status === "reservado")?.count ?? 0;
   const vendido    = stats.stockByStatus.find(s => s.status === "vendido")?.count ?? 0;
@@ -32,6 +35,8 @@ export default async function DashboardPage() {
       {user && !user.onboarding_completed && (
         <OnboardingChecklist name={tenant.name} />
       )}
+
+      <ContasVencendoBanner bills={bills} />
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
