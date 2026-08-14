@@ -5,7 +5,7 @@ import { AlertTriangle, CalendarClock, CalendarSearch, CheckCircle2, Plus } from
 import type { PayableRow } from "@/lib/schema";
 import type { BillWithPayable } from "@/lib/db/payables";
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/constants";
-import { formatBRL } from "@/lib/money";
+import { formatBRLFull } from "@/lib/money";
 import { Button, EmptyState } from "@/components/ui";
 import { PayableForm } from "./PayableForm";
 import { PayableRulesPanel } from "./PayableRulesPanel";
@@ -61,7 +61,7 @@ export function ContasAPagarTab({
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <p className="text-sm text-n600">
-          Em aberto na janela: <strong className="text-ink">{formatBRL(totalAberto)}</strong>
+          Em aberto na janela: <strong className="text-ink">{formatBRLFull(totalAberto)}</strong>
         </p>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setGerindo(true)}>
@@ -118,7 +118,7 @@ export function ContasAPagarTab({
                     </Button>
                   )}
                   <span className="font-medium text-ink whitespace-nowrap">
-                    {formatBRL(b.status === "pago" ? (b.paid_amount_cents ?? 0) : (b.amount_cents ?? 0))}
+                    {formatBRLFull(b.status === "pago" ? (b.paid_amount_cents ?? 0) : (b.amount_cents ?? 0))}
                   </span>
                 </li>
               ))}

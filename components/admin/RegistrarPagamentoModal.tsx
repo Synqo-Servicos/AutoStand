@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BillWithPayable } from "@/lib/db/payables";
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
-import { centsToDisplay, displayToCents } from "@/lib/money";
+import { centsToDisplayFull, displayToCents } from "@/lib/money";
 import { Button, Field, Input, Modal, Select } from "@/components/ui";
 
 interface Props {
@@ -18,7 +18,7 @@ export function RegistrarPagamentoModal({ bill, onClose }: Props) {
   // em UTC, e às 21h de Maceió já seria "amanhã" no campo.
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
-  const [amount, setAmount] = useState(bill.amount_cents ? centsToDisplay(bill.amount_cents) : "");
+  const [amount, setAmount] = useState(bill.amount_cents ? centsToDisplayFull(bill.amount_cents) : "");
   const [date, setDate] = useState(today);
   const [method, setMethod] = useState(bill.payment_method ?? "boleto");
   const [notes, setNotes] = useState("");
@@ -29,6 +29,13 @@ export function RegistrarPagamentoModal({ bill, onClose }: Props) {
     const cents = displayToCents(amount);
     if (cents <= 0) {
       setError("Informe um valor maior que zero.");
+      return;
+    }
+    // O `required` do <Input> é inerte aqui — não há <form>, o submit é
+    // via onClick. Sem esta checagem, uma data apagada só falha no
+    // servidor, e o lojista veria "date: use o formato YYYY-MM-DD" na tela.
+    if (!date) {
+      setError("Informe a data do pagamento.");
       return;
     }
 
@@ -103,7 +110,7 @@ export function RegistrarPagamentoModal({ bill, onClose }: Props) {
               <Input
                 id={f.id} required inputMode="decimal" value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                onBlur={() => setAmount(amount.trim() ? centsToDisplay(displayToCents(amount)) : "")}
+                onBlur={() => setAmount(amount.trim() ? centsToDisplayFull(displayToCents(amount)) : "")}
               />
             )}
           </Field>

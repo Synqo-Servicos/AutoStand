@@ -8,7 +8,7 @@ import {
   PAYABLE_FREQUENCIES, PAYABLE_FREQUENCY_LABELS,
   PAYMENT_METHODS, PAYMENT_METHOD_LABELS,
 } from "@/lib/constants";
-import { displayToCents, centsToDisplay } from "@/lib/money";
+import { displayToCents, centsToDisplayFull } from "@/lib/money";
 import { Button, Field, Input, Modal, Select } from "@/components/ui";
 
 interface Props {
@@ -26,7 +26,7 @@ export function PayableForm({ payable, onClose }: Props) {
     category: payable?.category ?? ALL_EXPENSE_CATEGORIES[0],
     description: payable?.description ?? "",
     supplier: payable?.supplier ?? "",
-    amount: payable?.amount_cents ? centsToDisplay(payable.amount_cents) : "",
+    amount: payable?.amount_cents ? centsToDisplayFull(payable.amount_cents) : "",
     frequency: payable?.frequency ?? "mensal",
     first_due_date: payable?.first_due_date ?? "",
     installments: payable?.installments ? String(payable.installments) : "",
@@ -58,6 +58,18 @@ export function PayableForm({ payable, onClose }: Props) {
       return;
     }
 
+    // "Valor previsto" pode ficar em branco de propósito (o valor real é
+    // digitado ao pagar) — mas se algo foi digitado, tem de virar um valor
+    // válido. Sem isso, lixo digitado (ou um "0" digitado sem querer) vira
+    // silenciosamente amount_cents: 0, e o aviso de vencimento sai com
+    // valor zerado.
+    const amountTrimmed = form.amount.trim();
+    const amountCents = amountTrimmed ? displayToCents(amountTrimmed) : null;
+    if (amountTrimmed && (amountCents === null || amountCents <= 0)) {
+      setError("Valor previsto inválido — apague o campo se ainda não souber o valor.");
+      return;
+    }
+
     setLoading(true);
 
     const body = {
@@ -65,7 +77,7 @@ export function PayableForm({ payable, onClose }: Props) {
       category: form.category.trim() || null,
       description: form.description.trim() || null,
       supplier: form.supplier.trim() || null,
-      amount_cents: form.amount ? displayToCents(form.amount) : null,
+      amount_cents: amountCents,
       frequency: form.frequency,
       first_due_date: form.first_due_date,
       // Conta única não é parcelável — a API rejeita installments > 1 com
@@ -174,8 +186,8 @@ export function PayableForm({ payable, onClose }: Props) {
             {(f) => (
               <Input id={f.id} inputMode="decimal" value={form.amount}
                 onChange={(e) => set("amount", e.target.value)}
-                onBlur={() => set("amount", form.amount.trim() ? centsToDisplay(displayToCents(form.amount)) : "")}
-                placeholder="4.500" />
+                onBlur={() => set("amount", form.amount.trim() ? centsToDisplayFull(displayToCents(form.amount)) : "")}
+                placeholder="4.500,00" />
             )}
           </Field>
         </div>

@@ -8,7 +8,7 @@ import {
   PAYABLE_FREQUENCY_LABELS, PAYMENT_METHOD_LABELS,
   type PayableFrequency, type PaymentMethod,
 } from "@/lib/constants";
-import { formatBRL } from "@/lib/money";
+import { formatBRLFull } from "@/lib/money";
 import { Button, Modal, toast, useConfirm } from "@/components/ui";
 
 interface Props {
@@ -81,7 +81,7 @@ export function PayableRulesPanel({ payables, onClose, onEdit }: Props) {
                 </p>
               </div>
               <span className="text-sm text-n600 whitespace-nowrap">
-                {p.amount_cents ? formatBRL(p.amount_cents) : "—"}
+                {p.amount_cents ? formatBRLFull(p.amount_cents) : "—"}
               </span>
               <Button size="sm" variant="outline" onClick={() => onEdit(p)}
                 leadingIcon={<Pencil className="w-3.5 h-3.5" />}>
