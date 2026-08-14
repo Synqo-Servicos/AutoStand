@@ -255,7 +255,14 @@ export async function releaseNotifications(
   ));
 }
 
-/** Tenants elegíveis ao digest — suspenso e diagnóstico ficam de fora. */
+/**
+ * Tenants elegíveis ao digest: filtra só por `status = "active"` — não há
+ * filtro por slug. Tenants `diag-` (fluxo de diagnóstico de checkout do
+ * super-admin) ENTRAM nesta lista: o MP_STATUS_MAP em lib/db/tenants.ts os
+ * marca `active` ao "pagar" o R$1 do diagnóstico. Isso não vaza aviso pra
+ * eles só porque nunca têm linhas em `payables` — listBills devolve `[]` e
+ * o loop da rota nunca monta um digest, não porque estejam filtrados aqui.
+ */
 export async function listTenantsForBillDigest(): Promise<TenantRow[]> {
   return db.select().from(tenants).where(eq(tenants.status, "active"));
 }
