@@ -5,13 +5,16 @@ import {
   getFinanceiroPorVeiculo,
   getFinanceiroResumo,
   getOperationalExpenses,
+  listBills,
+  listPayables,
 } from "@/lib/db";
 import { formatBRL } from "@/lib/money";
 import { OperationalExpenseList } from "@/components/admin/OperationalExpenseList";
+import { ContasAPagarTab } from "@/components/admin/ContasAPagarTab";
 
 export const dynamic = "force-dynamic";
 
-type Tab = "resumo" | "veiculos" | "operacionais";
+type Tab = "resumo" | "veiculos" | "operacionais" | "contas";
 
 type SearchParams = Promise<{ tab?: string; month?: string }>;
 
@@ -19,6 +22,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "resumo",       label: "Resumo" },
   { id: "veiculos",     label: "Por veículo" },
   { id: "operacionais", label: "Despesas operacionais" },
+  { id: "contas",       label: "Contas a pagar" },
 ];
 
 export default async function FinanceiroPage({ searchParams }: { searchParams: SearchParams }) {
@@ -29,6 +33,11 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
   const month = (sp.month ?? defaultMonth).slice(0, 7);
 
   const tenant = await getAdminTenant();
+
+  const todayISO = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const [bills, payablesList] = tab === "contas"
+    ? await Promise.all([listBills(tenant.id, todayISO), listPayables(tenant.id)])
+    : [[], []];
 
   return (
     <div className="p-4 sm:p-8 w-full space-y-5 sm:space-y-6">
@@ -74,6 +83,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
       {tab === "resumo"       && <ResumoTab tenantId={tenant.id} month={month} />}
       {tab === "veiculos"     && <VeiculosTab tenantId={tenant.id} month={month} />}
       {tab === "operacionais" && <OperacionaisTab tenantId={tenant.id} month={month} />}
+      {tab === "contas"       && <ContasAPagarTab bills={bills} payables={payablesList} />}
     </div>
   );
 }
