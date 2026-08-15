@@ -56,6 +56,33 @@ describe("formatBRLFull (usado nas telas de contas a pagar)", () => {
   });
 });
 
+describe("round-trip do onBlur do valor (string digitada → cents → string exibida)", () => {
+  // Simula o que o input de valor faz no blur:
+  // setAmountStr(centsToDisplayFull(displayToCents(amountStr))).
+  // OperationalExpenseList.tsx usava centsToDisplay aqui — o lojista digitava
+  // "450,37", saía do campo, e o valor virava "450" sem aviso (a despesa era
+  // salva com R$ 450,00). Esta é a composição que precisa preservar centavos.
+  function onBlurRoundTrip(typed: string): string {
+    return centsToDisplayFull(displayToCents(typed));
+  }
+
+  it("preserva os centavos digitados pelo lojista", () => {
+    expect(onBlurRoundTrip("450,37")).toBe("450,37");
+    expect(onBlurRoundTrip("137,42")).toBe("137,42");
+    expect(onBlurRoundTrip("0,05")).toBe("0,05");
+  });
+
+  it("normaliza entrada sem casas decimais para duas casas", () => {
+    expect(onBlurRoundTrip("3500")).toBe("3.500,00");
+  });
+
+  it("usar centsToDisplay em vez de centsToDisplayFull aqui reproduziria o bug", () => {
+    // Documenta o defeito que foi corrigido: se o onBlur voltasse a usar
+    // centsToDisplay, "450,37" viraria "450" e o teste acima quebraria.
+    expect(centsToDisplay(displayToCents("450,37"))).toBe("450");
+  });
+});
+
 describe("displayToCents", () => {
   it("converte string em pt-BR (com separador de milhar e vírgula decimal) pra centavos", () => {
     expect(displayToCents("137,42")).toBe(13742);
