@@ -47,6 +47,7 @@ A 2 e a 3 são independentes entre si; as duas dependem da 1.
 | Recuperar webhook perdido | **Botão de reconciliação, não cron** | com um cliente, cron é maquinário para um problema que não existe. Botão **mostra a diferença** em vez de corrigir em silêncio |
 | Emissão fiscal agora | **Manual**, com fila no console | ver "Camada 3" abaixo |
 | Perguntas do console | **as quatro** — caixa, imposto, recorrência, pendência fiscal | todas saem da mesma fonte |
+| Exibir valor de imposto | **Não, até o contador validar** | número de imposto errado vira decisão errada sobre dinheiro. Calculado e testado desde já; exibição atrás de flag |
 
 ---
 
@@ -115,12 +116,25 @@ Os dois caminhos usam a mesma função de gravação e a mesma trava de idempot�
 Em `/superadmin/financeiro`, com seletor de período (mês corrente por padrão). Quatro blocos.
 
 ### Caixa
-Bruto recebido, taxa do MP, DAS estimado, líquido. Dinheiro que caiu, não previsão.
+Bruto recebido, taxa do Mercado Pago, e o resultado — rotulado **"líquido antes de imposto"**, nunca "líquido" sozinho.
 
-### Imposto
-DAS **estimado** do período, data de vencimento, e **a conta aberta**: receita bruta dos últimos 12 meses (RBT12), anexo, alíquota nominal, parcela a deduzir, alíquota efetiva resultante.
+> Esse rótulo é requisito, não estilo. Enquanto o bloco de imposto estiver desligado (ver abaixo), "líquido" sem qualificação seria lido como dinheiro disponível, e é justamente o erro que desligar o imposto existe para evitar. O número que sobra ainda tem o DAS pela frente.
 
-> "Estimado" é literal e precisa aparecer na tela. O DAS oficial é apurado no PGDAS-D, que considera coisas que este sistema não conhece — outras receitas, retenções, ajustes. O número aqui serve para **separar dinheiro**, não para pagar a guia.
+### Imposto — **desligado até validação contábil**
+
+**Decisão do dono (15/08/2026): o console não exibe valor de imposto — nem DAS estimado, nem alíquota efetiva — enquanto o cálculo não for validado pelo contador.**
+
+O bloco existe e é visível, mas mostra apenas:
+
+- o estado: *"cálculo de imposto aguardando validação contábil"*
+- os **insumos**, que são fato e não estimativa: RBT12 apurado do próprio registro de pagamentos, anexo configurado, e desde quando
+- nenhum resultado: sem DAS, sem alíquota
+
+Os insumos ficam à vista de propósito — é o que o contador precisa para conferir a conta. O que fica escondido é o número que induziria decisão.
+
+**Ligar é mudança de configuração, não deploy de lógica.** O cálculo é implementado e testado desde já; uma flag decide se o resultado aparece. Quando o contador validar, vira `true` e o bloco passa a mostrar DAS estimado, alíquota efetiva e vencimento.
+
+> Quando ligado, "estimado" é literal e precisa aparecer na tela. O DAS oficial é apurado no PGDAS-D, que considera o que este sistema não conhece — outras receitas, retenções, ajustes. O número serve para **separar dinheiro**, não para pagar a guia.
 
 ### Recorrência
 MRR, ativos por plano, inadimplentes, cancelados no período. Sai de `tenants`, não do registro de pagamentos.
@@ -140,7 +154,7 @@ Três pontos que a implementação precisa acertar:
 
 **A SYNQO abriu em 02/06/2026 e não tem 12 meses de receita.** Para empresa nova, o Simples manda proporcionalizar a receita acumulada em vez de somar direto. Somando direto, a alíquota sai da faixa errada.
 
-> **Este cálculo precisa ser confirmado pelo contador antes de o número ser usado para decisão.** O sistema implementa a conta; não assina por ela. O console deve deixar isso explícito na tela.
+> **Este cálculo precisa ser confirmado pelo contador antes de o número aparecer.** O sistema implementa a conta; não assina por ela. Por decisão do dono, o resultado fica **oculto atrás de uma flag** até essa validação — ver o bloco "Imposto" acima. O cálculo é implementado e testado normalmente; só não é exibido.
 
 **O anexo (III ou V) é configuração, não constante.** Depende do fator R (folha ÷ receita bruta), que muda mês a mês com o pró-labore. Configurável significa: funciona hoje sem a questão fechada, e corrigir depois é trocar um valor. O console mostra qual anexo está configurado e desde quando — número de imposto sem procedência visível é pior que número nenhum.
 
@@ -171,6 +185,10 @@ Se já houver nota emitida contra ele, o console alerta — cancelamento de NFS-
 ## Testes
 
 **Puros** — a matemática do Simples é módulo isolado, sem banco: alíquota efetiva por faixa, proporcionalização de empresa nova, virada de faixa, agregação por período com estorno no meio.
+
+> O cálculo é testado **mesmo estando oculto na tela**. Testá-lo agora é o que permite ao contador validar a conta contra casos concretos em vez de ler código — e é o que torna ligar a flag uma decisão de um passo, sem implementação pendente atrás dela.
+
+**Da flag de imposto** — com ela desligada, nenhum valor de imposto aparece na resposta da página; com ela ligada, aparece. O teste cobre os dois estados, para que desligar não vire uma tela quebrada nem ligar exponha um cálculo que ninguém exercitou.
 
 **Webhook** — notificação repetida grava uma linha só; tipo que não é pagamento continua ignorado; falha na busca ao MP não grava linha parcial.
 
