@@ -12,6 +12,12 @@ export const POST = withSuperAdmin(async (req) => {
 
   const name = String(body.name ?? "").trim();
   const code = normalizeSlug(String(body.code ?? ""));
+  // CAMPO INATIVO desde 2026-08-15 (decisão de produto): o desconto de parceiro
+  // não existe como mecanismo próprio — ele se dá por CUPOM vinculado
+  // (`coupons.partner_id`). O formulário não envia mais estas chaves, então na
+  // prática o parceiro nasce com o default da coluna. O parsing fica aqui, sem
+  // migration e sem tocar em dado gravado, porque a decisão pode ser revista.
+  // Ver a nota completa em lib/db/partners.ts.
   const discount_type = body.discount_type === "amount" ? "amount" : "percent";
   const discount_value = Math.max(0, Math.round(Number(body.discount_value) || 0));
   const status = body.status === "inactive" ? "inactive" : "active";

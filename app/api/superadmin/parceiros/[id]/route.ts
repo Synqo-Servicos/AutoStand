@@ -21,6 +21,11 @@ export const PATCH = withSuperAdmin<{ id: string }>(async (req, { params }) => {
     patch.code = code;
   }
 
+  // CAMPO INATIVO desde 2026-08-15 (decisão de produto): desconto de parceiro
+  // é por CUPOM vinculado (`coupons.partner_id`), não por campo próprio. O
+  // formulário parou de enviar estas chaves — sem elas, o PATCH preserva o que
+  // já está gravado. Mantido aceitando, sem migration, caso a decisão volte.
+  // Ver a nota completa em lib/db/partners.ts.
   if (body.discount_type === "percent" || body.discount_type === "amount") {
     patch.discount_type = body.discount_type;
   }

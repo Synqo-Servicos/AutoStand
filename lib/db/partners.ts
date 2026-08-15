@@ -26,9 +26,14 @@ import { db, type Tx } from "./client";
  *
  * Não ligue estes campos no cálculo de preço sem decisão comercial explícita —
  * isso criaria um segundo mecanismo de desconto concorrendo com os cupons
- * (regra de acúmulo, desconto recorrente permanente, etc.). A remoção das
- * colunas exige migration + limpeza do CRUD em `/superadmin/parceiros`, que
- * hoje ainda coleta e exibe os valores.
+ * (regra de acúmulo, desconto recorrente permanente, etc.).
+ *
+ * DESATIVADO NA UI EM 2026-08-15, por decisão de produto: `/superadmin/parceiros`
+ * não coleta nem exibe mais o desconto (era ali que o parceiro se convencia de
+ * que ele era real, vendo o super-admin cadastrar um "15%"). As COLUNAS ficam:
+ * sem migration e sem apagar dado, porque a decisão pode ser revista. As rotas
+ * de `/api/superadmin/parceiros` seguem aceitando os campos — hoje ninguém os
+ * envia. Remover as colunas de vez exige migration.
  */
 
 export async function listPartners(): Promise<PartnerRow[]> {
