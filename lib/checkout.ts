@@ -1,7 +1,7 @@
 import MercadoPagoConfig, { PreApproval, PreApprovalPlan } from "mercadopago";
 import type { Plan } from "@/lib/plans";
-import type { CouponRow, PartnerRow, TenantRow } from "@/lib/schema";
-import { discountedPriceCents } from "@/lib/coupon-pricing";
+import type { CouponRow, TenantRow } from "@/lib/schema";
+import { monthlyChargeCents } from "@/lib/coupon-pricing";
 import { tenantSiteUrl } from "@/lib/marketplace";
 import { mpNotificationUrl } from "@/lib/platform";
 
@@ -67,11 +67,14 @@ function subscriptionReason(plan: Plan, coupon: CouponRow | null): string {
 }
 
 function autoRecurringBody(plan: Plan, coupon: CouponRow | null): Record<string, unknown> {
-  const priceCents = coupon ? discountedPriceCents(plan, coupon) : plan.priceMonthly;
+  // Sem piso local: `monthlyChargeCents` já devolve o valor cobrável (>= 1
+  // centavo). O piso precisa ser o MESMO número que a prévia do cupom e a tela
+  // de pagamento exibem — por isso mora em lib/coupon-pricing.ts, não aqui.
+  const priceCents = monthlyChargeCents(plan, coupon);
   const body: Record<string, unknown> = {
     frequency: 1,
     frequency_type: "months",
-    transaction_amount: Math.max(1, priceCents) / 100, // piso de código; MP tem mínimo próprio
+    transaction_amount: priceCents / 100,
     currency_id: "BRL",
   };
   if (coupon?.discount_type === "free_month") {
@@ -107,11 +110,17 @@ async function createMpPlan(tenant: TenantRow, plan: Plan, coupon: CouponRow | n
  * `back_url` aponte pro painel da própria loja. Os planos pré-criados
  * (`MERCADOPAGO_PLAN_*`) não são mais usados aqui — um plano compartilhado
  * teria back_url fixo, caindo num host sem tenant após o pagamento.
+ *
+ * NÃO recebe parceiro, de propósito. O parceiro do link `?parceiro=` é
+ * atribuição (`tenants.referred_by` + `partners.signup_count`), não preço — o
+ * desconto de indicação é concedido por cupom. Até ago/2026 a assinatura desta
+ * função tinha um parâmetro `_partner` que nunca era lido, o que fazia parecer
+ * que o desconto do parceiro entrava aqui; ele nunca entrou. Ver
+ * `lib/db/partners.ts`.
  */
 export async function createCheckoutSession(
   tenant: TenantRow,
   plan: Plan,
-  _partner: PartnerRow | null,
   coupon?: CouponRow | null,
 ): Promise<string | null> {
   const mpPlanId = await createMpPlan(tenant, plan, coupon ?? null);
