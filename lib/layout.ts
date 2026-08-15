@@ -42,8 +42,18 @@ export const CARD_STYLES: readonly LayoutConfig["cardStyle"][] = [
 /**
  * Valida/saneia uma config crua (ex.: payload do cliente) — campo a campo,
  * caindo no padrão quando o valor é inválido. Nunca confie no cliente.
+ *
+ * `heroImageUrl` é referência de ARQUIVO, não texto: o que for gravado aqui
+ * acaba em `deleteFromBlob` no cleanup de órfãos do PATCH /api/personalizar —
+ * uma string livre do cliente apagaria o arquivo de outra loja. Por isso a
+ * resolução é responsabilidade explícita de quem grava: sem `resolveHeroImageUrl`
+ * a imagem é DESCARTADA (fail-safe), nunca aceita como veio. O resolvedor real
+ * vive em app/api/personalizar/route.ts e prova a posse do objeto.
  */
-export function sanitizeLayoutConfig(raw: unknown): LayoutConfig {
+export function sanitizeLayoutConfig(
+  raw: unknown,
+  resolveHeroImageUrl: (value: string) => string | null = () => null,
+): LayoutConfig {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   return {
     heroStyle: HERO_STYLES.includes(r.heroStyle as LayoutConfig["heroStyle"])
@@ -51,7 +61,7 @@ export function sanitizeLayoutConfig(raw: unknown): LayoutConfig {
       : DEFAULT_LAYOUT_CONFIG.heroStyle,
     heroImageUrl:
       typeof r.heroImageUrl === "string" && r.heroImageUrl.trim()
-        ? r.heroImageUrl.trim()
+        ? resolveHeroImageUrl(r.heroImageUrl.trim())
         : null,
     cardStyle: CARD_STYLES.includes(r.cardStyle as LayoutConfig["cardStyle"])
       ? (r.cardStyle as LayoutConfig["cardStyle"])

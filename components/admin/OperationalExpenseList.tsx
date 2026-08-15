@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CalendarCheck, Plus, Trash2 } from "lucide-react";
-import { centsToDisplay, displayToCents, formatBRLFull } from "@/lib/money";
+import { centsToDisplayFull, displayToCents, formatBRLFull } from "@/lib/money";
 import { EXPENSE_CATEGORIES, TRANSACTION_LABELS } from "@/lib/constants";
 import { Button, Field, Input, Modal, Select, Textarea, useConfirm, toast } from "@/components/ui";
 import type { OperationalExpenseRow } from "@/lib/db";
@@ -266,7 +266,7 @@ function AddOperationalModal({ onClose, onCreated }: ModalProps) {
               type="text"
               value={amountStr}
               onChange={(e) => setAmountStr(e.target.value)}
-              onBlur={() => setAmountStr(centsToDisplay(displayToCents(amountStr)))}
+              onBlur={() => setAmountStr(centsToDisplayFull(displayToCents(amountStr)))}
               placeholder="Ex: 3.500"
             />
           )}

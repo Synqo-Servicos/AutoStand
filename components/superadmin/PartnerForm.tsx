@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Trash2, Copy, Check } from "lucide-react";
 import { normalizeSlug } from "@/lib/slug";
@@ -9,6 +10,25 @@ import { Button, Field, Input, Select, useConfirm } from "@/components/ui";
 
 const cardClass = "bg-white rounded-xl border border-n200 shadow-xs p-6 space-y-4";
 
+/**
+ * CAMPO INATIVO — "Desconto" do parceiro (`discount_type` / `discount_value`).
+ *
+ * Desativado por decisão de produto em 2026-08-15: o desconto de parceiro não
+ * existe como mecanismo próprio. O modelo é "parceiro dá CUPOM", e
+ * `coupons.partner_id` já amarra os dois. Estes campos nunca entraram em
+ * nenhum cálculo de preço (ver lib/db/partners.ts e lib/coupon-pricing.ts), e
+ * 4c0b5b3 já tirou a promessa da página pública de /assinar.
+ *
+ * Coletá-los aqui era o pior pedaço do problema: o super-admin cadastrava um
+ * "15%" na frente do parceiro, e o parceiro saía convencido de que o desconto
+ * era real — a tela dava lastro a uma promessa que a cobrança não cumpre.
+ *
+ * A desativação é só de UI, de propósito: as colunas continuam no banco com o
+ * dado histórico intacto (sem migration, sem DELETE), porque a decisão pode ser
+ * revista. Se for revista, reativar é restaurar o estado + os dois `Field` —
+ * as rotas de /api/superadmin/parceiros ainda aceitam os campos.
+ */
+
 export function PartnerForm({ partner }: { partner?: PartnerRow }) {
   const router = useRouter();
   const isEdit = !!partner;
@@ -16,16 +36,6 @@ export function PartnerForm({ partner }: { partner?: PartnerRow }) {
   const [name, setName] = useState(partner?.name ?? "");
   const [code, setCode] = useState(partner?.code ?? "");
   const [codeTouched, setCodeTouched] = useState(isEdit);
-  const [discountType, setDiscountType] = useState<"percent" | "amount">(
-    partner?.discount_type === "amount" ? "amount" : "percent",
-  );
-  const [discountValue, setDiscountValue] = useState(
-    partner
-      ? partner.discount_type === "amount"
-        ? String(partner.discount_value / 100)
-        : String(partner.discount_value)
-      : "",
-  );
   const [maxUses, setMaxUses] = useState(partner?.max_uses != null ? String(partner.max_uses) : "");
   const [expiresAt, setExpiresAt] = useState(partner?.expires_at ?? "");
   const [status, setStatus] = useState(partner?.status ?? "active");
@@ -52,21 +62,18 @@ export function PartnerForm({ partner }: { partner?: PartnerRow }) {
     setError(null);
     setLoading(true);
 
-    const discount_value =
-      discountType === "amount"
-        ? Math.round((Number(discountValue) || 0) * 100)
-        : Math.round(Number(discountValue) || 0);
-
     const res = await fetch(
       isEdit ? `/api/superadmin/parceiros/${partner!.id}` : "/api/superadmin/parceiros",
       {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
+        // `discount_type`/`discount_value` ficam FORA do payload — campo
+        // inativo (ver nota no topo do arquivo). No PATCH, a ausência das
+        // chaves preserva o que já está gravado; no POST, o banco aplica o
+        // default da coluna. Nada é apagado.
         body: JSON.stringify({
           name,
           code,
-          discount_type: discountType,
-          discount_value,
           max_uses: maxUses || null,
           expires_at: expiresAt || null,
           status,
@@ -139,35 +146,21 @@ export function PartnerForm({ partner }: { partner?: PartnerRow }) {
         </div>
       </div>
 
-      {/* Desconto e limites */}
+      {/* Limites e status */}
       <div className={cardClass}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Tipo de desconto">
-            {(f) => (
-              <Select
-                id={f.id}
-                value={discountType}
-                onValueChange={(v) => setDiscountType(v as "percent" | "amount")}
-                options={[
-                  { value: "percent", label: "Percentual (%)" },
-                  { value: "amount", label: "Valor fixo (R$)" },
-                ]}
-              />
-            )}
-          </Field>
-          <Field label={discountType === "percent" ? "Desconto (%)" : "Desconto (R$)"}>
-            {(f) => (
-              <Input
-                id={f.id}
-                type="number"
-                min="0"
-                value={discountValue}
-                onChange={(e) => setDiscountValue(e.target.value)}
-                placeholder={discountType === "percent" ? "15" : "50"}
-              />
-            )}
-          </Field>
-        </div>
+        {/*
+          No lugar do antigo par "Tipo de desconto" + "Desconto": em vez de um
+          campo que não cobra nada, a tela diz onde o desconto realmente mora.
+        */}
+        <p className="rounded-lg bg-n50 px-3 py-2 text-xs leading-relaxed text-n600">
+          <strong className="text-ink">Desconto é por cupom.</strong> O link{" "}
+          <code>?parceiro=</code> registra a indicação — ele não abate valor nenhum
+          na cobrança. Para o parceiro dar desconto, crie um{" "}
+          <Link href="/superadmin/cupons" className="font-medium text-signal hover:text-signal-dark">
+            cupom
+          </Link>{" "}
+          e peça que ele entregue o código ao lojista.
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Limite de usos">
             {(f) => (

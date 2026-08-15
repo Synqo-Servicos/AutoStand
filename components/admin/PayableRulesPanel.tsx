@@ -32,7 +32,12 @@ export function PayableRulesPanel({ payables, onClose, onEdit }: Props) {
   async function handleDeactivate(p: PayableRow) {
     const ok = await confirm({
       title: `Desativar "${p.category ?? p.description ?? "conta"}"?`,
-      description: "Ela para de gerar vencimentos daqui pra frente. Os pagamentos já registrados continuam no financeiro.",
+      // O texto descreve o que o código faz de verdade (listBills lê as
+      // regras inativas e buildBills mantém a ocorrência vencida em aberto).
+      // A versão anterior prometia só "para de gerar daqui pra frente" e
+      // silenciava o essencial: o que já venceu e não foi pago continua
+      // cobrável — antes da correção, sumia junto.
+      description: "Ela para de gerar vencimentos daqui pra frente. O que já venceu e não foi pago continua na lista, para você registrar o pagamento, e os pagamentos já feitos continuam no financeiro.",
       confirmLabel: "Desativar",
       danger: true,
     });
@@ -59,7 +64,7 @@ export function PayableRulesPanel({ payables, onClose, onEdit }: Props) {
       onOpenChange={(next) => { if (!next) onClose(); }}
       size="lg"
       title="Contas cadastradas"
-      description="Editar altera a regra para os próximos vencimentos. Desativar não apaga o histórico já pago."
+      description="Editar altera a regra para os próximos vencimentos. Desativar interrompe os próximos, sem apagar o histórico nem o que ficou em aberto."
     >
       {dialog}
       {payables.length === 0 ? (

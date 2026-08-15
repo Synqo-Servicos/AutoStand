@@ -3,6 +3,39 @@ import { partners, tenants } from "@/lib/schema";
 import type { NewPartner, PartnerRow, TenantRow } from "@/lib/schema";
 import { db, type Tx } from "./client";
 
+/**
+ * CAMPO MORTO — `partners.discount_type` / `partners.discount_value`.
+ *
+ * Estes dois campos NÃO afetam cobrança e nunca afetaram. Eles são resquício do
+ * desenho original (era Stripe: o parceiro apontava para um `stripe_coupon_id`,
+ * coluna hoje também sem uso). Quando o billing migrou para o Mercado Pago, o
+ * desconto passou a ser concedido pela tabela `coupons` — que tem `partner_id`
+ * justamente para amarrar o cupom ao parceiro.
+ *
+ * Modelo comercial vigente, conforme a documentação do produto:
+ * - `docs/Modelo de Dados.md` (§ `partners`): "o desconto é aplicado via cupom
+ *   no checkout do Mercado Pago — ver tabela `coupons`";
+ * - `docs/Decisões.md`: "Cada parceiro tem um cupom de desconto e um link
+ *   `?parceiro=`";
+ * - `docs/produto/01-Fundamentos.md` e `docs/Planos e Preços.md`: links de
+ *   parceiro "aplicam cupons de desconto e creditam a indicação".
+ *
+ * Ou seja: o link `?parceiro=` faz ATRIBUIÇÃO (`tenants.referred_by`,
+ * `partners.signup_count`, limites `max_uses`/`expires_at`). Quem dá desconto é
+ * o CUPOM que o parceiro entrega ao lojista.
+ *
+ * Não ligue estes campos no cálculo de preço sem decisão comercial explícita —
+ * isso criaria um segundo mecanismo de desconto concorrendo com os cupons
+ * (regra de acúmulo, desconto recorrente permanente, etc.).
+ *
+ * DESATIVADO NA UI EM 2026-08-15, por decisão de produto: `/superadmin/parceiros`
+ * não coleta nem exibe mais o desconto (era ali que o parceiro se convencia de
+ * que ele era real, vendo o super-admin cadastrar um "15%"). As COLUNAS ficam:
+ * sem migration e sem apagar dado, porque a decisão pode ser revista. As rotas
+ * de `/api/superadmin/parceiros` seguem aceitando os campos — hoje ninguém os
+ * envia. Remover as colunas de vez exige migration.
+ */
+
 export async function listPartners(): Promise<PartnerRow[]> {
   return db.select().from(partners).orderBy(desc(partners.created_at));
 }

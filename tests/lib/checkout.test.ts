@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { translateDecline } from "@/lib/checkout";
+import { MIN_CHARGEABLE_CENTS, discountedPriceCents } from "@/lib/coupon-pricing";
 import { PLATFORM_ORIGIN } from "@/lib/platform";
 
 const WEBHOOK_URL = `${PLATFORM_ORIGIN}/api/webhooks/mercadopago`;
@@ -55,7 +56,7 @@ describe("createCheckoutSession", () => {
 
   it("sem cupom: cria plano on-the-fly com mensalidade cheia e back_url da loja", async () => {
     const { createCheckoutSession } = await import("@/lib/checkout");
-    const result = await createCheckoutSession(TENANT, PLAN, null);
+    const result = await createCheckoutSession(TENANT, PLAN);
 
     expect(mockPlanCreate).toHaveBeenCalledOnce();
     const body = mockPlanCreate.mock.calls[0][0].body;
@@ -69,7 +70,7 @@ describe("createCheckoutSession", () => {
 
   it("cupom percentage: aplica desconto e mantém back_url da loja", async () => {
     const { createCheckoutSession } = await import("@/lib/checkout");
-    const result = await createCheckoutSession(TENANT, PLAN, null, makeCoupon("percentage", 10));
+    const result = await createCheckoutSession(TENANT, PLAN, makeCoupon("percentage", 10));
 
     const body = mockPlanCreate.mock.calls[0][0].body;
     expect(body.reason).toContain("10%");
@@ -78,9 +79,35 @@ describe("createCheckoutSession", () => {
     expect(result).toContain("plan_created_123");
   });
 
+  // Regressão: cupom de 100% (ou fixed >= preço) anunciava "R$ 0,00/mês" na
+  // prévia e criava assinatura de R$ 0,01/mês por causa de um Math.max(1, ...)
+  // que só existia no checkout. O piso agora é único e visível na prévia.
+  it("cupom que zera o plano: cobra EXATAMENTE o valor que a prévia exibe", async () => {
+    const { createCheckoutSession } = await import("@/lib/checkout");
+    const coupon = makeCoupon("percentage", 100);
+    await createCheckoutSession(TENANT, PLAN, coupon);
+
+    const body = mockPlanCreate.mock.calls[0][0].body;
+    // discountedPriceCents é a fonte da prévia (/api/cupons/validate) e do
+    // `amount` que vai pra tela de pagamento. Cobrado === exibido.
+    expect(body.auto_recurring.transaction_amount).toBe(discountedPriceCents(PLAN, coupon) / 100);
+    expect(body.auto_recurring.transaction_amount).toBe(MIN_CHARGEABLE_CENTS / 100);
+    expect(body.auto_recurring.transaction_amount).toBeGreaterThan(0);
+  });
+
+  it("cupom fixed maior que a mensalidade: mesmo piso, sem valor negativo", async () => {
+    const { createCheckoutSession } = await import("@/lib/checkout");
+    const coupon = makeCoupon("fixed", 99999);
+    await createCheckoutSession(TENANT, PLAN, coupon);
+
+    const body = mockPlanCreate.mock.calls[0][0].body;
+    expect(body.auto_recurring.transaction_amount).toBe(discountedPriceCents(PLAN, coupon) / 100);
+    expect(body.auto_recurring.transaction_amount).toBeGreaterThan(0);
+  });
+
   it("cupom free_month: vira free_trial com mensalidade cheia", async () => {
     const { createCheckoutSession } = await import("@/lib/checkout");
-    await createCheckoutSession(TENANT, PLAN, null, makeCoupon("free_month", null));
+    await createCheckoutSession(TENANT, PLAN, makeCoupon("free_month", null));
 
     const body = mockPlanCreate.mock.calls[0][0].body;
     expect(body.auto_recurring.free_trial).toEqual({ frequency: 1, frequency_type: "months" });
@@ -92,7 +119,6 @@ describe("createCheckoutSession", () => {
     await createCheckoutSession(
       { id: 2, slug: "x", custom_domain: "loja.exemplo.com.br" } as any,
       PLAN,
-      null,
     );
 
     const body = mockPlanCreate.mock.calls[0][0].body;
@@ -101,7 +127,7 @@ describe("createCheckoutSession", () => {
 
   it("envia notification_url explícito, apontando pro apex da plataforma", async () => {
     const { createCheckoutSession } = await import("@/lib/checkout");
-    await createCheckoutSession(TENANT, PLAN, null);
+    await createCheckoutSession(TENANT, PLAN);
 
     const body = mockPlanCreate.mock.calls[0][0].body;
     expect(body.notification_url).toBe(WEBHOOK_URL);
@@ -112,7 +138,6 @@ describe("createCheckoutSession", () => {
     await createCheckoutSession(
       { id: 2, slug: "x", custom_domain: "loja.exemplo.com.br" } as any,
       PLAN,
-      null,
     );
 
     const body = mockPlanCreate.mock.calls[0][0].body;
@@ -144,6 +169,29 @@ describe("createTransparentSubscription", () => {
     expect(body.auto_recurring.transaction_amount).toBeCloseTo(1.0, 2); // 16990-16890 = 100c = R$1,00
     expect(body.back_url).toMatch(/^https:\/\/autoprime\..+\/admin\/assinatura$/);
     expect(res).toEqual({ id: "sub_123", status: "authorized", statusDetail: "accredited" });
+  });
+
+  // Mesmo contrato no modo transparent (o que roda em produção): o valor
+  // cobrado no MP tem que ser o mesmo que a tela de pagamento mostrou.
+  it("cupom que zera o plano: cobra EXATAMENTE o valor que a tela exibe", async () => {
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    const coupon = makeCoupon("percentage", 100);
+    await createTransparentSubscription(TENANT, PLAN, coupon, "tok", "c@t.com");
+
+    const body = mockPreApprovalCreate.mock.calls[0][0].body;
+    expect(body.auto_recurring.transaction_amount).toBe(discountedPriceCents(PLAN, coupon) / 100);
+    expect(body.auto_recurring.transaction_amount).toBe(MIN_CHARGEABLE_CENTS / 100);
+    expect(body.auto_recurring.transaction_amount).toBeGreaterThan(0);
+  });
+
+  it("cupom fixed igual à mensalidade: piso único, sem divergência com a prévia", async () => {
+    const { createTransparentSubscription } = await import("@/lib/checkout");
+    const coupon = makeCoupon("fixed", 16990);
+    await createTransparentSubscription(TENANT, PLAN, coupon, "tok", "c@t.com");
+
+    const body = mockPreApprovalCreate.mock.calls[0][0].body;
+    expect(body.auto_recurring.transaction_amount).toBe(discountedPriceCents(PLAN, coupon) / 100);
+    expect(body.auto_recurring.transaction_amount).toBeGreaterThan(0);
   });
 
   it("free_month vira free_trial com mensalidade cheia", async () => {

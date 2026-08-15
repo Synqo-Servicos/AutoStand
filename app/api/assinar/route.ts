@@ -18,7 +18,7 @@ import { createCheckoutSession } from "@/lib/checkout";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { signPaymentToken } from "@/lib/payment-token";
-import { discountedPriceCents } from "@/lib/coupon-pricing";
+import { monthlyChargeCents } from "@/lib/coupon-pricing";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -128,11 +128,13 @@ export async function POST(req: NextRequest) {
         couponId: coupon?.id ?? null,
       });
       const planObj = getPlan(plan);
-      const amount = coupon ? discountedPriceCents(planObj, coupon) : planObj.priceMonthly;
+      // Mesmo número que o MP vai cobrar (ver lib/coupon-pricing.ts). O parceiro
+      // não entra: desconto de indicação vem por cupom, não por `?parceiro=`.
+      const amount = monthlyChargeCents(planObj, coupon);
       return NextResponse.json({ ok: true, slug: tenant.slug, paymentToken, amount }, { status: 201 });
     }
 
-    const checkoutUrl = await createCheckoutSession(tenant, getPlan(plan), partner, coupon);
+    const checkoutUrl = await createCheckoutSession(tenant, getPlan(plan), coupon);
     return NextResponse.json({ ok: true, slug: tenant.slug, checkoutUrl }, { status: 201 });
   } catch (err) {
     console.error("[assinar] unexpected error:", err);

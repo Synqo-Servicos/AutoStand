@@ -4,6 +4,8 @@ import {
   vehicle_documents, vehicle_photos, vehicles,
 } from "@/lib/schema";
 import type { NewTenant, TenantRow } from "@/lib/schema";
+// Módulo puro (sem `server-only`/AWS SDK) — só a convenção de pastas do upload.
+import { uploadFolder } from "@/lib/presign";
 import { db, dbAll, dbGet, type Tx } from "./client";
 
 // — CRUD ———————————————————————————————————————————————————————
@@ -157,25 +159,54 @@ export async function releaseTenantCheckout(tenantId: number): Promise<void> {
     .where(and(eq(tenants.id, tenantId), eq(tenants.subscription_status, "processing")));
 }
 
+/** Um blob do tenant + a pasta em que ele obrigatoriamente tem que estar. */
+export interface TenantBlobRef {
+  /** URL pública gravada no banco — o que se apagaria do storage. */
+  url: string;
+  /** Pasta canônica do upload (`uploadFolder`) — base da prova de posse. */
+  folder: string;
+}
+
 /**
- * Coleta todas as URLs de blob de um tenant — logo, hero image, fotos de
- * veículos e documentos. Usado antes de deleteTenant pra que o caller
- * possa apagar os arquivos no storage depois que a transação no DB sair.
+ * Coleta os blobs de um tenant — logo, hero image, fotos de veículos e
+ * documentos. Usado antes de deleteTenant pra que o caller possa apagar os
+ * arquivos no storage depois que a transação no DB sair.
+ *
+ * Devolve `folder` junto com a URL, e não só a URL, porque a URL sozinha NÃO
+ * autoriza delete: ela é dado gravado, e o código vulnerável de branding
+ * (corrigido em 1b04c4b) chegou a aceitar do cliente a URL do arquivo de outra
+ * loja. Excluir a Loja A com uma linha dessas apagaria o logo da Loja B. Quem
+ * apaga tem que provar a posse antes (`ownsBlobUrl`), e a prova precisa da
+ * pasta esperada — que só quem leu a linha sabe montar (a de foto/documento
+ * depende do `vehicle_id` do próprio registro).
  */
-export async function listTenantBlobUrls(id: number): Promise<string[]> {
+export async function listTenantBlobRefs(id: number): Promise<TenantBlobRef[]> {
   const tenant = await getTenantById(id);
   if (!tenant) return [];
 
-  const [photoUrls, docUrls] = await Promise.all([
-    db.select({ url: vehicle_photos.url }).from(vehicle_photos).where(eq(vehicle_photos.tenant_id, id)),
-    db.select({ url: vehicle_documents.url }).from(vehicle_documents).where(eq(vehicle_documents.tenant_id, id)),
+  const [photos, docs] = await Promise.all([
+    db
+      .select({ url: vehicle_photos.url, vehicleId: vehicle_photos.vehicle_id })
+      .from(vehicle_photos)
+      .where(eq(vehicle_photos.tenant_id, id)),
+    db
+      .select({ url: vehicle_documents.url, vehicleId: vehicle_documents.vehicle_id })
+      .from(vehicle_documents)
+      .where(eq(vehicle_documents.tenant_id, id)),
   ]);
 
-  const urls = [...photoUrls.map((r) => r.url), ...docUrls.map((r) => r.url)];
-  if (tenant.logo_url) urls.push(tenant.logo_url);
+  const refs: TenantBlobRef[] = [
+    ...photos.map((r) => ({ url: r.url, folder: uploadFolder("photo", id, r.vehicleId) })),
+    ...docs.map((r) => ({ url: r.url, folder: uploadFolder("document", id, r.vehicleId) })),
+  ];
+  if (tenant.logo_url) {
+    refs.push({ url: tenant.logo_url, folder: uploadFolder("logo", id) });
+  }
   const heroUrl = tenant.layout_config?.heroImageUrl ?? null;
-  if (heroUrl) urls.push(heroUrl);
-  return urls;
+  if (heroUrl) {
+    refs.push({ url: heroUrl, folder: uploadFolder("hero", id) });
+  }
+  return refs;
 }
 
 export async function deleteTenant(id: number): Promise<void> {

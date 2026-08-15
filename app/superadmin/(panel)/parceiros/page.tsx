@@ -1,17 +1,22 @@
 import Link from "next/link";
 import { Handshake, Pencil, Plus } from "lucide-react";
 import { listPartners } from "@/lib/db";
-import { formatBRL } from "@/lib/money";
 import { Badge, EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-function formatDesconto(type: string, value: number): string {
-  if (type === "amount") {
-    return formatBRL(value);
-  }
-  return `${value}%`;
-}
+/**
+ * A coluna "Desconto" (`discount_type`/`discount_value`) saiu daqui em
+ * 2026-08-15 por decisão de produto: esse desconto não existe como mecanismo
+ * próprio — o modelo é "parceiro dá cupom", e `coupons.partner_id` já liga os
+ * dois. O valor continua gravado no banco (sem migration, sem DELETE: a
+ * decisão pode ser revista), mas não é mais coletado nem exibido.
+ *
+ * Não mostrar, em vez de mostrar com um selo "não usado": esta tela é de
+ * varredura, e um número em cada linha continuaria ensinando que o parceiro
+ * tem desconto próprio — a legenda some da memória, o "15%" fica. Quem for
+ * atrás encontra a explicação no formulário do parceiro, que aponta o cupom.
+ */
 
 export default async function ParceirosPage() {
   const partners = await listPartners();
@@ -55,7 +60,7 @@ export default async function ParceirosPage() {
               <table className="min-w-full divide-y divide-n100 text-sm">
                 <thead>
                   <tr className="bg-n50">
-                    {["Parceiro", "Desconto", "Usos", "Validade", "Status", ""].map((h) => (
+                    {["Parceiro", "Usos", "Validade", "Status", ""].map((h) => (
                       <th
                         key={h}
                         className="px-4 py-3 text-left text-xs font-semibold text-n600 uppercase tracking-wider"
@@ -71,9 +76,6 @@ export default async function ParceirosPage() {
                       <td className="px-4 py-3">
                         <p className="font-medium text-ink">{p.name}</p>
                         <p className="text-xs text-n400">?parceiro={p.code}</p>
-                      </td>
-                      <td className="px-4 py-3 text-n600 whitespace-nowrap">
-                        {formatDesconto(p.discount_type, p.discount_value)}
                       </td>
                       <td className="px-4 py-3 text-n600 whitespace-nowrap">
                         {p.signup_count}
@@ -122,7 +124,7 @@ export default async function ParceirosPage() {
                   </div>
                   <div className="flex items-center justify-between gap-2 text-xs text-n600">
                     <span>
-                      {formatDesconto(p.discount_type, p.discount_value)} · {p.signup_count}
+                      {p.signup_count}
                       {p.max_uses != null ? ` / ${p.max_uses}` : ""} usos
                     </span>
                     <span className="text-signal font-medium whitespace-nowrap">Editar →</span>

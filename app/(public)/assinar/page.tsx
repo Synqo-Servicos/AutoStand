@@ -36,9 +36,17 @@ export default async function AssinarPage({
         Poucos minutos para ter site e painel de gestão próprios.
       </p>
 
+      {/*
+        A indicação é registrada (tenants.referred_by) — mas o link, sozinho,
+        NÃO dá desconto: desconto de indicação vem por cupom. Não prometa
+        abatimento automático aqui; até ago/2026 esta faixa dizia "o desconto é
+        aplicado no pagamento" e o cliente pagava o preço cheio.
+      */}
       {partner && (
         <p className="mt-5 rounded-lg bg-signal/10 px-3 py-2 text-body-s text-ink">
-          Indicação de <strong>{partner.name}</strong> — o desconto é aplicado no pagamento.
+          Indicação de <strong>{partner.name}</strong> — vamos registrar que você veio por
+          este link. Se você recebeu um <strong>código de cupom</strong>, informe-o no campo
+          &ldquo;Código de cupom&rdquo; abaixo para que o desconto entre no pagamento.
         </p>
       )}
 
