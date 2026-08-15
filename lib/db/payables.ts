@@ -93,13 +93,28 @@ export async function getPayable(tenantId: number, id: number): Promise<PayableR
 }
 
 /**
- * Contas da janela padrão, já classificadas. Duas queries; a expansão e a
+ * Contas da janela padrão, já classificadas — mais toda ocorrência vencida
+ * e não paga, que não tem piso de data. Duas queries; a expansão e a
  * classificação ficam no módulo puro (lib/recurring.ts).
  */
 export async function listBills(tenantId: number, today: string): Promise<BillWithPayable[]> {
   const window = defaultWindow(today);
-  const rules = await listPayables(tenantId);
+  // `includeInactive`: desativar uma conta interrompe os vencimentos
+  // FUTUROS, não apaga o que já venceu e ficou em aberto. Filtrar `active`
+  // aqui derrubava a janela inteira da regra, incluindo o passado devido —
+  // e sem linha na lista não há botão de "Registrar pagamento" em lugar
+  // nenhum. Quem decide ocorrência a ocorrência é buildBills.
+  const rules = await listPayables(tenantId, { includeInactive: true });
   if (rules.length === 0) return [];
+
+  // Piso da busca de pagamentos = o vencimento mais antigo entre as regras.
+  // Precisa alcançar tudo que expandOccurrences pode derivar: com o piso
+  // antigo (window.from), um vencimento antigo JÁ PAGO voltaria à tela como
+  // "atrasado" — ressuscitar dívida quitada é pior do que escondê-la.
+  const earliest = rules.reduce(
+    (min, r) => (r.first_due_date < min ? r.first_due_date : min),
+    rules[0].first_due_date,
+  );
 
   const paidRows = await db
     .select({
@@ -112,7 +127,7 @@ export async function listBills(tenantId: number, today: string): Promise<BillWi
     .where(and(
       eq(transactions.tenant_id, tenantId),
       isNotNull(transactions.payable_id),
-      gte(transactions.due_date, window.from),
+      gte(transactions.due_date, earliest),
       lte(transactions.due_date, window.to),
     ))
     .orderBy(transactions.due_date);
@@ -126,6 +141,7 @@ export async function listBills(tenantId: number, today: string): Promise<BillWi
     installments: r.installments,
     payment_method: r.payment_method,
     amount_cents: r.amount_cents,
+    active: r.active,
   }));
 
   return buildBills(asRules, paid, window, today).map((b): BillWithPayable => {

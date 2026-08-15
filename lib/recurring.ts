@@ -52,8 +52,20 @@ export function daysBetween(from: string, to: string): number {
 
 /**
  * Janela de derivação: do 1º dia de 2 meses atrás ao último dia do mês
- * seguinte. O piso é o que impede uma regra com vencimento antigo de
- * cuspir dezenas de "atrasados" fantasma no primeiro acesso.
+ * seguinte.
+ *
+ * `to` é o TETO e vale para tudo — não existe motivo para derivar futuro
+ * infinito.
+ *
+ * `from` é o piso de EXIBIÇÃO e vale só para o que já está pago ou ainda
+ * não venceu. É ele que impede uma regra recém-cadastrada com vencimento
+ * antigo de encher a tela de histórico irrelevante.
+ *
+ * O que este piso NÃO faz — e chegou a fazer, apagando dívida real da aba,
+ * do badge, do banner e do cron de avisos — é esconder vencimento que já
+ * passou e não foi pago. Isso é dinheiro devido; `buildBills` mostra
+ * sempre, sem piso de data. A regra é simples: a janela recorta o que já
+ * está resolvido, nunca o que está em aberto.
  */
 export function defaultWindow(today: string): { from: string; to: string } {
   const { y, m } = parseISO(today);
@@ -80,6 +92,11 @@ export interface PayableRule {
   installments: number | null;
   payment_method: string | null;
   amount_cents: number | null;
+  /**
+   * Regra desativada para de gerar vencimento FUTURO — e só isso. O que já
+   * venceu e ficou sem pagar continua aparecendo (ver `buildBills`).
+   */
+  active: boolean;
 }
 
 export interface Occurrence {
@@ -104,11 +121,17 @@ export interface Bill extends Occurrence {
 }
 
 /**
- * Expande a regra nos vencimentos dentro da janela.
+ * Expande a regra em TODOS os vencimentos até o teto da janela — do
+ * primeiro vencimento da série em diante, sem piso.
+ *
+ * O recorte do passado é decisão de `buildBills`, que sabe o que foi pago;
+ * aqui não dá para decidir, e foi por tentar decidir sem essa informação
+ * que ocorrência vencida e não paga sumia de vez. Este laço só produz o
+ * calendário completo da regra.
  *
  * Termina sempre: `due` cresce monotonicamente e o laço para no primeiro
- * valor acima de `window.to`. Ocorrências anteriores a `window.from` são
- * puladas mas contadas — a numeração da parcela é da série, não da janela.
+ * valor acima de `window.to`. A numeração da parcela é da série inteira,
+ * não do trecho exibido.
  */
 export function expandOccurrences(
   rule: PayableRule,
@@ -121,14 +144,12 @@ export function expandOccurrences(
   for (let i = 0; i < max; i++) {
     const due = addMonthsClamped(rule.first_due_date, i * step);
     if (due > window.to) break;
-    if (due >= window.from) {
-      out.push({
-        payable_id: rule.id,
-        due_date: due,
-        installment: rule.installments ? i + 1 : null,
-        installments: rule.installments,
-      });
-    }
+    out.push({
+      payable_id: rule.id,
+      due_date: due,
+      installment: rule.installments ? i + 1 : null,
+      installments: rule.installments,
+    });
   }
   return out;
 }
@@ -145,6 +166,34 @@ function classify(
   return payment_method === "debito_automatico" ? "aguardando_conciliacao" : "atrasado";
 }
 
+/**
+ * Uma ocorrência entra na lista quando:
+ *
+ * 1. venceu e não foi paga — SEMPRE. Sem piso de data e mesmo com a regra
+ *    desativada. É dívida em aberto: tirar da tela não quita nada, só faz
+ *    o lojista esquecer que deve. Vale para conta `unica` vencida há um
+ *    ano, para a última parcela de uma série já encerrada e para a conta
+ *    `anual` que passou meses fora da janela.
+ * 2. ou está dentro da janela de exibição e a regra segue ativa — o caso
+ *    normal: pagamentos recentes e próximos vencimentos.
+ *
+ * Fica de fora só o que está resolvido ou não existe: vencimento antigo já
+ * pago (está no livro-caixa, repetir aqui é ruído) e qualquer vencimento
+ * futuro de regra desativada — que é exatamente o que "desativar" promete
+ * interromper.
+ */
+function isVisible(
+  rule: PayableRule,
+  due_date: string,
+  paid: PaidRef | undefined,
+  window: { from: string; to: string },
+  today: string,
+): boolean {
+  if (!paid && due_date <= today) return true;
+  if (!rule.active) return false;
+  return due_date >= window.from;
+}
+
 /** Expande todas as regras, casa com as transações e classifica. */
 export function buildBills(
   rules: PayableRule[],
@@ -156,27 +205,44 @@ export function buildBills(
 
   return rules
     .flatMap((rule) =>
-      expandOccurrences(rule, window).map((occ): Bill => {
-        const hit = byKey.get(`${occ.payable_id}:${occ.due_date}`);
-        return {
+      expandOccurrences(rule, window)
+        .map((occ) => ({ occ, hit: byKey.get(`${occ.payable_id}:${occ.due_date}`) }))
+        .filter(({ occ, hit }) => isVisible(rule, occ.due_date, hit, window, today))
+        .map(({ occ, hit }): Bill => ({
           ...occ,
           status: classify(occ.due_date, hit, rule.payment_method, today),
           amount_cents: rule.amount_cents,
           paid_amount_cents: hit?.amount ?? null,
           transaction_id: hit?.transaction_id ?? null,
-        };
-      }),
+        })),
     )
     .sort((a, b) => (a.due_date < b.due_date ? -1 : a.due_date > b.due_date ? 1 : a.payable_id - b.payable_id));
 }
+
+/**
+ * Teto da escalada de cobrança por e-mail: 12 semanas de atraso.
+ *
+ * Antes este teto existia por acidente — a ocorrência caía fora da janela
+ * de derivação entre a 8ª e a 12ª semana de atraso (a semana exata
+ * dependia do dia do mês) e o aviso morria junto com ela. Agora que dívida
+ * vencida não tem mais piso, sem um teto explícito uma conta esquecida
+ * viraria e-mail semanal para sempre.
+ *
+ * 84 dias é o MAIOR teto que o comportamento antigo já produzia: nenhum
+ * aviso que era enviado antes deixa de ser enviado. A conta continua na
+ * aba, no badge e no banner indefinidamente — o que para é a repetição do
+ * e-mail, não a cobrança.
+ */
+export const MAX_OVERDUE_NOTICE_DAYS = 84;
 
 /**
  * Qual estágio de aviso dispara hoje para este vencimento — ou null.
  *
  * Digest diário ingênuo repetiria "vence em 5 dias" cinco dias seguidos e
  * o lojista silenciaria o aviso. Cada conta aparece em D-3, D-0 e depois
- * a cada 7 dias de atraso. Débito automático recebe só o D-3: ele se paga
- * sozinho, e cobrar depois geraria alarme falso todo mês.
+ * a cada 7 dias de atraso, até MAX_OVERDUE_NOTICE_DAYS. Débito automático
+ * recebe só o D-3: ele se paga sozinho, e cobrar depois geraria alarme
+ * falso todo mês.
  */
 export function stageForToday(
   due_date: string,
@@ -189,6 +255,7 @@ export function stageForToday(
   if (diff === 0) return "d0";
   if (diff < 0) {
     const late = -diff;
+    if (late > MAX_OVERDUE_NOTICE_DAYS) return null;
     return late % 7 === 0 ? `atraso-${late}` : null;
   }
   return null;

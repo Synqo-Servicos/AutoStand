@@ -51,6 +51,7 @@ function rule(over: Partial<PayableRule> = {}): PayableRule {
     installments: null,
     payment_method: "boleto",
     amount_cents: 450_000,
+    active: true,
     ...over,
   };
 }
@@ -81,10 +82,11 @@ describe("expandOccurrences", () => {
     expect(expandOccurrences(rule(), WINDOW)[0].installment).toBeNull();
   });
 
-  it("ignora ocorrências anteriores à janela mas mantém a numeração", () => {
+  it("deriva também o que é anterior à janela — o recorte do passado é do buildBills", () => {
     const out = expandOccurrences(rule({ first_due_date: "2026-04-10", installments: 12 }), WINDOW);
-    expect(out[0].due_date).toBe("2026-06-10");
-    expect(out[0].installment).toBe(3);
+    expect(out.map((o) => o.due_date))
+      .toEqual(["2026-04-10", "2026-05-10", "2026-06-10", "2026-07-10", "2026-08-10", "2026-09-10"]);
+    expect(out[0].installment).toBe(1);
   });
 
   it("devolve vazio quando o primeiro vencimento é posterior à janela", () => {
@@ -93,8 +95,104 @@ describe("expandOccurrences", () => {
 
   it("preserva o clamp ao longo da série", () => {
     const out = expandOccurrences(rule({ first_due_date: "2026-01-31", installments: 12 }), WINDOW);
-    expect(out.map((o) => o.due_date))
+    expect(out.map((o) => o.due_date).slice(5))
       .toEqual(["2026-06-30", "2026-07-31", "2026-08-31", "2026-09-30"]);
+  });
+});
+
+/**
+ * O piso da janela (`from`) recorta o que já está resolvido; nunca dívida em
+ * aberto. Cada caso abaixo é uma conta que sumia da aba, do badge, do banner
+ * e do cron de avisos antes da correção.
+ */
+describe("dívida vencida e não paga não tem piso de data", () => {
+  const TODAY = "2026-08-13"; // WINDOW = 2026-06-01 .. 2026-09-30
+
+  it("conta única vencida há sete meses continua na lista como atrasada", () => {
+    const r = rule({ frequency: "unica", first_due_date: "2026-01-15" });
+    const bills = buildBills([r], [], WINDOW, TODAY);
+    expect(bills.map((b) => [b.due_date, b.status]))
+      .toEqual([["2026-01-15", "atrasado"]]);
+  });
+
+  it("conta única já paga fora da janela some — está no livro-caixa, não é dívida", () => {
+    const r = rule({ frequency: "unica", first_due_date: "2026-01-15" });
+    const paid: PaidRef[] = [
+      { payable_id: 1, due_date: "2026-01-15", transaction_id: 77, amount: 450_000 },
+    ];
+    expect(buildBills([r], paid, WINDOW, TODAY)).toEqual([]);
+  });
+
+  it("série de parcelas encerrada antes da janela mantém a parcela em aberto", () => {
+    // 3x a partir de 2026-01-10: a série acabou em março e nunca mais gera
+    // ocorrência que traga a parcela esquecida de volta.
+    const r = rule({ first_due_date: "2026-01-10", installments: 3 });
+    const paid: PaidRef[] = [
+      { payable_id: 1, due_date: "2026-01-10", transaction_id: 1, amount: 450_000 },
+      { payable_id: 1, due_date: "2026-02-10", transaction_id: 2, amount: 450_000 },
+    ];
+    const bills = buildBills([r], paid, WINDOW, TODAY);
+    expect(bills.map((b) => [b.due_date, b.status, b.installment]))
+      .toEqual([["2026-03-10", "atrasado", 3]]);
+  });
+
+  it("conta anual vencida em janeiro segue visível em agosto", () => {
+    const r = rule({ frequency: "anual", first_due_date: "2026-01-15" });
+    const bills = buildBills([r], [], WINDOW, TODAY);
+    expect(bills.map((b) => [b.due_date, b.status]))
+      .toEqual([["2026-01-15", "atrasado"]]);
+  });
+
+  it("débito automático vencido fora da janela vira aguardando_conciliacao, não some", () => {
+    const r = rule({
+      frequency: "unica", first_due_date: "2026-01-15",
+      payment_method: "debito_automatico",
+    });
+    expect(buildBills([r], [], WINDOW, TODAY).map((b) => b.status))
+      .toEqual(["aguardando_conciliacao"]);
+  });
+
+  it("mensal antiga lista todos os vencimentos em aberto, sem cortar no piso", () => {
+    // Recolher a lista é decisão da UI (BACKLOG_PREVIEW em ContasAPagarTab);
+    // o dado nunca mente sobre quantos vencimentos estão em aberto.
+    const r = rule({ first_due_date: "2025-11-10" });
+    const bills = buildBills([r], [], WINDOW, TODAY);
+    expect(bills[0].due_date).toBe("2025-11-10");
+    expect(bills.filter((b) => b.status === "atrasado")).toHaveLength(10); // 11/25 a 08/26
+  });
+});
+
+describe("regra desativada", () => {
+  const TODAY = "2026-08-13";
+
+  it("mantém o vencimento passado em aberto e corta os futuros", () => {
+    const r = rule({ active: false, first_due_date: "2026-06-10" });
+    const bills = buildBills([r], [], WINDOW, TODAY);
+    expect(bills.map((b) => [b.due_date, b.status])).toEqual([
+      ["2026-06-10", "atrasado"],
+      ["2026-07-10", "atrasado"],
+      ["2026-08-10", "atrasado"],
+    ]);
+  });
+
+  it("some por completo quando não deixou nada em aberto", () => {
+    const r = rule({ active: false, first_due_date: "2026-06-10" });
+    const paid: PaidRef[] = [
+      { payable_id: 1, due_date: "2026-06-10", transaction_id: 1, amount: 450_000 },
+      { payable_id: 1, due_date: "2026-07-10", transaction_id: 2, amount: 450_000 },
+      { payable_id: 1, due_date: "2026-08-10", transaction_id: 3, amount: 450_000 },
+    ];
+    expect(buildBills([r], paid, WINDOW, TODAY)).toEqual([]);
+  });
+
+  it("não gera nem o vencimento de amanhã", () => {
+    const r = rule({ active: false, first_due_date: "2026-09-10" });
+    expect(buildBills([r], [], WINDOW, TODAY)).toEqual([]);
+  });
+
+  it("regra ativa continua mostrando o futuro dentro da janela", () => {
+    const r = rule({ first_due_date: "2026-09-10" });
+    expect(buildBills([r], [], WINDOW, TODAY).map((b) => b.status)).toEqual(["a_vencer"]);
   });
 });
 
@@ -156,6 +254,14 @@ describe("stageForToday", () => {
   });
   it("fica em silêncio nos dias intermediários do atraso", () => {
     expect(stageForToday("2026-08-05", "boleto", "2026-08-13")).toBeNull();
+  });
+  it("ainda cobra na 12ª semana de atraso — o teto do comportamento antigo", () => {
+    // 2026-05-21 + 84 dias = 2026-08-13.
+    expect(stageForToday("2026-05-21", "boleto", "2026-08-13")).toBe("atraso-84");
+  });
+  it("para de cobrar por e-mail depois de 12 semanas — a conta continua na tela", () => {
+    expect(stageForToday("2026-05-14", "boleto", "2026-08-13")).toBeNull(); // 91 dias
+    expect(stageForToday("2026-05-07", "boleto", "2026-08-13")).toBeNull(); // 98 dias
   });
   it("débito automático recebe d3 e mais nada", () => {
     expect(stageForToday("2026-08-16", "debito_automatico", "2026-08-13")).toBe("d3");

@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { and, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { payables, transactions } from "@/lib/schema";
 
 const selectRows = vi.fn();
 const selectLimitRows = vi.fn();
@@ -7,14 +9,29 @@ const insertReturning = vi.fn();
 const updateSet = vi.fn();
 const updateWhere = vi.fn();
 
+/**
+ * Condições `where` na ordem em que as queries são montadas.
+ *
+ * O mock não filtra nada — devolve o que o teste enfileirou, aconteça o que
+ * acontecer com o `where`. Sem guardar a condição, um filtro a mais ou a
+ * menos na query (ler só regras ativas, ou buscar pagamentos a partir do
+ * piso errado) passa despercebido: o mock entrega as mesmas linhas nos dois
+ * casos. Comparar a condição com a expressão drizzle esperada é a única
+ * forma de exercer a query nesta suíte 100% mockada.
+ */
+const whereConds: unknown[] = [];
+
 vi.mock("@/lib/db/client", () => ({
   db: {
     select: () => ({
       from: () => ({
-        where: () => ({
-          orderBy: () => selectRows(),
-          limit: () => selectLimitRows(),
-        }),
+        where: (cond: unknown) => {
+          whereConds.push(cond);
+          return {
+            orderBy: () => selectRows(),
+            limit: () => selectLimitRows(),
+          };
+        },
       }),
     }),
     insert: () => ({
@@ -33,8 +50,28 @@ vi.mock("@/lib/db/client", () => ({
   client: {},
 }));
 
+// `resetAllMocks`, não `clearAllMocks`: clear zera as chamadas mas NÃO drena a
+// fila de `mockResolvedValueOnce`. Um teste que enfileira dois retornos e
+// consome só um (listBills sai cedo quando não há regra) deixava o resto da
+// fila vazando para o teste seguinte, deslocando "regras" e "transações".
+
+/** Linha de `payables` como o banco devolve — sobrescreva só o que importa. */
+function payableRow(over: Record<string, unknown> = {}) {
+  return {
+    id: 1, tenant_id: 7, type: "despesa_fixa", category: "Aluguel",
+    description: "Galpão", supplier: "Imobiliária Costa", amount_cents: 450_000,
+    frequency: "mensal", first_due_date: "2026-06-10", installments: null,
+    payment_method: "boleto", active: true, notes: null,
+    created_at: "2026-06-01T00:00:00Z",
+    ...over,
+  };
+}
+
 describe("listBills", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    whereConds.length = 0;
+  });
 
   it("junta regra e transação numa conta classificada", async () => {
     // 1ª chamada: regras. 2ª: transações casadas.
@@ -67,10 +104,105 @@ describe("listBills", () => {
     const { listBills } = await import("@/lib/db/payables");
     expect(await listBills(7, "2026-08-13")).toEqual([]);
   });
+
+  it("mostra a conta única vencida há sete meses — janela não apaga dívida em aberto", async () => {
+    selectRows
+      .mockResolvedValueOnce([payableRow({
+        frequency: "unica", first_due_date: "2026-01-15", category: "Multa Detran",
+      })])
+      .mockResolvedValueOnce([]);
+
+    const { listBills } = await import("@/lib/db/payables");
+    const bills = await listBills(7, "2026-08-13");
+
+    expect(bills.map((b) => [b.due_date, b.status])).toEqual([["2026-01-15", "atrasado"]]);
+    expect(bills[0].category).toBe("Multa Detran");
+  });
+
+  it("conta DESATIVADA mantém a parcela vencida em aberto e não gera futuro", async () => {
+    // A query passa a ler regras inativas (includeInactive) — o recorte é
+    // por ocorrência, em buildBills. Sem isso a linha some da aba, do badge
+    // e do banner, e não sobra botão de "Registrar pagamento" em lugar nenhum.
+    selectRows
+      .mockResolvedValueOnce([payableRow({ active: false, first_due_date: "2026-06-10" })])
+      .mockResolvedValueOnce([
+        { payable_id: 1, due_date: "2026-06-10", transaction_id: 5, amount: 450_000 },
+      ]);
+
+    const { listBills } = await import("@/lib/db/payables");
+    const bills = await listBills(7, "2026-08-13");
+
+    // 06/10 pago some (está no livro-caixa); 07/10 e 08/10 seguem devidos;
+    // 09/10 é futuro de regra desativada e não é gerado.
+    expect(bills.map((b) => [b.due_date, b.status])).toEqual([
+      ["2026-07-10", "atrasado"],
+      ["2026-08-10", "atrasado"],
+    ]);
+  });
+
+  it("busca pagamentos desde o vencimento mais antigo — não ressuscita conta já paga", async () => {
+    selectRows
+      .mockResolvedValueOnce([payableRow({
+        frequency: "unica", first_due_date: "2026-01-15",
+      })])
+      .mockResolvedValueOnce([
+        { payable_id: 1, due_date: "2026-01-15", transaction_id: 9, amount: 450_000 },
+      ]);
+
+    const { listBills } = await import("@/lib/db/payables");
+    expect(await listBills(7, "2026-08-13")).toEqual([]);
+  });
+
+  it("a query de regras NÃO filtra por active — senão a dívida da conta desativada some", async () => {
+    selectRows
+      .mockResolvedValueOnce([payableRow({ active: false })])
+      .mockResolvedValueOnce([]);
+
+    const { listBills } = await import("@/lib/db/payables");
+    await listBills(7, "2026-08-13");
+
+    // Só o tenant. `and(..., eq(payables.active, true))` reprova aqui.
+    expect(whereConds[0]).toEqual(eq(payables.tenant_id, 7));
+  });
+
+  it("a query de pagamentos desce até o vencimento mais antigo, não até o piso da janela", async () => {
+    selectRows
+      .mockResolvedValueOnce([
+        payableRow({ id: 1, first_due_date: "2026-06-10" }),
+        payableRow({ id: 2, first_due_date: "2026-01-15", frequency: "unica" }),
+      ])
+      .mockResolvedValueOnce([]);
+
+    const { listBills } = await import("@/lib/db/payables");
+    await listBills(7, "2026-08-13");
+
+    // Piso = 2026-01-15 (o mais antigo entre as regras), não 2026-06-01
+    // (window.from). Com o piso da janela, o pagamento de uma ocorrência
+    // antiga não é encontrado e a conta quitada volta como "atrasado".
+    expect(whereConds[1]).toEqual(and(
+      eq(transactions.tenant_id, 7),
+      isNotNull(transactions.payable_id),
+      gte(transactions.due_date, "2026-01-15"),
+      lte(transactions.due_date, "2026-09-30"),
+    ));
+  });
+});
+
+describe("countOverdue", () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  it("conta o atraso anterior à janela — o badge da sidebar não mente", async () => {
+    selectRows
+      .mockResolvedValueOnce([payableRow({ frequency: "unica", first_due_date: "2026-01-15" })])
+      .mockResolvedValueOnce([]);
+
+    const { countOverdue } = await import("@/lib/db/payables");
+    expect(await countOverdue(7, "2026-08-13")).toBe(1);
+  });
 });
 
 describe("hasPaymentFor", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => vi.resetAllMocks());
 
   it("retorna true quando já existe transação para (regra, vencimento) — trava de duplicata", async () => {
     selectLimitRows.mockResolvedValueOnce([{ id: 99 }]);
@@ -86,7 +218,7 @@ describe("hasPaymentFor", () => {
 });
 
 describe("updatePayable", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => vi.resetAllMocks());
 
   it("com { active: false } encerra a conta — único mecanismo de 'não deletável'", async () => {
     selectLimitRows.mockResolvedValueOnce([{
@@ -122,7 +254,7 @@ describe("updatePayable", () => {
 });
 
 describe("createPayable", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => vi.resetAllMocks());
 
   it("descarta um tenant_id malicioso no input — sempre usa o tenantId do argumento", async () => {
     insertReturning.mockResolvedValueOnce([{
@@ -150,7 +282,7 @@ describe("createPayable", () => {
 });
 
 describe("addPayableAttachment", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => vi.resetAllMocks());
 
   it("descarta tenant_id/payable_id maliciosos no input — sempre usa os argumentos", async () => {
     insertReturning.mockResolvedValueOnce([{
