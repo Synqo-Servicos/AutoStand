@@ -253,6 +253,16 @@ export interface OperationalExpenseRow {
   date: string;
   notes: string | null;
   seller_id: number | null;
+  /**
+   * Conta a pagar que esta despesa quita — null quando foi lançada à mão.
+   *
+   * A lista precisa distinguir as duas origens: excluir uma linha vinda de
+   * conta faz o vencimento voltar a constar como em aberto (o status é
+   * derivado por NOT EXISTS), e sem o selo o lojista não teria como saber
+   * que apagar aqui mexe na aba "Contas a pagar".
+   */
+  payable_id: number | null;
+  due_date: string | null;
 }
 
 /** Filtros de período do financeiro: `month` (YYYY-MM) ou `year` (YYYY). */
@@ -361,7 +371,7 @@ export async function getOperationalExpenses(
   const likePattern = period ? `${period}%` : "%";
 
   return (await dbAll(sql`
-    SELECT id, type, category, amount, date, notes, seller_id
+    SELECT id, type, category, amount, date, notes, seller_id, payable_id, due_date
     FROM transactions
     WHERE tenant_id = ${tenantId}
       AND type IN ('despesa_fixa', 'despesa_var', 'comissao')

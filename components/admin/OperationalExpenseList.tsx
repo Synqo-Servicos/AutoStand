@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { CalendarCheck, Plus, Trash2 } from "lucide-react";
 import { centsToDisplay, displayToCents, formatBRLFull } from "@/lib/money";
 import { EXPENSE_CATEGORIES, TRANSACTION_LABELS } from "@/lib/constants";
 import { Button, Field, Input, Modal, Select, Textarea, useConfirm, toast } from "@/components/ui";
@@ -36,14 +36,21 @@ export function OperationalExpenseList({ initialRows, month }: Props) {
 
   const total = useMemo(() => rows.reduce((a, r) => a + r.amount, 0), [rows]);
 
-  async function handleDelete(id: number) {
-    if (!(await confirm({ title: "Excluir esta despesa?", confirmLabel: "Excluir", danger: true }))) return;
-    const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+  async function handleDelete(row: OperationalExpenseRow) {
+    // Despesa vinda de uma conta a pagar: excluir aqui reabre o vencimento na
+    // aba "Contas a pagar" (o status é derivado, não gravado). Sem dizer isso,
+    // o lojista apaga achando que só está corrigindo o caixa.
+    const desc = row.payable_id
+      ? `Esta despesa quita a conta que vence em ${formatDate(row.due_date ?? row.date)}. Excluindo, ela volta a aparecer como em aberto em "Contas a pagar".`
+      : undefined;
+
+    if (!(await confirm({ title: "Excluir esta despesa?", description: desc, confirmLabel: "Excluir", danger: true }))) return;
+    const res = await fetch(`/api/transactions/${row.id}`, { method: "DELETE" });
     if (!res.ok) {
       toast.error("Não foi possível excluir. Tente novamente.");
       return;
     }
-    setRows((prev) => prev.filter((r) => r.id !== id));
+    setRows((prev) => prev.filter((r) => r.id !== row.id));
   }
 
   function handleCreated(row: OperationalExpenseRow) {
@@ -95,6 +102,12 @@ export function OperationalExpenseList({ initialRows, month }: Props) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-ink truncate">{r.category ?? "—"}</p>
+                  {r.payable_id ? (
+                    <p className="text-xs text-n500 flex items-center gap-1">
+                      <CalendarCheck className="w-3 h-3 shrink-0" />
+                      Conta a pagar{r.due_date && ` · vence ${formatDate(r.due_date)}`}
+                    </p>
+                  ) : null}
                   {r.notes && <p className="text-xs text-n600 truncate">{r.notes}</p>}
                 </div>
                 <span className="font-medium text-ink whitespace-nowrap">{formatBRLFull(r.amount)}</span>
@@ -102,7 +115,7 @@ export function OperationalExpenseList({ initialRows, month }: Props) {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDelete(r.id)}
+                  onClick={() => handleDelete(r)}
                   aria-label="Excluir"
                   className="text-danger hover:bg-danger/10 shrink-0"
                 >
@@ -135,7 +148,9 @@ interface ModalProps {
 }
 
 function AddOperationalModal({ onClose, onCreated }: ModalProps) {
-  const today = new Date().toISOString().slice(0, 10);
+  // `toISOString()` devolve UTC: depois das 21h em Maceió a despesa nasceria
+  // com a data de amanhã, e no dia 31 cairia no mês seguinte do financeiro.
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
   const [type, setType] = useState<OpType>("despesa_fixa");
   const [category, setCategory] = useState<string>(TYPE_OPTIONS[0].categories[0]);
   const [amountStr, setAmountStr] = useState("");
@@ -186,6 +201,10 @@ function AddOperationalModal({ onClose, onCreated }: ModalProps) {
         date: data.date,
         notes: data.notes,
         seller_id: data.seller_id,
+        // Despesa lançada aqui é avulsa por definição — este modal não vincula
+        // conta. Quem quita um vencimento é a aba "Contas a pagar".
+        payable_id: null,
+        due_date: null,
       });
     } catch (err) {
       setError((err as Error).message);
