@@ -21,3 +21,4 @@ export * from "./partners";
 export * from "./about";
 export * from "./coupons";
 export * from "./payables";
+export * from "./payments";
