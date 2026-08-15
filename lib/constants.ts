@@ -205,3 +205,17 @@ export const LEAD_INTERACTION_LABELS: Record<LeadInteractionType, string> = {
 };
 
 // Branding (nome, contatos, cores) vem do tenant — ver tabela `tenants` em lib/schema.ts.
+
+// --- Financeiro da plataforma ---
+
+/** Estado do pagamento. Estorno NUNCA vira delete — muda de status. */
+export const PAYMENT_STATUSES = ["approved", "refunded", "chargeback"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+/**
+ * Anexo do Simples aplicável a serviço de TI. Depende do fator R
+ * (folha ÷ receita bruta), que muda mês a mês — por isso é CONFIGURAÇÃO,
+ * não constante de código. Ver FINANCE_ANEXO em lib/finance-config.ts.
+ */
+export const SIMPLES_ANEXOS = ["III", "V"] as const;
+export type SimplesAnexo = (typeof SIMPLES_ANEXOS)[number];

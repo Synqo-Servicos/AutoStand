@@ -43,6 +43,13 @@
       "when": 1786642219180,
       "tag": "0005_quiet_talkback",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786823522435,
+      "tag": "0006_loud_zuras",
+      "breakpoints": true
     }
   ]
 }

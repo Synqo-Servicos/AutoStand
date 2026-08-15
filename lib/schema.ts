@@ -339,6 +339,47 @@ export const sent_notifications = pgTable("sent_notifications", {
   uniqRef: uniqueIndex("uniq_sent_notif").on(table.tenant_id, table.kind, table.ref_key),
 }));
 
+// --- Pagamentos da plataforma (assinaturas) ---
+
+/**
+ * Um pagamento de assinatura recebido. Fonte da verdade sobre receita.
+ *
+ * NÃO cascateia com o tenant: registro fiscal precisa sobreviver à saída
+ * do cliente, e a nota tem que dizer quem era o pagador NAQUELE dia — por
+ * isso nome e documento ficam copiados na linha, não lidos de `tenants`.
+ */
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  tenant_id: integer("tenant_id").references(() => tenants.id, { onDelete: "set null" }),
+  /** Snapshot do pagador no momento do pagamento. */
+  tenant_name: text("tenant_name").notNull(),
+  tenant_document: text("tenant_document"),
+  /** Plano cobrado, snapshot — cliente muda de plano, nota emitida não muda. */
+  plan: text("plan"),
+  /** Id do pagamento no MP. Único = idempotência de webhook e reconciliação. */
+  mp_payment_id: text("mp_payment_id").notNull(),
+  mp_preapproval_id: text("mp_preapproval_id"),
+  /** Três colunas, não uma conta: a taxa do MP muda com o tempo. */
+  gross_cents: integer("gross_cents").notNull(),
+  fee_cents: integer("fee_cents"),
+  net_cents: integer("net_cents"),
+  /** 'approved' | 'refunded' | 'chargeback' */
+  status: text("status").notNull(),
+  paid_at: timestamp("paid_at", { mode: "string" }).notNull(),
+  coupon_id: integer("coupon_id").references(() => coupons.id, { onDelete: "set null" }),
+  /** Nulos até a nota ser emitida — no portal (hoje) ou por API (camada 3). */
+  nfse_issued_at: timestamp("nfse_issued_at", { mode: "string" }),
+  nfse_number: text("nfse_number"),
+  nfse_issued_by: integer("nfse_issued_by").references(() => users.id, { onDelete: "set null" }),
+  /** Taxa não veio na resposta do MP: net = gross e o número fica marcado. */
+  incomplete: boolean("incomplete").notNull().default(false),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  uniqMpPayment: uniqueIndex("uniq_payments_mp_id").on(table.mp_payment_id),
+  byPaidAt: index("idx_payments_paid_at").on(table.paid_at),
+  byTenant: index("idx_payments_tenant").on(table.tenant_id),
+}));
+
 // --- Sellers (vendedores da concessionária) ---
 
 export const sellers = pgTable("sellers", {
@@ -511,3 +552,5 @@ export type PayableRow = typeof payables.$inferSelect;
 export type NewPayable = typeof payables.$inferInsert;
 export type PayableAttachmentRow = typeof payable_attachments.$inferSelect;
 export type SentNotificationRow = typeof sent_notifications.$inferSelect;
+export type PaymentRow = typeof payments.$inferSelect;
+export type NewPayment = typeof payments.$inferInsert;
