@@ -48,6 +48,7 @@ A 2 e a 3 são independentes entre si; as duas dependem da 1.
 | Emissão fiscal agora | **Manual**, com fila no console | ver "Camada 3" abaixo |
 | Perguntas do console | **as quatro** — caixa, imposto, recorrência, pendência fiscal | todas saem da mesma fonte |
 | Exibir valor de imposto | **Não, até o contador validar** | número de imposto errado vira decisão errada sobre dinheiro. Calculado e testado desde já; exibição atrás de flag |
+| Acesso do contador | **Papel próprio, escopo financeiro** | ele **opera** a fila de NFS-e, não só lê — emite a nota e registra o número. Operador precisa de conta; leitor precisaria só de exportação |
 
 ---
 
@@ -140,7 +141,44 @@ Os insumos ficam à vista de propósito — é o que o contador precisa para con
 MRR, ativos por plano, inadimplentes, cancelados no período. Sai de `tenants`, não do registro de pagamentos.
 
 ### Pendência fiscal
-Pagamentos sem `nfse_issued_at`, com campo para registrar o número depois de emitir.
+Pagamentos sem `nfse_issued_at`, com os dados necessários para emitir (pagador, CNPJ, valor, competência) e campo para registrar o número depois de emitido.
+
+É a tela de trabalho do contador — quem opera a fila é ele.
+
+---
+
+## Acesso do contador
+
+O contador **emite as notas e registra os números**. Isso o torna operador, não leitor — e operador precisa de conta.
+
+### O papel
+
+Papel novo em `users.role`: `contador`. Hoje só existem `super_admin` e `tenant_admin`; não há nada intermediário nem read-only.
+
+**Escopo:** o console financeiro e nada mais. Ele não vê concessionárias, cupons, parceiros, diagnóstico, e não exclui nada.
+
+**Escrita permitida:** apenas `nfse_issued_at` e `nfse_number`. Nenhum outro campo de `payments`, nenhuma outra tabela.
+
+### A decisão que evita o vazamento
+
+O risco desse papel não é hoje — é **daqui a seis meses, quando o console ganhar uma página nova e alguém esquecer de checar a permissão**. Esquecer uma vez expõe dado que o contador não deveria ver.
+
+Por isso a checagem é **deny por padrão**:
+
+- `withSuperAdmin` continua significando **super-admin e mais ninguém**. Não ganha exceção, não ganha parâmetro.
+- Um wrapper novo — `withFinanceAccess` — aceita `super_admin` **ou** `contador`, e é usado **apenas** nas rotas do financeiro.
+
+Assim, uma página nova criada com o wrapper padrão **tranca o contador para fora**. O modo de falha por esquecimento é negar acesso, não conceder. Se ele reclamar que não consegue ver algo, é bug visível e barato; o inverso é vazamento silencioso.
+
+### Rastro
+
+`payments` ganha `nfse_issued_by` (→ `users`, `SET NULL`): quem registrou a nota. Com duas pessoas podendo operar a fila, "quem emitiu esta" precisa ter resposta — e é dado que uma auditoria pede.
+
+### O cálculo de imposto para ele
+
+A flag esconde o valor de imposto **de quem tomaria decisão com ele**. O contador é exatamente quem tem qualificação para julgar um cálculo ainda não validado.
+
+Então: com a flag desligada, o bloco mostra o resultado **para o papel `contador`**, marcado como não validado, e mostra só os insumos para o super-admin. Ele valida na própria tela, em vez de conferir por arquivo — e quando disser que está certo, a flag liga para todo mundo.
 
 ---
 
@@ -188,7 +226,13 @@ Se já houver nota emitida contra ele, o console alerta — cancelamento de NFS-
 
 > O cálculo é testado **mesmo estando oculto na tela**. Testá-lo agora é o que permite ao contador validar a conta contra casos concretos em vez de ler código — e é o que torna ligar a flag uma decisão de um passo, sem implementação pendente atrás dela.
 
-**Da flag de imposto** — com ela desligada, nenhum valor de imposto aparece na resposta da página; com ela ligada, aparece. O teste cobre os dois estados, para que desligar não vire uma tela quebrada nem ligar exponha um cálculo que ninguém exercitou.
+**Da flag de imposto** — com ela desligada, o valor não aparece para `super_admin` mas aparece para `contador`; com ela ligada, aparece para os dois. O teste cobre os quatro cruzamentos, para que desligar não vire tela quebrada nem ligar exponha cálculo que ninguém exercitou.
+
+**Do papel `contador`** — e este é o bloco de teste que mais importa:
+
+- `contador` acessa as rotas do financeiro e **é rejeitado em todas as outras rotas do console** — tenants, cupons, parceiros, diagnóstico. Um caso por rota existente, não um caso genérico.
+- `contador` consegue gravar `nfse_number`/`nfse_issued_at` e **não consegue gravar mais nada** em `payments`.
+- Rota nova criada com `withSuperAdmin` **nega** o `contador` — é o teste que prova que o padrão é deny, e que a proteção não depende de alguém lembrar.
 
 **Webhook** — notificação repetida grava uma linha só; tipo que não é pagamento continua ignorado; falha na busca ao MP não grava linha parcial.
 
