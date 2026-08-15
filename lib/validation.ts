@@ -243,9 +243,14 @@ export const tenantStorefrontSchema = z.object({
   youtube_url: optionalUrl,
   tiktok_url: optionalUrl,
   twitter_url: optionalUrl,
-  // identidade — URL devolvida pelo /api/upload ou null pra remover
+  // identidade — `key` do presign ou a URL devolvida pelo /api/upload (as duas
+  // formas são aceitas), ou null pra remover. ATENÇÃO: aqui só se valida a
+  // FORMA. A posse do arquivo é checada em app/api/personalizar/route.ts
+  // (`resolveBrandingRef`), que exige a pasta tenants/{tenantId}/branding/logo
+  // antes de gravar — e de novo antes de apagar. Sem isso, uma string livre
+  // neste campo apaga do S3 o arquivo de outra loja no PATCH seguinte.
   logo_url: z
-    .union([z.string().max(2048), z.literal("")])
+    .union([z.string().trim().max(2048), z.literal("")])
     .transform((v) => (v === "" ? null : v))
     .nullable()
     .optional(),
