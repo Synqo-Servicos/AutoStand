@@ -3,6 +3,7 @@ import { ApiError, withTenant } from "@/lib/api";
 import { BANKS_BY_SLUG } from "@/lib/banks";
 import { deleteFromBlob, publicUrlForKey } from "@/lib/blob";
 import { UploadValidationError } from "@/lib/blob-constants";
+import { ownKeyFromUrl, ownsBlobUrl } from "@/lib/blob-ownership";
 import { getTenantById, updateTenant } from "@/lib/db";
 import { capabilitiesFor } from "@/lib/plans";
 import { assertKeyInFolder, uploadFolder } from "@/lib/presign";
@@ -29,20 +30,13 @@ import type { NewTenant } from "@/lib/schema";
  *  1. escrita — `resolveBrandingRef` só aceita key/URL da pasta
  *     `tenants/{tenantId}/branding/{kind}` deste tenant (ou uma URL externa,
  *     que não é objeto nosso e portanto nunca é deletável);
- *  2. cleanup — `ownsBrandingBlob` reconfere a posse antes de apagar, o que
+ *  2. cleanup — `ownsBlobUrl` reconfere a posse antes de apagar, o que
  *     também protege linha já envenenada no banco ANTES desta correção.
+ *
+ * As duas barreiras usam o mesmo helper de posse (lib/blob-ownership.ts), que
+ * saiu daqui pra ser reaproveitado por todo caminho que apaga blob a partir de
+ * URL do banco — hoje também o DELETE de loja do super-admin.
  */
-
-/** Prefixo público de qualquer objeto nosso — CDN em prod, stub em dev. */
-function ownStoragePrefix(): string {
-  return publicUrlForKey("");
-}
-
-/** Key do objeto a partir da URL pública; `null` quando a URL não é nossa. */
-function ownKeyFromUrl(url: string): string | null {
-  const prefix = ownStoragePrefix();
-  return url.startsWith(prefix) ? url.slice(prefix.length) : null;
-}
 
 /** A key é uma que ESTE servidor assinou pra ESTA pasta? Senão, 400. */
 function assertOwnKey(key: string, kind: UploadKind, tenantId: number): void {
@@ -56,21 +50,6 @@ function assertOwnKey(key: string, kind: UploadKind, tenantId: number): void {
       );
     }
     throw err;
-  }
-}
-
-/**
- * `true` só quando a URL aponta pra um objeto que ESTE tenant subiu nesta
- * pasta de branding — a única coisa que o cleanup pode apagar do bucket.
- */
-function ownsBrandingBlob(url: string, kind: UploadKind, tenantId: number): boolean {
-  const key = ownKeyFromUrl(url);
-  if (key === null) return false;
-  try {
-    assertKeyInFolder(key, uploadFolder(kind, tenantId));
-    return true;
-  } catch {
-    return false;
   }
 }
 
@@ -186,7 +165,7 @@ export const PATCH = withTenant(async (req, { tenantId }) => {
     // tenant. Vale para o dado já gravado antes desta correção (URL alheia
     // plantada continua no banco, mas some do alcance do delete) e para
     // URL externa, que não é objeto nosso.
-    const deletable = orphans.filter((o) => ownsBrandingBlob(o.url, o.kind, tenantId));
+    const deletable = orphans.filter((o) => ownsBlobUrl(o.url, uploadFolder(o.kind, tenantId)));
     await Promise.allSettled(deletable.map((o) => deleteFromBlob(o.url)));
   }
 
