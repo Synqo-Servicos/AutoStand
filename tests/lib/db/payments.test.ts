@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 
 const insertValues = vi.fn();
 const insertReturning = vi.fn();
+const selectWhere = vi.fn();
 const selectRows = vi.fn();
 const updateSetArgs = vi.fn();
 const updateReturning = vi.fn();
@@ -13,7 +16,9 @@ vi.mock("@/lib/db/client", () => ({
         onConflictDoNothing: () => ({ returning: () => insertReturning() }),
       }; },
     }),
-    select: () => ({ from: () => ({ where: () => ({ orderBy: () => selectRows() }) }) }),
+    select: () => ({ from: () => ({
+      where: (cond: unknown) => { selectWhere(cond); return { orderBy: () => selectRows() }; },
+    }) }),
     update: () => ({
       set: (v: unknown) => { updateSetArgs(v); return {
         where: () => ({ returning: () => updateReturning() }),
@@ -68,6 +73,60 @@ describe("recordPayment", () => {
   });
 });
 
+describe("periodBounds", () => {
+  it("periodBounds('2026-08') devolve o par [início, fim) correto", async () => {
+    const { periodBounds } = await import("@/lib/db/payments");
+    expect(periodBounds("2026-08")).toEqual({
+      from: "2026-08-01T00:00:00.000Z",
+      to: "2026-09-01T00:00:00.000Z",
+    });
+  });
+
+  it("periodBounds('2026-12') atravessa a virada de ano", async () => {
+    const { periodBounds } = await import("@/lib/db/payments");
+    expect(periodBounds("2026-12")).toEqual({
+      from: "2026-12-01T00:00:00.000Z",
+      to: "2027-01-01T00:00:00.000Z",
+    });
+  });
+});
+
+describe("listPaymentsByPeriod — fronteira do período", () => {
+  beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
+
+  it("o limite superior é EXCLUSIVO — pagamento no instante exato de `to` pertence ao mês seguinte", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { listPaymentsByPeriod } = await import("@/lib/db/payments");
+    await listPaymentsByPeriod("2026-08");
+
+    // `to` de agosto ("2026-09-01T00:00:00.000Z") é o INÍCIO de setembro,
+    // não o fim de agosto. Compila a condição de fato passada pro
+    // `.where()` e confirma que o limite superior usa `<` (estrito), não
+    // `<=` — com `<=` um pagamento nesse instante exato apareceria em
+    // agosto E em setembro, contando como receita duas vezes.
+    const condition = selectWhere.mock.calls[0][0] as SQL;
+    const compiled = new PgDialect().sqlToQuery(condition).sql;
+    expect(compiled).toContain("<");
+    expect(compiled).not.toContain("<=");
+  });
+});
+
+describe("sumCaixa", () => {
+  beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
+
+  it("soma só pagamentos approved — estorno e chargeback ficam de fora", async () => {
+    selectRows.mockResolvedValueOnce([
+      { status: "approved", gross_cents: 10000, fee_cents: 500 },
+      { status: "refunded", gross_cents: 20000, fee_cents: 1000 },
+      { status: "chargeback", gross_cents: 30000, fee_cents: 1500 },
+      { status: "approved", gross_cents: 5000, fee_cents: 250 },
+    ]);
+    const { sumCaixa } = await import("@/lib/db/payments");
+    const result = await sumCaixa("2026-08");
+    expect(result).toEqual({ gross: 15000, fee: 750, netBeforeTax: 14250 });
+  });
+});
+
 describe("updatePaymentStatus", () => {
   beforeEach(() => { vi.clearAllMocks(); updateReturning.mockReset(); });
 
@@ -86,12 +145,28 @@ describe("updatePaymentStatus", () => {
     expect(row).toBeNull();
   });
 
-  it("é idempotente — aplicar duas vezes dá o mesmo resultado", async () => {
-    updateReturning.mockResolvedValue([{ id: 1, mp_payment_id: "mp-1", status: "refunded" }]);
+  it("é idempotente — duas chamadas com o mesmo status mandam o mesmo UPDATE e convergem pro mesmo resultado", async () => {
+    const rowAfterUpdate = { id: 1, mp_payment_id: "mp-1", status: "refunded" };
+    // `mockResolvedValueOnce` duas vezes (não `mockResolvedValue` fixo): cada
+    // chamada consome sua própria resposta da fila. Se a implementação
+    // deixasse de chamar `db.update` na segunda invocação (cache, early
+    // return, o que for), a fila ficaria com uma resposta não consumida e
+    // `toHaveBeenCalledTimes(2)` abaixo cairia — diferente de um mock fixo,
+    // que "passaria" mesmo se o código ignorasse a segunda chamada.
+    updateReturning.mockResolvedValueOnce([rowAfterUpdate]);
+    updateReturning.mockResolvedValueOnce([rowAfterUpdate]);
     const { updatePaymentStatus } = await import("@/lib/db/payments");
+
     const first = await updatePaymentStatus("mp-1", "refunded");
     const second = await updatePaymentStatus("mp-1", "refunded");
-    expect(first).toEqual(second);
+
+    expect(first).toEqual(rowAfterUpdate);
+    expect(second).toEqual(rowAfterUpdate);
+    // Mesmo SET nas duas chamadas — sem incremento nem acúmulo entre elas,
+    // então a segunda converge pro mesmo resultado que a primeira (o mesmo
+    // que um UPDATE puro faria no banco real).
+    expect(updateSetArgs).toHaveBeenNthCalledWith(1, { status: "refunded" });
+    expect(updateSetArgs).toHaveBeenNthCalledWith(2, { status: "refunded" });
     expect(updateReturning).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "./client";
 import { payments, type PaymentRow } from "@/lib/schema";
 
@@ -64,9 +64,12 @@ export function periodBounds(competencia: string): { from: string; to: string } 
 }
 
 export async function listPaymentsByPeriod(competencia: string): Promise<PaymentRow[]> {
+  // `to` é o `from` do mês seguinte (periodBounds é semiaberto [from, to)) —
+  // por isso o limite superior é `lt`, não `lte`. Com `lte`, um pagamento no
+  // instante exato da virada do mês contaria em dois períodos.
   const { from, to } = periodBounds(competencia);
   return db.select().from(payments)
-    .where(and(gte(payments.paid_at, from), lte(payments.paid_at, to)))
+    .where(and(gte(payments.paid_at, from), lt(payments.paid_at, to)))
     .orderBy(desc(payments.paid_at));
 }
 
