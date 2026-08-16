@@ -17,7 +17,10 @@ vi.mock("@/lib/db/client", () => ({
       }; },
     }),
     select: () => ({ from: () => ({
-      where: (cond: unknown) => { selectWhere(cond); return { orderBy: () => selectRows() }; },
+      where: (cond: unknown) => {
+        selectWhere(cond);
+        return { orderBy: () => selectRows(), limit: () => selectRows() };
+      },
     }) }),
     update: () => ({
       set: (v: unknown) => { updateSetArgs(v); return {
@@ -168,5 +171,59 @@ describe("updatePaymentStatus", () => {
     expect(updateSetArgs).toHaveBeenNthCalledWith(1, { status: "refunded" });
     expect(updateSetArgs).toHaveBeenNthCalledWith(2, { status: "refunded" });
     expect(updateReturning).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("getPaymentByMpId", () => {
+  beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
+
+  it("devolve a linha quando o mp_payment_id existe", async () => {
+    selectRows.mockResolvedValueOnce([{ id: 1, mp_payment_id: "mp-1", status: "approved" }]);
+    const { getPaymentByMpId } = await import("@/lib/db/payments");
+    const row = await getPaymentByMpId("mp-1");
+    expect(row).toEqual({ id: 1, mp_payment_id: "mp-1", status: "approved" });
+  });
+
+  it("devolve null quando o mp_payment_id não existe", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { getPaymentByMpId } = await import("@/lib/db/payments");
+    const row = await getPaymentByMpId("mp-inexistente");
+    expect(row).toBeNull();
+  });
+});
+
+describe("updatePayment", () => {
+  beforeEach(() => { vi.clearAllMocks(); updateReturning.mockReset(); });
+
+  it("aplica um patch parcial — não só status, como updatePaymentStatus", async () => {
+    updateReturning.mockResolvedValueOnce([
+      { id: 1, mp_payment_id: "mp-1", status: "approved", fee_cents: 1200, net_cents: 23790, incomplete: false },
+    ]);
+    const { updatePayment } = await import("@/lib/db/payments");
+    const row = await updatePayment("mp-1", {
+      status: "approved", fee_cents: 1200, net_cents: 23790, incomplete: false,
+    });
+    expect(row).toEqual(
+      { id: 1, mp_payment_id: "mp-1", status: "approved", fee_cents: 1200, net_cents: 23790, incomplete: false },
+    );
+    expect(updateSetArgs).toHaveBeenCalledWith({
+      status: "approved", fee_cents: 1200, net_cents: 23790, incomplete: false,
+    });
+  });
+
+  it("um patch sem `status` não manda a chave no SET — não sobrescreve status por acidente", async () => {
+    updateReturning.mockResolvedValueOnce([{ id: 1, mp_payment_id: "mp-1" }]);
+    const { updatePayment } = await import("@/lib/db/payments");
+    await updatePayment("mp-1", { paid_at: "2026-08-15T12:00:00.000Z" });
+    const setArg = updateSetArgs.mock.calls[0][0];
+    expect(setArg).toEqual({ paid_at: "2026-08-15T12:00:00.000Z" });
+    expect(setArg).not.toHaveProperty("status");
+  });
+
+  it("devolve null quando o mp_payment_id não existe", async () => {
+    updateReturning.mockResolvedValueOnce([]);
+    const { updatePayment } = await import("@/lib/db/payments");
+    const row = await updatePayment("mp-inexistente", { status: "refunded" });
+    expect(row).toBeNull();
   });
 });

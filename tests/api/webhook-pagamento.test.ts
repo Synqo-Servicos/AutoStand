@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createHmac } from "crypto";
 
 const recordPayment = vi.fn();
-const updatePaymentStatus = vi.fn();
+const getPaymentByMpId = vi.fn();
+const updatePayment = vi.fn();
 const getTenantById = vi.fn();
 const setTenantSubscriptionState = vi.fn();
 const paymentGet = vi.fn();
@@ -10,7 +11,8 @@ const preApprovalGet = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   recordPayment,
-  updatePaymentStatus,
+  getPaymentByMpId,
+  updatePayment,
   getTenantById,
   setTenantSubscriptionState,
 }));
@@ -54,6 +56,21 @@ function req(body: { type: string; data: { id: string } }) {
       get: (name: string) => {
         if (name === "x-signature") return `ts=${ts},v1=${v1}`;
         if (name === "x-request-id") return xRequestId;
+        return "";
+      },
+    },
+  } as never;
+}
+
+/** Requisição com uma assinatura HMAC deliberadamente inválida (não bate
+ * com o secret configurado) — pro caso negativo de segurança (achado 7). */
+function reqBadSignature(body: { type: string; data: { id: string } }) {
+  return {
+    json: async () => body,
+    headers: {
+      get: (name: string) => {
+        if (name === "x-signature") return "ts=1700000000,v1=0000000000000000000000000000000000000000000000000000000000000000";
+        if (name === "x-request-id") return "req-1";
         return "";
       },
     },
@@ -147,6 +164,15 @@ describe("webhook — notificação de cobrança", () => {
 
   it("estorno de pagamento já registrado ATUALIZA o status, não é descartado", async () => {
     recordPayment.mockResolvedValueOnce({ created: false });
+    getPaymentByMpId.mockResolvedValueOnce({
+      id: 1,
+      mp_payment_id: "999",
+      status: "approved",
+      incomplete: false,
+      fee_cents: 1200,
+      net_cents: 23790,
+      paid_at: "2026-08-15T12:00:00.000Z",
+    });
     paymentGet.mockResolvedValueOnce({
       id: 999,
       status: "refunded",
@@ -157,6 +183,157 @@ describe("webhook — notificação de cobrança", () => {
     });
     const { POST } = await import("@/app/api/webhooks/mercadopago/route");
     await POST(req({ type: "payment", data: { id: "999" } }));
-    expect(updatePaymentStatus).toHaveBeenCalledWith("999", "refunded");
+    expect(updatePayment).toHaveBeenCalledWith("999", expect.objectContaining({ status: "refunded" }));
+  });
+
+  // --- Achado 1 (revisão rodada 1): reentrega fora de ordem não reverte um estorno ---
+  it("reentrega fora de ordem NÃO reverte um estorno já gravado (approved chegando depois de refunded)", async () => {
+    recordPayment.mockResolvedValueOnce({ created: false });
+    // A linha já está `refunded` (o estorno chegou primeiro). Esta
+    // notificação é o retry ATRASADO do `approved` original.
+    getPaymentByMpId.mockResolvedValueOnce({
+      id: 1,
+      mp_payment_id: "999",
+      status: "refunded",
+      incomplete: false,
+      fee_cents: 1200,
+      net_cents: 23790,
+      paid_at: "2026-08-15T12:00:00.000Z",
+    });
+    paymentGet.mockResolvedValueOnce({
+      id: 999,
+      status: "approved",
+      transaction_amount: 249.9,
+      date_approved: "2026-08-15T12:00:00.000-03:00",
+      external_reference: "7",
+      fee_details: [{ amount: 12.0 }],
+    });
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "payment", data: { id: "999" } }));
+    expect(updatePayment).toHaveBeenCalledTimes(1);
+    const patch = updatePayment.mock.calls[0][1] as Record<string, unknown>;
+    // Nem sequer tenta escrever "approved" — a chave fica de fora do patch.
+    expect(patch).not.toHaveProperty("status");
+    expect(patch.status).not.toBe("approved");
+  });
+
+  // --- Achado 2 (revisão rodada 1): reentrega com dados melhores não fica congelada ---
+  it("reentrega com taxa melhor que a gravada atualiza fee/net/incomplete", async () => {
+    recordPayment.mockResolvedValueOnce({ created: false });
+    // A 1ª notificação gravou a linha `pending`/sem taxa (`incomplete: true`).
+    getPaymentByMpId.mockResolvedValueOnce({
+      id: 1,
+      mp_payment_id: "999",
+      status: "pending",
+      incomplete: true,
+      fee_cents: null,
+      net_cents: 24990,
+      paid_at: "2026-08-15T11:00:00.000Z",
+    });
+    // Esta reentrega já é `approved`, com taxa.
+    paymentGet.mockResolvedValueOnce({
+      id: 999,
+      status: "approved",
+      transaction_amount: 249.9,
+      date_approved: "2026-08-15T12:00:00.000-03:00",
+      external_reference: "7",
+      fee_details: [{ amount: 12.0 }],
+    });
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "payment", data: { id: "999" } }));
+    expect(updatePayment).toHaveBeenCalledWith(
+      "999",
+      expect.objectContaining({
+        status: "approved",
+        fee_cents: 1200,
+        net_cents: 23790,
+        incomplete: false,
+        paid_at: "2026-08-15T12:00:00.000-03:00",
+      }),
+    );
+  });
+
+  // --- Achado 3 (revisão rodada 1): net_received_amount tem prioridade; fee_payer é filtrado ---
+  it("prefere transaction_details.net_received_amount do MP, derivando a taxa por gross - net", async () => {
+    paymentGet.mockResolvedValueOnce({
+      id: 995,
+      status: "approved",
+      transaction_amount: 249.9,
+      date_approved: "2026-08-15T12:00:00.000-03:00",
+      external_reference: "7",
+      transaction_details: { net_received_amount: 236.9 },
+      // Deliberadamente "errado" — prova que NÃO é usado quando
+      // net_received_amount está presente.
+      fee_details: [{ amount: 999.0 }],
+    });
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "payment", data: { id: "995" } }));
+    expect(recordPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ gross_cents: 24990, net_cents: 23690, fee_cents: 1300, incomplete: false }),
+    );
+  });
+
+  it("ignora fee_details com fee_payer=payer — não é despesa nossa", async () => {
+    paymentGet.mockResolvedValueOnce({
+      id: 994,
+      status: "approved",
+      transaction_amount: 249.9,
+      date_approved: "2026-08-15T12:00:00.000-03:00",
+      external_reference: "7",
+      fee_details: [
+        { amount: 12.0, fee_payer: "collector" },
+        { amount: 5.0, fee_payer: "payer" },
+      ],
+    });
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "payment", data: { id: "994" } }));
+    expect(recordPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ fee_cents: 1200, net_cents: 23790, incomplete: false }),
+    );
+  });
+
+  // --- Achado 4 (revisão rodada 1): tipo desconhecido loga, não some em silêncio ---
+  it("tipo de notificação desconhecido gera console.warn e não grava nada", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "merchant_order", data: { id: "mo-1" } }));
+    expect(recordPayment).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("não tratado"), "merchant_order");
+    warnSpy.mockRestore();
+  });
+
+  // --- Achado 5 (revisão rodada 1, prova por mutação): tenant resolvido pelo
+  // ARGUMENTO passado a getTenantById, não pelo que o mock devolve ---
+  it("resolve o tenant pelo external_reference do pagamento (argumento capturado, não o retorno do mock)", async () => {
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "payment", data: { id: "999" } }));
+    expect(getTenantById).toHaveBeenCalledWith(7);
+  });
+
+  // --- Achado 6 (revisão rodada 1, prova por mutação): Math.round, não Math.trunc.
+  // 249.9 não discrimina (24990 é exato); 19.9*100 = 1989.9999999999998 e
+  // 2.51*100 = 250.99999999999997 — round e trunc DIVERGEM aqui. ---
+  it("arredonda pra centavos com Math.round (valor que discrimina de Math.trunc)", async () => {
+    paymentGet.mockResolvedValueOnce({
+      id: 993,
+      status: "approved",
+      transaction_amount: 19.9,
+      date_approved: "2026-08-15T12:00:00.000-03:00",
+      external_reference: "7",
+      fee_details: [{ amount: 2.51 }],
+    });
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "payment", data: { id: "993" } }));
+    expect(recordPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ gross_cents: 1990, fee_cents: 251, net_cents: 1739 }),
+    );
+  });
+
+  // --- Achado 7 (revisão rodada 1, prova por mutação): assinatura inválida → 401 ---
+  it("assinatura HMAC inválida devolve 401 e não chama recordPayment", async () => {
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    const res = await POST(reqBadSignature({ type: "payment", data: { id: "999" } }));
+    expect(res.status).toBe(401);
+    expect(recordPayment).not.toHaveBeenCalled();
   });
 });

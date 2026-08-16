@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import MercadoPagoConfig, { Payment, PreApproval } from "mercadopago";
-import { getTenantById, recordPayment, setTenantSubscriptionState, updatePaymentStatus } from "@/lib/db";
+import {
+  getPaymentByMpId, getTenantById, recordPayment, setTenantSubscriptionState, updatePayment,
+  type UpdatePaymentInput,
+} from "@/lib/db";
 import { notifyPaymentStatus } from "@/lib/email/notify";
 
 /** Status do preapproval do MP → status interno usado na notificação. */
@@ -11,8 +14,51 @@ const MP_TO_INTERNAL: Record<string, string> = {
   cancelled: "cancelled",
 };
 
+/**
+ * Status "terminais negativos": uma reentrega fora de ordem não pode
+ * regredir a linha PRA FORA deles. Cenário real: o `approved` original
+ * fica pendente de reenvio (ex.: o banco ficou fora e o POST devolveu
+ * 500), o estorno chega e grava `refunded` primeiro, e o retry do
+ * `approved` chega DEPOIS — sem essa guarda, o retry sobrescreveria
+ * `refunded` de volta pra `approved` e a receita ficaria contada pra
+ * sempre sobre um pagamento já devolvido.
+ */
+const TERMINAL_NEGATIVE_STATUSES = new Set(["refunded", "chargeback"]);
+
+function shouldOverwriteStatus(currentStatus: string, incomingStatus: string): boolean {
+  return !(TERMINAL_NEGATIVE_STATUSES.has(currentStatus) && !TERMINAL_NEGATIVE_STATUSES.has(incomingStatus));
+}
+
 function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
+}
+
+type PaymentGetResult = Awaited<ReturnType<InstanceType<typeof Payment>["get"]>>;
+
+/**
+ * Bruto → líquido. Prioridade: `transaction_details.net_received_amount`
+ * — o líquido autoritativo que o próprio MP calcula, derivando a taxa por
+ * `gross - net`. Sem ele, soma `fee_details[]` filtrando por
+ * `fee_payer !== "payer"` (taxa atribuída ao PAGADOR não é despesa nossa;
+ * ausência de `fee_payer` é tratada como `collector`, o caso comum — ver
+ * `node_modules/mercadopago/dist/clients/payment/commonTypes.d.ts`). Sem
+ * nenhum dos dois: nunca inventar a taxa — `net = gross`,
+ * `incomplete = true`.
+ */
+function computeFeeAndNet(
+  payment: PaymentGetResult, grossCents: number,
+): { feeCents: number | null; netCents: number; incomplete: boolean } {
+  const netReceived = payment.transaction_details?.net_received_amount;
+  if (typeof netReceived === "number") {
+    const netCents = Math.round(netReceived * 100);
+    return { feeCents: grossCents - netCents, netCents, incomplete: false };
+  }
+  const collectorFees = (payment.fee_details ?? []).filter((f) => f.fee_payer !== "payer");
+  if (collectorFees.length === 0) {
+    return { feeCents: null, netCents: grossCents, incomplete: true };
+  }
+  const feeCents = Math.round(collectorFees.reduce((sum, f) => sum + (f.amount ?? 0), 0) * 100);
+  return { feeCents, netCents: grossCents - feeCents, incomplete: false };
 }
 
 function verifySignature(secret: string, xSignature: string, xRequestId: string, dataId: string): boolean {
@@ -66,15 +112,7 @@ async function handlePaymentNotification(dataId: string): Promise<void> {
 
   // Reais → centavos, sempre arredondando (nunca truncando).
   const grossCents = Math.round((payment.transaction_amount ?? 0) * 100);
-  // `fee_details` ausente OU vazio = MP não informou a taxa nesta resposta.
-  // Regra do domínio: nunca inventar a taxa — net = gross e a linha fica
-  // marcada `incomplete` pra reconciliação revisitar depois.
-  const feeDetails = payment.fee_details ?? [];
-  const hasFee = feeDetails.length > 0;
-  const feeCents = hasFee
-    ? Math.round(feeDetails.reduce((sum, f) => sum + (f.amount ?? 0), 0) * 100)
-    : null;
-  const netCents = hasFee ? grossCents - (feeCents as number) : grossCents;
+  const { feeCents, netCents, incomplete } = computeFeeAndNet(payment, grossCents);
   const mpPaymentId = String(payment.id ?? dataId);
   const status = String(payment.status ?? "");
   const paidAt = payment.date_approved ?? payment.date_created ?? new Date().toISOString();
@@ -92,17 +130,51 @@ async function handlePaymentNotification(dataId: string): Promise<void> {
     status,
     paid_at: paidAt,
     coupon_id: tenant.coupon_id,
-    incomplete: !hasFee,
+    incomplete,
   });
 
+  if (result.created) return;
+
   // `recordPayment` é idempotente por `mp_payment_id` (`onConflictDoNothing`):
-  // uma segunda notificação para o MESMO pagamento — o caso do estorno —
-  // seria descartada em silêncio, e o pagamento contaria como receita para
-  // sempre. `created: false` é o sinal de que a linha já existia; o status
-  // novo (ex.: "refunded") precisa ser aplicado por UPDATE.
-  if (!result.created) {
-    await updatePaymentStatus(mpPaymentId, status);
+  // uma reentrega pro MESMO pagamento cai aqui, e "só atualizar o status"
+  // não é seguro sozinho por dois motivos: (1) pode ter chegado FORA DE
+  // ORDEM — ex. o retry do `approved` original, depois do estorno já ter
+  // sido gravado — sobrescrever sem checar reverteria um estorno; (2) pode
+  // trazer dados MELHORES que os já gravados — ex. a 1ª notificação era
+  // `pending` sem taxa (`incomplete: true`) e esta é `approved` com taxa.
+  // Por isso relê a linha atual e decide o patch a partir dela, em vez de
+  // sobrescrever cegamente.
+  const existing = await getPaymentByMpId(mpPaymentId);
+  if (!existing) {
+    console.error(
+      "[webhooks/mercadopago] recordPayment reportou linha existente, mas não encontrei ao reler:",
+      mpPaymentId,
+    );
+    return;
   }
+
+  const patch: UpdatePaymentInput = {};
+  if (shouldOverwriteStatus(existing.status, status)) {
+    patch.status = status;
+  }
+  if (!incomplete) {
+    // Esta notificação tem taxa determinável — sempre aplica (ela é, na
+    // pior das hipóteses, tão boa quanto a que já estava gravada).
+    patch.fee_cents = feeCents;
+    patch.net_cents = netCents;
+    patch.incomplete = false;
+  } else if (existing.incomplete) {
+    // Nem esta nem a gravada têm taxa — não há regressão possível, só
+    // mantém `net = gross` (pode ter mudado se `transaction_amount`
+    // divergir entre leituras, o que não deveria acontecer, mas não custa).
+    patch.net_cents = netCents;
+  }
+  // `date_approved` pode ter estado ausente na 1ª notificação (ex.: ela
+  // chegou `pending`) e `paidAt` ter caído no fallback de `date_created`;
+  // uma reentrega já `approved` traz o valor definitivo.
+  patch.paid_at = paidAt;
+
+  await updatePayment(mpPaymentId, patch);
 }
 
 export async function POST(req: NextRequest) {
@@ -121,6 +193,14 @@ export async function POST(req: NextRequest) {
   if (body.type === "payment" && dataId) {
     await handlePaymentNotification(dataId);
     return NextResponse.json({ received: true });
+  }
+
+  // Tipo que não é nem `payment` nem `preapproval`: não tratamos, mas o
+  // fato precisa ficar visível. Sem log, o modo de falha de "o MP passou a
+  // mandar um topic novo/diferente" é silencioso — o console financeiro
+  // fica vazio no fechamento do mês, sem nenhum sinal de que algo mudou.
+  if (body.type !== "payment" && body.type !== "preapproval") {
+    console.warn("[webhooks/mercadopago] tipo de notificação não tratado:", body.type);
   }
 
   if (body.type !== "preapproval" || !dataId) {

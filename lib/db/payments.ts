@@ -132,3 +132,49 @@ export async function updatePaymentStatus(
     .returning();
   return row ?? null;
 }
+
+/**
+ * Lê a linha atual por `mp_payment_id`. Existe pro chamador (o webhook)
+ * poder decidir COMO reagir a uma reentrega — ex.: recusar sobrescrever um
+ * `refunded` com um `approved` atrasado, ou aproveitar dados melhores que
+ * a notificação atual trouxe — decisão que exige saber o que já está
+ * gravado, não só o que chegou agora.
+ */
+export async function getPaymentByMpId(mpPaymentId: string): Promise<PaymentRow | null> {
+  const [row] = await db.select().from(payments)
+    .where(eq(payments.mp_payment_id, mpPaymentId))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Allowlist do que uma reentrega pode tocar. Deliberadamente NÃO inclui
+ * `tenant_id`/`tenant_name`/`plan`/`coupon_id`/`gross_cents`: são snapshot
+ * do pagamento no momento em que ele foi criado e não devem mudar depois —
+ * só o que uma notificação subsequente pode legitimamente corrigir (status,
+ * taxa/líquido quando a primeira notificação não tinha, e a data efetiva).
+ */
+export interface UpdatePaymentInput {
+  status?: string;
+  fee_cents?: number | null;
+  net_cents?: number | null;
+  incomplete?: boolean;
+  paid_at?: string;
+}
+
+/**
+ * Aplica um patch parcial a uma linha já existente, por `mp_payment_id`.
+ * Mais genérico que `updatePaymentStatus` — usado quando a reentrega de
+ * uma notificação de pagamento traz mais do que só um status novo (ver
+ * `getPaymentByMpId`). `updatePaymentStatus` continua existindo pro
+ * caminho simples "só o status mudou".
+ */
+export async function updatePayment(
+  mpPaymentId: string, patch: UpdatePaymentInput,
+): Promise<PaymentRow | null> {
+  const [row] = await db.update(payments)
+    .set(patch)
+    .where(eq(payments.mp_payment_id, mpPaymentId))
+    .returning();
+  return row ?? null;
+}
