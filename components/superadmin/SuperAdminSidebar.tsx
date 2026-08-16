@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, Handshake, LayoutDashboard, LogOut, Menu, Stethoscope, Tag, X } from "lucide-react";
+import { Building2, Handshake, LayoutDashboard, LogOut, Menu, Stethoscope, Tag, Wallet, X } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 const NAV = [
@@ -11,12 +11,23 @@ const NAV = [
   { href: "/superadmin/tenants", label: "Concessionárias", icon: Building2 },
   { href: "/superadmin/parceiros", label: "Parceiros", icon: Handshake },
   { href: "/superadmin/cupons", label: "Cupons", icon: Tag },
+  { href: "/superadmin/financeiro", label: "Financeiro", icon: Wallet },
   { href: "/superadmin/diagnostico", label: "Diagnóstico", icon: Stethoscope },
 ];
 
-export function SuperAdminSidebar() {
+/**
+ * Rotas que o papel `contador` enxerga no menu. Allowlist, não denylist:
+ * item novo em NAV não aparece para ele a menos que entre aqui — mesma
+ * regra de deny por padrão do route group `(financeiro)`.
+ *
+ * Isto é cosmético; quem barra de verdade é o layout de cada route group.
+ */
+const NAV_CONTADOR: ReadonlySet<string> = new Set(["/superadmin/financeiro"]);
+
+export function SuperAdminSidebar({ role }: { role?: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const nav = role === "contador" ? NAV.filter((item) => NAV_CONTADOR.has(item.href)) : NAV;
 
   useEffect(() => {
     setOpen(false);
@@ -88,7 +99,7 @@ export function SuperAdminSidebar() {
         </div>
 
         <nav className="flex-1 py-5 px-3 space-y-1 overflow-y-auto">
-          {NAV.map(({ href, label, icon: Icon }) => {
+          {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href);
             return (
               <Link

@@ -219,3 +219,17 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
  */
 export const SIMPLES_ANEXOS = ["III", "V"] as const;
 export type SimplesAnexo = (typeof SIMPLES_ANEXOS)[number];
+
+// --- Papéis de usuário ---
+
+/**
+ * Papéis conhecidos em `users.role`. `contador` é papel de escopo
+ * financeiro: opera a fila de NFS-e (emite a nota e registra o número) e
+ * nada mais — não vê concessionárias, cupons, parceiros nem diagnóstico.
+ *
+ * Esta lista NÃO decide permissão; é só o vocabulário. Quem decide é o
+ * gate: `withSuperAdmin`/layout de `(panel)` para o console, e
+ * `lib/finance-access.ts` para o financeiro.
+ */
+export const USER_ROLES = ["super_admin", "tenant_admin", "contador"] as const;
+export type UserRole = (typeof USER_ROLES)[number];

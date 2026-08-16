@@ -240,6 +240,23 @@ async function main() {
     console.log(`· Super admin ${superEmail} já existe`);
   }
 
+  // --- Contador (escopo financeiro: só /superadmin/financeiro) ---
+  // Existe no seed para dar como testar o isolamento do papel: logado como
+  // ele, qualquer página de (panel) devolve o login.
+  const contadorEmail = "contador@plataforma.com";
+  if (!(await getUserByEmail(contadorEmail))) {
+    await createUser({
+      email: contadorEmail,
+      password: await bcrypt.hash("contador123", 12),
+      name: "Contador",
+      role: "contador",
+      tenant_id: null,
+    });
+    console.log(`✓ Contador: ${contadorEmail}`);
+  } else {
+    console.log(`· Contador ${contadorEmail} já existe`);
+  }
+
   // ---------------------------------------------------------------------------
   // 1) AutoPrime Seminovos — São Paulo, SP — Premium tier (vitrine principal)
   // ---------------------------------------------------------------------------
@@ -344,6 +361,7 @@ async function main() {
   console.log("\n✅ Seed concluído!");
   console.log("\nAcessos de demo:");
   console.log("  Super admin       super@plataforma.com / super123          → localhost:3000/superadmin");
+  console.log("  Contador          contador@plataforma.com / contador123    → console.localhost:3000/superadmin/financeiro");
   console.log("  AutoPrime (Prem)  admin@autoprime.com / demo123             → autoprime.localhost:3000");
   console.log("  Garagem 082 (Pro) admin@garagem082.com.br / garagem123      → garagem082.localhost:3000");
   console.log("  Premium Motors    admin@premiummotors.com.br / premium123   → premiummotors.localhost:3000");
