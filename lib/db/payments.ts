@@ -1,6 +1,7 @@
-import { and, desc, eq, gte, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "./client";
-import { payments, type PaymentRow } from "@/lib/schema";
+import { payments, tenants, type PaymentRow } from "@/lib/schema";
+import { getPlan } from "@/lib/plans";
 
 /**
  * Camada de dados de `payments` — fonte da verdade sobre receita da
@@ -177,4 +178,42 @@ export async function updatePayment(
     .where(eq(payments.mp_payment_id, mpPaymentId))
     .returning();
   return row ?? null;
+}
+
+export interface RecorrenciaSummary {
+  mrrCents: number;
+  ativosPorPlano: Record<string, number>;
+  inadimplentes: number;
+}
+
+/**
+ * Recorrência da base de assinantes — lê `tenants`, não `payments`: é sobre
+ * quem assina AGORA (estado corrente da assinatura), não sobre o que entrou
+ * de caixa num período. Por isso não recebe `competencia`.
+ *
+ * MRR usa o preço de tabela do plano corrente (lib/plans.ts), não o valor
+ * historicamente pago — um tenant sem `plan` gravado (provisionado
+ * manualmente) cai no Básico, mesmo fallback de `getPlan`.
+ */
+export async function getRecorrencia(): Promise<RecorrenciaSummary> {
+  const rows = await db
+    .select({ plan: tenants.plan, subscription_status: tenants.subscription_status })
+    .from(tenants)
+    .where(inArray(tenants.subscription_status, ["active", "past_due"]));
+
+  const ativosPorPlano: Record<string, number> = {};
+  let mrrCents = 0;
+  let inadimplentes = 0;
+
+  for (const row of rows) {
+    if (row.subscription_status === "active") {
+      const slug = row.plan ?? "basico";
+      ativosPorPlano[slug] = (ativosPorPlano[slug] ?? 0) + 1;
+      mrrCents += getPlan(row.plan).priceMonthly;
+    } else if (row.subscription_status === "past_due") {
+      inadimplentes += 1;
+    }
+  }
+
+  return { mrrCents, ativosPorPlano, inadimplentes };
 }
