@@ -157,18 +157,30 @@ describe("isolamento por route group — página nova nasce fechada", () => {
    */
   const PAGINAS_SEM_GRUPO = ["login/page.tsx", "trocar-senha/page.tsx"];
 
-  function paginasDe(dir: string, prefixo = ""): string[] {
+  function arquivosDe(dir: string, nome: string, prefixo = ""): string[] {
     return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
       const rel = prefixo ? `${prefixo}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) return paginasDe(path.join(dir, entry.name), rel);
-      return entry.name === "page.tsx" ? [rel] : [];
+      if (entry.isDirectory()) return arquivosDe(path.join(dir, entry.name), nome, rel);
+      return entry.name === nome ? [rel] : [];
     });
   }
 
   it("toda página de /superadmin está num route group com gate de papel", () => {
     const gateadas = (p: string) => p.startsWith("(panel)/") || p.startsWith("(financeiro)/");
-    const semGrupo = paginasDe(superadminDir).filter((p) => !gateadas(p));
+    const semGrupo = arquivosDe(superadminDir, "page.tsx").filter((p) => !gateadas(p));
     expect(semGrupo.sort()).toEqual([...PAGINAS_SEM_GRUPO].sort());
+  });
+
+  /**
+   * Route Handler NÃO é embrulhado por layout — nem pelo gate de papel do
+   * route group, nem pelo fence de host de app/superadmin/layout.tsx. Um
+   * `route.ts` aqui dentro nasceria PÚBLICO, em qualquer host, e o
+   * varredor de páginas acima não o veria. Não existe nenhum hoje; a regra
+   * é que API de console mora em app/api/superadmin, onde o teste de
+   * wrapper (abaixo) cobre.
+   */
+  it("nenhum route.ts mora sob app/superadmin — lá layout não protege nada", () => {
+    expect(arquivosDe(superadminDir, "route.ts")).toEqual([]);
   });
 
   it("o layout de (panel) não concede acesso a papel de financeiro", () => {
@@ -183,6 +195,88 @@ describe("isolamento por route group — página nova nasce fechada", () => {
     const source = readFileSync(layout, "utf8");
     expect(source).toMatch(/hasFinanceAccess\(/);
     expect(source).toMatch(/redirect\("\/superadmin\/login"\)/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Troca de senha do console. O gate antigo era `super_admin` e mais ninguém:
+// contador provisionado com senha provisória vinha de (financeiro) para cá,
+// era rejeitado, voltava ao login — e nunca conseguia trocar a senha.
+// ---------------------------------------------------------------------------
+
+const { redirect } = vi.hoisted(() => ({
+  // O redirect do Next nunca retorna — lança. Imitar isso é o que prova que
+  // o código depois do gate não roda para quem é barrado.
+  redirect: vi.fn((url: string) => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  }),
+}));
+vi.mock("next/navigation", () => ({ redirect }));
+
+// A tela não é o objeto do teste — o gate é. Dublê para não arrastar o kit
+// de UI (client component) para dentro do ambiente node da suíte.
+vi.mock("@/app/admin/trocar-senha/ChangePasswordForm", () => ({
+  ChangePasswordForm: function ChangePasswordForm() {
+    return null;
+  },
+}));
+
+/** Acha o elemento de `tipo` na árvore e devolve as props com que foi criado. */
+function propsDe(node: unknown, tipo: unknown): Record<string, unknown> | null {
+  if (Array.isArray(node)) {
+    for (const filho of node) {
+      const achou = propsDe(filho, tipo);
+      if (achou) return achou;
+    }
+    return null;
+  }
+  if (!node || typeof node !== "object") return null;
+  const el = node as { type?: unknown; props?: { children?: unknown } };
+  if (el.type === tipo) return (el.props ?? {}) as Record<string, unknown>;
+  return propsDe(el.props?.children, tipo);
+}
+
+describe("trocar-senha — quem entra no console troca a própria senha", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  async function abrirComo(role: string | null) {
+    auth.mockResolvedValue(role === null ? null : { user: { id: "5", role } });
+    const { default: Page } = await import("@/app/superadmin/trocar-senha/page");
+    return Page();
+  }
+
+  async function destinoPosTroca(role: string) {
+    const arvore = await abrirComo(role);
+    const { ChangePasswordForm } = await import("@/app/admin/trocar-senha/ChangePasswordForm");
+    return propsDe(arvore, ChangePasswordForm)?.redirectTo;
+  }
+
+  it("contador com senha provisória alcança a tela", async () => {
+    await expect(abrirComo("contador")).resolves.toBeTruthy();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  // Afirmação sobre o argumento com que o formulário foi montado: o destino
+  // pós-troca precisa ser algo que o papel alcança. Mandar o contador para
+  // /superadmin cairia em (panel) e o expulsaria de novo — o beco sem saída
+  // reapareceria um passo à frente.
+  it("manda o contador de volta para o financeiro, não para (panel)", async () => {
+    await expect(destinoPosTroca("contador")).resolves.toBe("/superadmin/financeiro");
+  });
+
+  it("super_admin segue alcançando a tela e voltando para /superadmin", async () => {
+    await expect(destinoPosTroca("super_admin")).resolves.toBe("/superadmin");
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("tenant_admin não alcança — vai para o login", async () => {
+    await expect(abrirComo("tenant_admin")).rejects.toThrow("NEXT_REDIRECT:/superadmin/login");
+    expect(redirect).toHaveBeenCalledWith("/superadmin/login");
+  });
+
+  it("sem sessão não alcança — vai para o login", async () => {
+    await expect(abrirComo(null)).rejects.toThrow("NEXT_REDIRECT:/superadmin/login");
+    expect(redirect).toHaveBeenCalledWith("/superadmin/login");
   });
 });
 
