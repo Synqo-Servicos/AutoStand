@@ -15,6 +15,7 @@ import {
   type CandidatoMp, type Diferenca, type ItemFalha, type ItemIgnorado,
   type ReconciliacaoResultado,
 } from "@/lib/reconciliacao";
+import { instanteMs } from "@/lib/competencia";
 import { reconciliarInputSchema } from "@/lib/validation";
 
 /**
@@ -54,8 +55,21 @@ const MP_PAGE_SIZE = 50;
 const MP_MAX_PAGES = 20;
 
 /**
- * Folga de cada lado da janela pedida ao MP. 24 h cobre qualquer offset que o
- * recurso possa trazer — ver a docstring de `buscarNoMp`.
+ * Folga de cada lado da janela pedida ao MP.
+ *
+ * Ela EXISTIA por correção: `paid_at` era relógio de parede e a janela pedida
+ * ao MP era instante, então pedir exatamente `[from, to)` deixava de fora o
+ * pagamento das 22h do dia 31 — que o banco contava no mês. Sem a folga, ele
+ * não voltava nem para aparecer como faltante.
+ *
+ * Depois que `paid_at` virou `timestamptz` e `periodBounds` passou a devolver
+ * instantes ancorados em São Paulo, os dois lados falam a mesma língua e a
+ * folga deixou de ser necessária para correção. Ela FICA como margem, por dois
+ * motivos concretos e baratos: a semântica de borda de `begin_date`/`end_date`
+ * do MP não é documentada como inclusiva ou exclusiva, e os carimbos do MP têm
+ * granularidade de segundo. O custo é alguns resultados a mais, descartados
+ * localmente por `dentroDaCompetencia`; o custo de errar para menos é um
+ * pagamento invisível no fechamento do mês.
  */
 const MP_FOLGA_MS = 24 * 60 * 60 * 1000;
 
@@ -122,15 +136,12 @@ interface MpSearchResult {
  *    criado em 31/07 e aprovado em 01/08 seria buscado em julho e gravado em
  *    agosto, e nenhuma reconciliação fecharia;
  *  - `begin_date`/`end_date` — ISO-8601, com **um dia de folga de cada lado**
- *    da competência. A folga não é preguiça: o MP filtra por INSTANTE, e a
- *    competência desta base é RELÓGIO DE PAREDE (`paid_at` é `timestamp` sem
- *    time zone — ver `dentroDaCompetencia` em lib/reconciliacao.ts). Pedir ao
- *    MP exatamente `[00:00Z do dia 1º, 00:00Z do dia 1º seguinte)` deixaria de
- *    fora o pagamento das 22:00 de 31/08 em São Paulo, que o banco conta em
- *    agosto — e ele não voltaria da busca de agosto nem para ser mostrado como
- *    faltante. Com a folga ele volta, e quem recorta é `dentroDaCompetencia`,
- *    pelo mesmo relógio do banco. O custo é alguns resultados a mais,
- *    descartados localmente.
+ *    da competência (ver `MP_FOLGA_MS`). O MP filtra por INSTANTE e a
+ *    competência desta base também é instante (`paid_at` é `timestamptz`,
+ *    recortado pela janela de São Paulo que `periodBounds` devolve), então a
+ *    folga é margem contra a semântica de borda do MP, não correção de fuso.
+ *    Quem recorta de verdade é `dentroDaCompetencia`, pela mesma regra do
+ *    banco. O custo é alguns resultados a mais, descartados localmente.
  *
  * Consequência deliberada de `range=date_approved`: pagamento que nunca foi
  * aprovado (recusado, pendente) não aparece. É o que se quer — o que falta no
@@ -217,7 +228,19 @@ async function resolverCandidatos(
       ignorados.push({ mpPaymentId, grossCents, motivo: "pagamento sem data no Mercado Pago" });
       continue;
     }
-    // Recorte SEMIABERTO pelo relógio de parede, igual ao `lt` de
+    // Data que existe mas não designa um INSTANTE (sem offset, ou fora de
+    // faixa) não é a mesma coisa que "fora da competência": ali não dá para
+    // dizer em que mês o pagamento está. Se caísse no `continue` de baixo, ele
+    // sumiria de todas as categorias e a tela diria "Tudo conferido" — o modo
+    // de falha exato que esta rota existe para pegar. Fica visível.
+    if (instanteMs(paidAt) === null) {
+      ignorados.push({
+        mpPaymentId, grossCents,
+        motivo: `data do pagamento ilegível ou sem fuso horário ("${paidAt}") — não dá para definir a competência`,
+      });
+      continue;
+    }
+    // Recorte SEMIABERTO por instante, igual ao `>= from` / `< to` de
     // `listPaymentsByPeriod`. A janela pedida ao MP é mais larga de propósito;
     // ESTE filtro é a definição da competência (ver lib/reconciliacao.ts).
     if (!dentroDaCompetencia(paidAt, fromISO, toISO)) continue;

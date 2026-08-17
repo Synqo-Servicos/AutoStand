@@ -4,6 +4,7 @@ import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Receipt } from "lucide-react";
 import type { PaymentRow } from "@/lib/schema";
+import { competenciaDeInstante } from "@/lib/competencia";
 import { formatBRLFull } from "@/lib/money";
 import {
   Button, Card, CardBody, CardDescription, CardHeader, CardTitle,
@@ -11,14 +12,25 @@ import {
 } from "@/components/ui";
 
 /**
- * Competência do pagamento, no mesmo recorte de mês (UTC) que `periodBounds`
- * usa pra agrupar caixa por competência (lib/db/payments.ts) — aqui é só
- * rótulo de exibição, não o cálculo de uma janela [from, to).
+ * Competência do pagamento como `MM/AAAA`.
+ *
+ * O mês vem de `competenciaDeInstante` (lib/competencia.ts) — o MESMO
+ * classificador que `sumCaixa` e a base do DAS usam. Antes esta função tinha
+ * opinião própria e empilhava dois fusos: `new Date(paidAt)` interpretava a
+ * string ingênua do Postgres como hora LOCAL do navegador, e o `getUTCMonth()`
+ * seguinte relia aquilo em UTC. Num navegador em São Paulo, um pagamento das
+ * 22h de 31/08 aparecia aqui como "Competência 09/2026" enquanto o Caixa da
+ * mesma tela contava ele em agosto — e é esta linha que o contador lê para
+ * decidir em que mês emitir a NFS-e.
+ *
+ * `YYYY-MM` → `MM/AAAA` é só recorte de string, sem `Date` no meio — mesmo
+ * estilo de `mesBR` em ImpostoCard.
  */
-function competenciaDe(paidAt: string): string {
-  const d = new Date(paidAt);
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  return `${mm}/${d.getUTCFullYear()}`;
+function competenciaDe(paidAt: string): string | null {
+  const competencia = competenciaDeInstante(paidAt);
+  if (!competencia) return null;
+  const [ano, mes] = competencia.split("-");
+  return `${mes}/${ano}`;
 }
 
 interface Props {
@@ -110,7 +122,12 @@ function FilaFiscalRow({ payment }: { payment: PaymentRow }) {
         <div className="min-w-0 flex-1">
           <p className="font-medium text-ink truncate">{payment.tenant_name}</p>
           <p className="text-body-s text-n600 mt-0.5">
-            {payment.tenant_document ?? "Documento não informado"} · Competência {competenciaDe(payment.paid_at)}
+            {payment.tenant_document ?? "Documento não informado"} ·{" "}
+            {/* Carimbo ilegível vira ausência declarada, nunca um mês chutado:
+                esta linha decide em que competência a nota é emitida. */}
+            {competenciaDe(payment.paid_at)
+              ? `Competência ${competenciaDe(payment.paid_at)}`
+              : "Competência indisponível"}
           </p>
         </div>
 

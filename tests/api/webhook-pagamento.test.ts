@@ -217,6 +217,125 @@ describe("webhook — notificação de cobrança", () => {
     expect(patch.status).not.toBe("approved");
   });
 
+  /**
+   * ==========================================================================
+   * `paid_at` É SNAPSHOT, NÃO CAMPO LIVRE
+   * ==========================================================================
+   *
+   * O handler protegia `status` contra reentrega fora de ordem
+   * (`shouldOverwriteStatus`) e deixava `paid_at` — que decide competência,
+   * mês do DAS e mês da NFS-e — ser sobrescrito por QUALQUER notificação,
+   * inclusive uma sem data nenhuma do MP, que cai no fallback "agora".
+   *
+   * A regra implementada: `paid_at` só muda quando a notificação (a) traz uma
+   * data DO MERCADO PAGO e (b) tem autoridade sobre a linha, isto é, o mesmo
+   * `shouldOverwriteStatus` que libera o `status`. A allowlist de
+   * `updatePayment` já trata `gross_cents` como snapshot pelo mesmo motivo;
+   * `paid_at` pesa igual.
+   */
+  it("reentrega fora de ordem NÃO move a competência — paid_at fica de fora do patch", async () => {
+    recordPayment.mockResolvedValueOnce({ created: false });
+    // Linha já estornada; chega o retry atrasado do `approved` original,
+    // com data de AGOSTO. Sem guarda, ele reescreveria `paid_at`.
+    getPaymentByMpId.mockResolvedValueOnce({
+      id: 1,
+      mp_payment_id: "999",
+      status: "refunded",
+      incomplete: false,
+      fee_cents: 1200,
+      net_cents: 23790,
+      paid_at: "2026-09-10T12:00:00.000Z",
+    });
+    paymentGet.mockResolvedValueOnce({
+      id: 999,
+      status: "approved",
+      transaction_amount: 249.9,
+      date_approved: "2026-08-15T12:00:00.000-03:00",
+      external_reference: "7",
+      fee_details: [{ amount: 12.0 }],
+    });
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "payment", data: { id: "999" } }));
+
+    const patch = updatePayment.mock.calls[0][1] as Record<string, unknown>;
+    expect(patch).not.toHaveProperty("paid_at");
+  });
+
+  it("notificação SEM data do MP não sobrescreve o carimbo já gravado com 'agora'", async () => {
+    recordPayment.mockResolvedValueOnce({ created: false });
+    getPaymentByMpId.mockResolvedValueOnce({
+      id: 1,
+      mp_payment_id: "999",
+      status: "approved",
+      incomplete: false,
+      fee_cents: 1200,
+      net_cents: 23790,
+      paid_at: "2026-08-15T12:00:00.000-03:00",
+    });
+    // Recurso sem `date_approved` NEM `date_created`: `derivePaidAt` devolve
+    // null. O fallback é o relógio DESTA máquina — que não é um fato sobre o
+    // pagamento, e num dia 1º jogaria a linha para a competência seguinte.
+    paymentGet.mockResolvedValueOnce({
+      id: 999,
+      status: "approved",
+      transaction_amount: 249.9,
+      external_reference: "7",
+      fee_details: [{ amount: 12.0 }],
+    });
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "payment", data: { id: "999" } }));
+
+    const patch = updatePayment.mock.calls[0][1] as Record<string, unknown>;
+    expect(patch).not.toHaveProperty("paid_at");
+  });
+
+  it("reentrega legítima com data DEFINITIVA promove o carimbo (pending → approved)", async () => {
+    recordPayment.mockResolvedValueOnce({ created: false });
+    // 1ª notificação veio `pending` e gravou `date_created`; esta traz o
+    // `date_approved` — é a correção que a sobrescrita existe para permitir.
+    getPaymentByMpId.mockResolvedValueOnce({
+      id: 1,
+      mp_payment_id: "999",
+      status: "pending",
+      incomplete: true,
+      fee_cents: null,
+      net_cents: null,
+      paid_at: "2026-08-14T09:00:00.000-03:00",
+    });
+    paymentGet.mockResolvedValueOnce({
+      id: 999,
+      status: "approved",
+      transaction_amount: 249.9,
+      date_created: "2026-08-14T09:00:00.000-03:00",
+      date_approved: "2026-08-15T12:00:00.000-03:00",
+      external_reference: "7",
+      fee_details: [{ amount: 12.0 }],
+    });
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "payment", data: { id: "999" } }));
+
+    const patch = updatePayment.mock.calls[0][1] as Record<string, unknown>;
+    expect(patch.paid_at).toBe("2026-08-15T12:00:00.000-03:00");
+    expect(patch.status).toBe("approved");
+  });
+
+  it("no INSERT o fallback continua valendo — carimbo aproximado é melhor que perder a linha", async () => {
+    paymentGet.mockResolvedValueOnce({
+      id: 999,
+      status: "approved",
+      transaction_amount: 249.9,
+      external_reference: "7",
+      fee_details: [{ amount: 12.0 }],
+    });
+    const { POST } = await import("@/app/api/webhooks/mercadopago/route");
+    await POST(req({ type: "payment", data: { id: "999" } }));
+
+    const gravado = recordPayment.mock.calls[0][0] as Record<string, unknown>;
+    // Instante absoluto com offset explícito — legível pela regra única.
+    const { instanteMs } = await import("@/lib/competencia");
+    expect(instanteMs(gravado.paid_at as string)).not.toBeNull();
+  });
+
   // --- Achado 2 (revisão rodada 1): reentrega com dados melhores não fica congelada ---
   it("reentrega com taxa melhor que a gravada atualiza fee/net/incomplete", async () => {
     recordPayment.mockResolvedValueOnce({ created: false });

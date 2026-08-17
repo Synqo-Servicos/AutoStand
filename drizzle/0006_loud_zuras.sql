@@ -10,7 +10,7 @@ CREATE TABLE "payments" (
 	"fee_cents" integer,
 	"net_cents" integer,
 	"status" text NOT NULL,
-	"paid_at" timestamp NOT NULL,
+	"paid_at" timestamp with time zone NOT NULL,
 	"coupon_id" integer,
 	"nfse_issued_at" timestamp,
 	"nfse_number" text,

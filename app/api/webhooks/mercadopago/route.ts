@@ -74,10 +74,18 @@ async function handlePaymentNotification(dataId: string): Promise<void> {
   const { feeCents, netCents, incomplete } = computeFeeAndNet(payment, grossCents);
   const mpPaymentId = String(payment.id ?? dataId);
   const status = String(payment.status ?? "");
-  // `derivePaidAt` devolve `null` quando o recurso não traz data nenhuma; aqui
-  // o fallback é "agora" — gravar a linha com carimbo aproximado é melhor que
-  // perder a notificação. A reconciliação escolhe o oposto (ver lib/mp-payment.ts).
-  const paidAt = derivePaidAt(payment) ?? new Date().toISOString();
+  // `derivePaidAt` devolve `null` quando o recurso não traz data nenhuma. As
+  // duas variáveis ficam separadas de propósito: `paidAtDoMp` é um FATO sobre
+  // o pagamento, `paidAt` pode ser o relógio desta máquina. Só o INSERT aceita
+  // o fallback — gravar a linha com carimbo aproximado é melhor que perder a
+  // notificação; o UPDATE não aceita (ver mais abaixo). A reconciliação
+  // escolhe o oposto (ver lib/mp-payment.ts).
+  //
+  // `new Date().toISOString()` é UTC com `Z` explícito, e a coluna é
+  // `timestamptz`: o instante é gravado sem ambiguidade, e a competência sai
+  // depois convertendo para São Paulo (lib/competencia.ts).
+  const paidAtDoMp = derivePaidAt(payment);
+  const paidAt = paidAtDoMp ?? new Date().toISOString();
 
   const result = await recordPayment({
     tenant_id: tenant.id,
@@ -115,8 +123,13 @@ async function handlePaymentNotification(dataId: string): Promise<void> {
     return;
   }
 
+  // Uma notificação só tem AUTORIDADE sobre a linha quando não é uma reentrega
+  // fora de ordem — a mesma condição que libera o `status`. Ela governa também
+  // o `paid_at`, logo abaixo.
+  const temAutoridade = shouldOverwriteStatus(existing.status, status);
+
   const patch: UpdatePaymentInput = {};
-  if (shouldOverwriteStatus(existing.status, status)) {
+  if (temAutoridade) {
     patch.status = status;
   }
   if (!incomplete) {
@@ -131,10 +144,27 @@ async function handlePaymentNotification(dataId: string): Promise<void> {
     // divergir entre leituras, o que não deveria acontecer, mas não custa).
     patch.net_cents = netCents;
   }
-  // `date_approved` pode ter estado ausente na 1ª notificação (ex.: ela
-  // chegou `pending`) e `paidAt` ter caído no fallback de `date_created`;
-  // uma reentrega já `approved` traz o valor definitivo.
-  patch.paid_at = paidAt;
+  // `paid_at` é SNAPSHOT, com o mesmo peso de `gross_cents` (que a allowlist
+  // de `UpdatePaymentInput` já exclui por ser snapshot): ele decide a
+  // competência, o mês do DAS e o mês da NFS-e. Antes esta linha era
+  // incondicional, e QUALQUER notificação podia movê-lo — inclusive as duas
+  // que não deveriam:
+  //
+  //  1. a REENTREGA FORA DE ORDEM. O handler já recusa o `status` dela (um
+  //     `approved` atrasado não desfaz um `refunded` gravado), mas deixava a
+  //     mesma notificação reescrever a data — ou seja, recusava a decisão e
+  //     aceitava a consequência dela. Uma nota já emitida na competência certa
+  //     via o pagamento migrar de mês por baixo;
+  //  2. a notificação SEM DATA do MP, cujo `paidAt` é o relógio DESTA máquina.
+  //     Isso não é um fato sobre o pagamento: um retry processado às 00:30 do
+  //     dia 1º jogaria para a competência seguinte um pagamento do mês passado.
+  //
+  // Sobra o caso legítimo, que é o motivo de a sobrescrita existir: a 1ª
+  // notificação chegou `pending` e gravou `date_created`; a reentrega chega
+  // `approved` (logo, com autoridade) e traz o `date_approved` definitivo.
+  if (temAutoridade && paidAtDoMp) {
+    patch.paid_at = paidAtDoMp;
+  }
 
   await updatePayment(mpPaymentId, patch);
 }

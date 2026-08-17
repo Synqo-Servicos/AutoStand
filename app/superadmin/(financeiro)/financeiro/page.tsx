@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getRecorrencia, listPendingNfse, sumCaixa, sumGrossBetween } from "@/lib/db";
-import { normalizeCompetencia } from "@/lib/competencia";
+import { competenciaAtual, normalizeCompetencia } from "@/lib/competencia";
 import { consultarBaseRbt12, montarImposto } from "@/lib/finance-config";
 import { CaixaCard } from "@/components/superadmin/CaixaCard";
 import { RecorrenciaCard } from "@/components/superadmin/RecorrenciaCard";
@@ -12,18 +12,15 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ competencia?: string }>;
 
-/** "Hoje" pela hora de São Paulo, nunca `toISOString()` (UTC vira o dia errado à noite). */
-function competenciaAtual(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" })
-    .format(new Date())
-    .slice(0, 7);
-}
-
 export default async function FinanceiroPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   // Valor de fora do formato (ausente, lixo, mês fora de 01–12) cai na
   // competência atual — nunca em 500, nunca num período calculado errado
   // em silêncio. Ver lib/competencia.ts.
+  //
+  // `competenciaAtual` é o mês corrente em São Paulo, não em UTC: depois das
+  // 21h do dia 31 o UTC já virou, e o console abriria no mês seguinte com
+  // Caixa vazio, RBT12 vazia e DAS zero — parecendo um mês sem faturamento.
   const competencia = normalizeCompetencia(sp.competencia, competenciaAtual());
 
   // O acesso já foi gateado pelo layout de `(financeiro)`; aqui o papel serve
