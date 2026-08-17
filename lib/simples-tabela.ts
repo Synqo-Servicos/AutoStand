@@ -11,14 +11,22 @@
  * Vigência dos valores abaixo: desde 1º de janeiro de 2018 (art. 11 da LC
  * 155/2016). Conferidos em 17/08/2026.
  *
- * Como foram conferidos (declarado por honestidade, porque muda o quanto se
- * pode confiar neles): o texto do planalto.gov.br não abriu desta máquina
- * (ECONNRESET em todas as tentativas, inclusive por curl). Os números vieram
- * de três reproduções independentes que batem dígito a dígito entre si
- * (contabilizei.com.br, mentorfiscal.com.br e coafdigital.com.br, consultadas
- * em 17/08/2026) e passam no teste de continuidade descrito abaixo. A fórmula
- * que consome esta tabela, essa sim, foi conferida no texto integral da
- * Resolução CGSN nº 140/2018 (art. 21, inciso II).
+ * Como foram conferidos: contra FONTE PRIMÁRIA, em 17/08/2026 — os 48
+ * números (2 anexos × 6 faixas × limite inferior, limite superior, nominal e
+ * parcela a deduzir) batem dígito a dígito com o texto consolidado da LC
+ * 123/2006 no planalto.gov.br e com os PDFs oficiais da Resolução CGSN nº
+ * 140/2018 em normas.receita.fazenda.gov.br. Nenhum valor veio de fonte
+ * secundária.
+ *
+ * ARMADILHA PARA QUEM FOR RECONFERIR: o planalto.gov.br derruba a conexão de
+ * cliente HTTP sem user-agent de navegador — foi o que fez a primeira
+ * tentativa concluir, erradamente, que o texto legal era inalcançável. Com
+ * `curl -A "<user-agent de navegador>"` a página abre normalmente (HTTP 200).
+ *
+ * A fórmula que consome esta tabela está no art. 18, § 1º-A da própria LC 123
+ * — hierarquia superior à Resolução CGSN nº 140/2018 (art. 21, II), que a
+ * repete. O fator R e seu operador (28% exatos caem no Anexo III) estão nos
+ * §§ 5º-J e 5º-M do mesmo artigo, e o teto de R$ 4.800.000,00 no art. 3º, II.
  *
  * Confirmação cruzada embutida: `tests/lib/simples.test.ts` verifica que a
  * alíquota EFETIVA é contínua nas viradas da 1ª à 5ª faixa — o teto de cada
@@ -29,11 +37,20 @@
  * ganha um teste que repita seus valores: um teste assim só provaria que ela
  * foi digitada duas vezes.
  *
- * REFORMA TRIBUTÁRIA (LC 214/2025): a transição começou em 2026 e altera a
- * coluna de REPARTIÇÃO dos anexos (PIS/Cofins → CBS; ICMS/ISS → IBS), que
- * este módulo não usa. As faixas, as alíquotas nominais e as parcelas a
- * deduzir seguem as mesmas, e a carga total do DAS não muda na transição.
- * Reconferir a partir de 2029, quando a redução gradual de ICMS/ISS começa.
+ * REFORMA TRIBUTÁRIA (LC 214/2025): o art. 519 SUBSTITUI os Anexos I a V da
+ * LC 123/2006. Faixas e parcelas a deduzir seguem idênticas, e as faixas 1 a
+ * 5 não mudam em nada — mas a alíquota NOMINAL da 6ª faixa muda já em 1º de
+ * janeiro de 2027, não em 2029: Anexo III 33,00% → 32,90% e Anexo V 30,50% →
+ * 30,40%, valendo em 2027 e 2028 e voltando aos valores atuais em 2029.
+ *
+ * RECONFERIR EM 1º/1/2027 — e note que o efeito prático aqui é nulo enquanto
+ * a Synqo não chegar perto de R$ 3,6 milhões de RBT12, que é onde a 6ª faixa
+ * começa. Nesse patamar este módulo já subestima de qualquer forma, porque o
+ * ISS sai do DAS (ver ARMADILHA DA 6ª FAIXA abaixo).
+ *
+ * Em vigor em agosto de 2026: nada mudou. As Resoluções CGSN 190/2026 e
+ * 191/2026, que integram IBS/CBS ao Simples, só produzem efeitos a partir de
+ * 1º/1/2027; a CGSN 140/2018 segue como norma base.
  *
  * QUEM ATUALIZAR ESTA TABELA: troque os números, atualize a data de
  * conferência acima e rode a suíte. A continuidade é a rede de segurança.
