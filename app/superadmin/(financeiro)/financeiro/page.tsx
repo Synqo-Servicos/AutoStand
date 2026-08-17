@@ -12,6 +12,7 @@ import { CaixaCard } from "@/components/superadmin/CaixaCard";
 import { RecorrenciaCard } from "@/components/superadmin/RecorrenciaCard";
 import { FilaFiscal } from "@/components/superadmin/FilaFiscal";
 import { ImpostoCard } from "@/components/superadmin/ImpostoCard";
+import { ReconciliarButton } from "@/components/superadmin/ReconciliarButton";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,14 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
 
       <div className="mt-4">
         <FilaFiscal payments={pendentesNfse} />
+      </div>
+
+      {/* Depois da fila fiscal de propósito: a conferência com o MP é a rede
+          embaixo do webhook, não a operação do dia. Ela usa a MESMA
+          competência do topo da página — o botão não tem picker próprio pra
+          não existirem dois períodos discordando na mesma tela. */}
+      <div className="mt-4">
+        <ReconciliarButton competencia={competencia} />
       </div>
     </div>
   );
