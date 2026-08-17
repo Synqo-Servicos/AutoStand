@@ -89,6 +89,18 @@ export async function listPendingNfse(): Promise<PaymentRow[]> {
     .orderBy(desc(payments.paid_at));
 }
 
+/**
+ * Idempotente por desenho: só grava se `nfse_issued_at` ainda for NULL.
+ * Sem essa condição no WHERE, um segundo registro no mesmo pagamento (duas
+ * abas na fila, duplo clique) sobrescreveria em silêncio o vínculo "qual
+ * nota foi emitida pra este pagamento" — a nota continua existindo na
+ * prefeitura, mas o rastro dela aqui se perderia, e esse rastro é a razão
+ * de estes campos existirem (Task 1).
+ *
+ * Devolve `null` quando o UPDATE não afeta nenhuma linha — id inexistente
+ * OU nota já registrada não são distinguíveis aqui (uma única query); o
+ * chamador decide como responder aos dois casos.
+ */
 export async function registerNfse(
   paymentId: number, numero: string, userId: number,
 ): Promise<PaymentRow | null> {
@@ -98,7 +110,7 @@ export async function registerNfse(
       nfse_issued_at: sql`CURRENT_TIMESTAMP`,
       nfse_issued_by: userId,
     })
-    .where(eq(payments.id, paymentId))
+    .where(and(eq(payments.id, paymentId), isNull(payments.nfse_issued_at)))
     .returning();
   return row ?? null;
 }

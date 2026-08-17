@@ -18,8 +18,12 @@ export const POST = withFinanceAccess<{ id: string }>(async (req, { params, user
 
   const { numero } = await parseBody(req, nfseInputSchema);
 
+  // `registerNfse` só grava quando `nfse_issued_at` ainda é NULL (ver
+  // lib/db/payments.ts). `null` de volta é "nada foi atualizado" — 409, não
+  // 200 mudo nem 404 técnico: a mensagem é a explicação real do caso comum
+  // (registrar duas vezes o mesmo pagamento), não uma adivinhação de causa.
   const payment = await registerNfse(paymentId, numero, userId);
-  if (!payment) throw new ApiError("Pagamento não encontrado.", 404);
+  if (!payment) throw new ApiError("Este pagamento já tem NFS-e registrada.", 409);
 
   return NextResponse.json(payment);
 });

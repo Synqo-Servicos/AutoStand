@@ -7,6 +7,7 @@ const insertReturning = vi.fn();
 const selectWhere = vi.fn();
 const selectRows = vi.fn();
 const updateSetArgs = vi.fn();
+const updateWhereArgs = vi.fn();
 const updateReturning = vi.fn();
 
 vi.mock("@/lib/db/client", () => ({
@@ -24,7 +25,7 @@ vi.mock("@/lib/db/client", () => ({
     }) }),
     update: () => ({
       set: (v: unknown) => { updateSetArgs(v); return {
-        where: () => ({ returning: () => updateReturning() }),
+        where: (cond: unknown) => { updateWhereArgs(cond); return { returning: () => updateReturning() }; },
       }; },
     }),
   },
@@ -224,6 +225,65 @@ describe("updatePayment", () => {
     updateReturning.mockResolvedValueOnce([]);
     const { updatePayment } = await import("@/lib/db/payments");
     const row = await updatePayment("mp-inexistente", { status: "refunded" });
+    expect(row).toBeNull();
+  });
+});
+
+describe("registerNfse", () => {
+  beforeEach(() => { vi.clearAllMocks(); updateReturning.mockReset(); });
+
+  it("grava numero, nfse_issued_at e nfse_issued_by quando ainda não há nota", async () => {
+    updateReturning.mockResolvedValueOnce([{ id: 1, nfse_number: "123", nfse_issued_by: 7 }]);
+    const { registerNfse } = await import("@/lib/db/payments");
+    const row = await registerNfse(1, "123", 7);
+    expect(row).toEqual({ id: 1, nfse_number: "123", nfse_issued_by: 7 });
+    expect(updateSetArgs).toHaveBeenCalledWith(
+      expect.objectContaining({ nfse_number: "123", nfse_issued_by: 7 }),
+    );
+  });
+
+  // Prova estrutural do guard de idempotência: compila a condição real
+  // passada pro `.where()` (mesma técnica do teste de `listPaymentsByPeriod`
+  // acima) e confirma que ela exige `nfse_issued_at IS NULL` — não só "id
+  // bate". Remover `isNull(payments.nfse_issued_at)` do WHERE em
+  // lib/db/payments.ts derruba este teste (verificado por mutação, ver
+  // task-6-report.md).
+  it("o WHERE exige nfse_issued_at IS NULL — não só o id do pagamento", async () => {
+    updateReturning.mockResolvedValueOnce([{ id: 1 }]);
+    const { registerNfse } = await import("@/lib/db/payments");
+    await registerNfse(1, "123", 7);
+
+    const condition = updateWhereArgs.mock.calls[0][0] as SQL;
+    const compiled = new PgDialect().sqlToQuery(condition).sql.toLowerCase();
+    expect(compiled).toContain("is null");
+  });
+
+  it("registrar duas vezes o mesmo pagamento — a 2ª chamada não altera o número já gravado (devolve null)", async () => {
+    // 1ª chamada: nfse_issued_at ainda é NULL -> UPDATE afeta 1 linha.
+    updateReturning.mockResolvedValueOnce([{ id: 1, nfse_number: "111", nfse_issued_by: 7 }]);
+    // 2ª chamada: no banco real, nfse_issued_at já não é mais NULL, então a
+    // condição do WHERE não bate em nenhuma linha -> UPDATE afeta 0 linhas.
+    // Simulamos aqui o resultado desse WHERE não bater (não há Postgres
+    // real neste teste) — é o comportamento que a asserção acima prova que
+    // a query pede.
+    updateReturning.mockResolvedValueOnce([]);
+
+    const { registerNfse } = await import("@/lib/db/payments");
+    const first = await registerNfse(1, "111", 7);
+    const second = await registerNfse(1, "222", 9);
+
+    expect(first).toEqual({ id: 1, nfse_number: "111", nfse_issued_by: 7 });
+    expect(second).toBeNull();
+    // A 2ª chamada tentou "222" no SET — mas como o mock representa "0
+    // linhas afetadas" (o WHERE não bateu), o retorno é null: o número
+    // "111" da 1ª chamada nunca é sobrescrito no banco.
+    expect(updateSetArgs).toHaveBeenNthCalledWith(2, expect.objectContaining({ nfse_number: "222" }));
+  });
+
+  it("devolve null quando o id do pagamento não existe", async () => {
+    updateReturning.mockResolvedValueOnce([]);
+    const { registerNfse } = await import("@/lib/db/payments");
+    const row = await registerNfse(999, "123", 7);
     expect(row).toBeNull();
   });
 });
