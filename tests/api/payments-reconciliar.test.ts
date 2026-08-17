@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { periodoDaCompetencia } from "@/lib/competencia";
 
 /**
  * `vi.hoisted` e não `const fn = vi.fn()` no topo: a fábrica do `vi.mock` é
@@ -48,7 +49,15 @@ vi.mock("mercadopago", () => ({
   PreApproval: class {},
 }));
 
-const AGOSTO = { from: "2026-08-01T00:00:00.000Z", to: "2026-09-01T00:00:00.000Z" };
+/**
+ * A janela que a rota receberia de `periodBounds` — vinda da implementação
+ * REAL, não copiada à mão. Copiada, ela vira uma segunda definição de
+ * competência dentro do teste: foi assim que este arquivo passou a afirmar
+ * limites de UTC (`00:00Z`) enquanto o produto recortava outro mês.
+ *
+ * Agosto/2026 em São Paulo = `2026-08-01T03:00:00.000Z` → `2026-09-01T03:00:00.000Z`.
+ */
+const AGOSTO = periodoDaCompetencia("2026-08");
 
 const TENANT = {
   id: 7,
@@ -238,12 +247,13 @@ describe("janela consultada no Mercado Pago", () => {
       range: "date_approved",
     });
     // A janela pedida ao MP é DELIBERADAMENTE mais larga que a competência —
-    // um dia de folga de cada lado. O MP filtra por INSTANTE e a competência é
-    // relógio de parede: sem a folga, o pagamento das 22:00 de 31/08 (que o
-    // banco conta em agosto) nem sequer voltaria da busca de agosto. Quem
-    // recorta de verdade é `dentroDaCompetencia`, em cima do que voltou.
-    expect(options.begin_date).toBe("2026-07-31T00:00:00.000Z");
-    expect(options.end_date).toBe("2026-09-02T00:00:00.000Z");
+    // um dia de folga de cada lado, contado a partir dos limites de São Paulo
+    // (03:00Z), não de UTC. Depois que `paid_at` virou `timestamptz`, a folga
+    // deixou de ser correção de fuso e passou a ser margem contra a semântica
+    // de borda do MP (ver `MP_FOLGA_MS` na rota). Quem recorta de verdade é
+    // `dentroDaCompetencia`, em cima do que voltou.
+    expect(options.begin_date).toBe("2026-07-31T03:00:00.000Z");
+    expect(options.end_date).toBe("2026-09-02T03:00:00.000Z");
   });
 
   it("pagina até acabar e junta os resultados", async () => {
@@ -370,10 +380,13 @@ describe("?dry=true — mostra a diferença sem gravar", () => {
 
 describe("recorte de período", () => {
   it("pagamento fora da competência não entra na diferença, mesmo se o MP devolver", async () => {
+    // Bordas expressas no fuso que DEFINE a competência. Antes estavam em `Z`,
+    // o que só funcionava porque a janela também era de UTC — e `2026-09-01
+    // T00:00:00Z` é 31/08 21:00 em São Paulo, ou seja, ainda agosto.
     umaPagina([
-      mpResult({ id: "dentro", date_approved: "2026-08-31T23:59:59.000Z" }),
-      mpResult({ id: "fora-depois", date_approved: "2026-09-01T00:00:00.000Z" }),
-      mpResult({ id: "fora-antes", date_approved: "2026-07-31T23:59:59.999Z" }),
+      mpResult({ id: "dentro", date_approved: "2026-08-31T23:59:59.000-03:00" }),
+      mpResult({ id: "fora-depois", date_approved: "2026-09-01T00:00:00.000-03:00" }),
+      mpResult({ id: "fora-antes", date_approved: "2026-07-31T23:59:59.999-03:00" }),
     ]);
     const POST = await route();
 
@@ -392,14 +405,14 @@ describe("recorte de período", () => {
   });
 
   /**
-   * A competência é decidida pelo relógio de parede que o Postgres grava
-   * (`paid_at` é `timestamp` SEM time zone: o offset do MP é descartado na
-   * gravação). Com `-03:00`, esse relógio é o de São Paulo.
+   * A competência é o mês do INSTANTE convertido para São Paulo — a mesma
+   * regra que o banco recebe via `periodBounds` (`paid_at` é `timestamptz`).
    *
-   * Um recorte por instante mandaria o pagamento das 22:00 de 31/08 para
-   * setembro enquanto o banco o conta em agosto — e aí ele não apareceria em
-   * categoria nenhuma na conferência de agosto: "Tudo conferido" com o mês
-   * faturando a menos, que é exatamente o que esta rota existe para pegar.
+   * O pagamento das 22:00 de 31/08 em São Paulo é 01/09 01:00 UTC. Recortar
+   * por UTC o mandaria para setembro enquanto o Caixa o conta em agosto, e
+   * aí ele não apareceria em categoria nenhuma na conferência de agosto:
+   * "Tudo conferido" com o mês faturando a menos, que é exatamente o que esta
+   * rota existe para pegar.
    */
   it("22:00 de 31/08 (São Paulo) é AGOSTO — o mesmo mês em que o banco o grava", async () => {
     umaPagina([
@@ -837,9 +850,7 @@ describe("confirmação amarrada ao conjunto conferido", () => {
     const POST = await route();
     const { token } = await (await POST(post({ competencia: "2026-08" }, "true"), ctx())).json();
 
-    mocks.periodBounds.mockReturnValue({
-      from: "2026-07-01T00:00:00.000Z", to: "2026-08-01T00:00:00.000Z",
-    });
+    mocks.periodBounds.mockReturnValue(periodoDaCompetencia("2026-07"));
     umaPagina([mpResult({ id: "999", date_approved: "2026-07-15T12:00:00.000-03:00" })]);
     const res = await POST(post({ competencia: "2026-07", token }), ctx());
 

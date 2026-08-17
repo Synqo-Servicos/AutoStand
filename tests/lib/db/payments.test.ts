@@ -77,41 +77,77 @@ describe("recordPayment", () => {
   });
 });
 
+/**
+ * Compila a condição REAL passada ao `.where()`. Asserção sobre o predicado
+ * inteiro (texto e parâmetros), nunca `contains`: já houve aqui um teste que
+ * passava com `IS NULL` em qualquer coluna porque só procurava a substring
+ * `"is null"`, e um `contains("<")` sobrevive tanto a `<` quanto a `<=`.
+ */
+function predicadoDe(cond: SQL): { sql: string; params: unknown[] } {
+  const { sql, params } = new PgDialect().sqlToQuery(cond);
+  return { sql, params: params as unknown[] };
+}
+
+/** Agosto/2026 em São Paulo, como instantes absolutos. */
+const AGOSTO_FROM = "2026-08-01T03:00:00.000Z";
+const AGOSTO_TO = "2026-09-01T03:00:00.000Z";
+
 describe("periodBounds", () => {
-  it("periodBounds('2026-08') devolve o par [início, fim) correto", async () => {
+  it("os limites são a meia-noite de SÃO PAULO, não a de UTC", async () => {
     const { periodBounds } = await import("@/lib/db/payments");
-    expect(periodBounds("2026-08")).toEqual({
-      from: "2026-08-01T00:00:00.000Z",
-      to: "2026-09-01T00:00:00.000Z",
+    // 00:00 em São Paulo é 03:00Z. Com 00:00Z, as 21h–24h do dia 31 cairiam
+    // no mês errado — o buraco que esta branch existe para fechar.
+    expect(periodBounds("2026-08")).toMatchObject({
+      from: AGOSTO_FROM,
+      to: AGOSTO_TO,
     });
   });
 
   it("periodBounds('2026-12') atravessa a virada de ano", async () => {
     const { periodBounds } = await import("@/lib/db/payments");
-    expect(periodBounds("2026-12")).toEqual({
-      from: "2026-12-01T00:00:00.000Z",
-      to: "2027-01-01T00:00:00.000Z",
+    expect(periodBounds("2026-12")).toMatchObject({
+      from: "2026-12-01T03:00:00.000Z",
+      to: "2027-01-01T03:00:00.000Z",
     });
+  });
+
+  it("é semiaberto: o `to` de um mês é o `from` do seguinte", async () => {
+    const { periodBounds } = await import("@/lib/db/payments");
+    expect(periodBounds("2026-08").to).toBe(periodBounds("2026-09").from);
   });
 });
 
-describe("listPaymentsByPeriod — fronteira do período", () => {
+/**
+ * ============================================================================
+ * AS DUAS FRONTEIRAS DO PERÍODO, AMARRADAS NO SQL COMPILADO
+ * ============================================================================
+ *
+ * Estes testes existem porque as duas mutações abaixo sobreviveram à suíte
+ * inteira, 100% verde:
+ *
+ *  - `gte` → `gt` no limite INFERIOR: um pagamento às `00:00:00.000` do dia 1º
+ *    some do Caixa e da base do DAS. Assinatura mensal é justamente o que mais
+ *    cai em meia-noite;
+ *  - `lte` → `lt` (e o inverso) no limite SUPERIOR: um pagamento na virada
+ *    exata conta em dois meses seguidos, e dentro do array do RBT12 é somado
+ *    duas vezes na mesma apuração.
+ *
+ * Por isso a asserção é sobre o predicado INTEIRO — texto e parâmetros — e não
+ * sobre a presença de um operador.
+ */
+describe("listPaymentsByPeriod — as duas fronteiras do período", () => {
   beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
 
-  it("o limite superior é EXCLUSIVO — pagamento no instante exato de `to` pertence ao mês seguinte", async () => {
+  it("o WHERE é exatamente `paid_at >= from AND paid_at < to`", async () => {
     selectRows.mockResolvedValueOnce([]);
     const { listPaymentsByPeriod } = await import("@/lib/db/payments");
     await listPaymentsByPeriod("2026-08");
 
-    // `to` de agosto ("2026-09-01T00:00:00.000Z") é o INÍCIO de setembro,
-    // não o fim de agosto. Compila a condição de fato passada pro
-    // `.where()` e confirma que o limite superior usa `<` (estrito), não
-    // `<=` — com `<=` um pagamento nesse instante exato apareceria em
-    // agosto E em setembro, contando como receita duas vezes.
-    const condition = selectWhere.mock.calls[0][0] as SQL;
-    const compiled = new PgDialect().sqlToQuery(condition).sql;
-    expect(compiled).toContain("<");
-    expect(compiled).not.toContain("<=");
+    const { sql, params } = predicadoDe(selectWhere.mock.calls[0][0] as SQL);
+    expect(sql).toBe('("payments"."paid_at" >= $1 and "payments"."paid_at" < $2)');
+    // E os limites são os de São Paulo — o predicado certo sobre a janela
+    // errada erraria a competência do mesmo jeito.
+    expect(params).toEqual([AGOSTO_FROM, AGOSTO_TO]);
   });
 });
 
@@ -181,6 +217,57 @@ describe("sumCaixa", () => {
     const { sumCaixa } = await import("@/lib/db/payments");
     const result = await sumCaixa("2026-08");
     expect(result).toEqual({ gross: 15000, fee: 750, netBeforeTax: 14250 });
+  });
+});
+
+/**
+ * `sumGrossBetween` alimenta a RBT12, que decide a alíquota efetiva e o DAS.
+ * Ele era o único fetcher de período com convenção INCLUSIVA dos dois lados,
+ * enquanto `listPaymentsByPeriod` era semiaberto — e a única coisa que
+ * segurava a diferença era uma função em OUTRO arquivo
+ * (`mesBoundsInclusivos`) que encolhia o `to` em 1 ms. Nenhum teste amarrava o
+ * operador no SQL: trocar `lte` por `lt` passava verde.
+ *
+ * As duas convenções agora são uma só (semiaberto), e é o predicado compilado
+ * que trava isso.
+ */
+describe("sumGrossBetween — mesma fronteira de listPaymentsByPeriod", () => {
+  beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
+
+  it("o WHERE é exatamente `paid_at >= from AND paid_at < to`", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { periodBounds, sumGrossBetween } = await import("@/lib/db/payments");
+    await sumGrossBetween(periodBounds("2026-08"));
+
+    const { sql, params } = predicadoDe(selectWhere.mock.calls[0][0] as SQL);
+    expect(sql).toBe('("payments"."paid_at" >= $1 and "payments"."paid_at" < $2)');
+    expect(params).toEqual([AGOSTO_FROM, AGOSTO_TO]);
+  });
+
+  it("usa o MESMO predicado que listPaymentsByPeriod para a mesma competência", async () => {
+    selectRows.mockResolvedValue([]);
+    const mod = await import("@/lib/db/payments");
+
+    await mod.listPaymentsByPeriod("2026-08");
+    const daLista = predicadoDe(selectWhere.mock.calls[0][0] as SQL);
+    selectWhere.mockClear();
+    await mod.sumGrossBetween(mod.periodBounds("2026-08"));
+    const daSoma = predicadoDe(selectWhere.mock.calls[0][0] as SQL);
+
+    // Caixa e base do DAS não podem discordar sobre quais linhas são do mês:
+    // é a mesma tela mostrando os dois números.
+    expect(daSoma).toEqual(daLista);
+  });
+
+  it("soma só approved — estorno não entra na base do DAS", async () => {
+    selectRows.mockResolvedValueOnce([
+      { status: "approved", gross: 10000 },
+      { status: "refunded", gross: 20000 },
+      { status: "chargeback", gross: 30000 },
+      { status: "approved", gross: 5000 },
+    ]);
+    const { periodBounds, sumGrossBetween } = await import("@/lib/db/payments");
+    expect(await sumGrossBetween(periodBounds("2026-08"))).toBe(15000);
   });
 });
 

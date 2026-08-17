@@ -365,7 +365,23 @@ export const payments = pgTable("payments", {
   net_cents: integer("net_cents"),
   /** 'approved' | 'refunded' | 'chargeback' */
   status: text("status").notNull(),
-  paid_at: timestamp("paid_at", { mode: "string" }).notNull(),
+  /**
+   * Instante ABSOLUTO da aprovação — `timestamptz`, nunca `timestamp`.
+   *
+   * Esta coluna decide competência, mês do DAS e mês da NFS-e, e recebe dois
+   * relógios diferentes: o `date_approved` do Mercado Pago (ISO com offset
+   * `-03:00`) e, no fallback do webhook, `new Date().toISOString()` (UTC).
+   * Como `timestamp` sem time zone o Postgres DESCARTA o offset e guarda o
+   * relógio de parede, então os dois relógios viravam o mesmo tipo de dado
+   * significando coisas diferentes — e a informação de qual instante era ficava
+   * irrecuperável. Com `timestamptz` o offset é honrado na escrita e a coluna
+   * guarda um instante só, sem ambiguidade.
+   *
+   * A competência NÃO é lida daqui direto: converte-se para
+   * `America/Sao_Paulo` em `competenciaDeInstante` (lib/competencia.ts), que é
+   * o único lugar autorizado a transformar instante em mês.
+   */
+  paid_at: timestamp("paid_at", { mode: "string", withTimezone: true }).notNull(),
   coupon_id: integer("coupon_id").references(() => coupons.id, { onDelete: "set null" }),
   /** Nulos até a nota ser emitida — no portal (hoje) ou por API (camada 3). */
   nfse_issued_at: timestamp("nfse_issued_at", { mode: "string" }),

@@ -4,6 +4,7 @@ import {
   dentroDaCompetencia,
   type CandidatoMp,
 } from "@/lib/reconciliacao";
+import { competenciaDeInstante, periodoDaCompetencia } from "@/lib/competencia";
 
 /**
  * Núcleo da reconciliação, isolado do I/O: dado o que o Mercado Pago
@@ -31,58 +32,63 @@ function candidato(over: Partial<CandidatoMp> = {}): CandidatoMp {
 
 /**
  * ============================================================================
- * A COMPETÊNCIA É DECIDIDA PELO MESMO RELÓGIO QUE O BANCO USA
+ * A COMPETÊNCIA É DECIDIDA PELO INSTANTE, CONVERTIDO PARA SÃO PAULO
  * ============================================================================
  *
- * `payments.paid_at` é `timestamp` **sem** time zone (drizzle/0006_loud_zuras.sql).
- * O Postgres, ao ler um literal com offset (`'2026-08-31T22:00:00.000-03:00'`),
- * **descarta o offset** e grava o relógio de parede: `2026-08-31 22:00:00`. E
- * `listPaymentsByPeriod` compara essa coluna com os limites de `periodBounds`,
- * que o Postgres também lê como relógio de parede (`2026-08-01 00:00:00`).
+ * **Estes testes afirmavam o oposto até a correção da causa-raiz.** Vale
+ * registrar por quê, porque a inversão foi deliberada e não um afrouxamento:
  *
- * Ou seja: para o banco, aquele pagamento é **agosto**. O MP manda a data com
- * o offset da conta (Brasil, `-03:00`), então esse relógio de parede é o de
- * São Paulo.
+ * `payments.paid_at` era `timestamp` **sem** time zone. O Postgres descartava
+ * o offset ao gravar (`'2026-08-31T22:00:00.000-03:00'` virava
+ * `2026-08-31 22:00:00`), então este filtro ignorava o offset TAMBÉM — de
+ * propósito, para não criar uma segunda opinião sobre em que mês a linha
+ * está. O invariante protegido não era "é São Paulo", era "os dois lados
+ * concordam".
  *
- * Se este filtro comparasse INSTANTES (`Date.parse`), o mesmo pagamento seria
- * setembro aqui e agosto lá — e as três consequências seriam, em ordem de dor:
+ * O preço daquele acordo era um risco que não sinalizava: se o MP mandasse
+ * `Z` em vez de `-03:00`, o relógio de parede deslizava 3 h e ninguém via —
+ * justamente porque os dois lados erravam igual.
  *
- *  1. na conferência de agosto ele não apareceria em lugar NENHUM (nem
- *     faltante, nem já registrado): a tela diria "Tudo conferido" com agosto
- *     faturando a menos — o modo de falha exato que esta rota existe para pegar;
- *  2. na conferência de setembro viraria faltante fantasma, oferecido para
- *     importar todo mês e importando zero;
- *  3. se ele realmente faltasse, entraria com `paid_at` de agosto — numa
- *     competência já fechada.
+ * A causa-raiz foi consertada: `paid_at` é `timestamptz` e guarda o INSTANTE,
+ * `periodBounds` devolve instantes ancorados na meia-noite de São Paulo, e a
+ * competência sai de `competenciaDeInstante`. Com o banco guardando instante,
+ * é o recorte por relógio de parede que passaria a divergir. Os dois lados
+ * continuam concordando — agora concordando no certo.
  *
- * A janela afetada é 21:00–23:59 do último dia de cada mês.
+ * O modo de falha que o recorte previne segue o mesmo: um pagamento do lado
+ * errado da fronteira sumiria de TODAS as categorias e a tela diria "Tudo
+ * conferido" com o mês faturando a menos.
  */
-describe("dentroDaCompetencia — mesmo relógio de parede que o Postgres grava", () => {
-  const from = "2026-08-01T00:00:00.000Z";
-  const to = "2026-09-01T00:00:00.000Z";
+describe("dentroDaCompetencia — recorte por INSTANTE, alinhado ao banco", () => {
+  // Os limites reais de agosto/2026: meia-noite de São Paulo, que é 03:00Z.
+  const from = "2026-08-01T03:00:00.000Z";
+  const to = "2026-09-01T03:00:00.000Z";
 
-  it("aceita o primeiro instante do mês", () => {
+  it("os limites usados aqui são exatamente os que o banco recebe", () => {
+    // Se `periodBounds` mudar, este teste denuncia antes dos outros mentirem.
+    expect(periodoDaCompetencia("2026-08")).toMatchObject({ from, to });
+  });
+
+  it("aceita o primeiro instante do mês em São Paulo", () => {
     expect(dentroDaCompetencia("2026-08-01T00:00:00.000-03:00", from, to)).toBe(true);
   });
 
-  it("aceita o último instante do mês", () => {
+  it("aceita o último instante do mês em São Paulo", () => {
     expect(dentroDaCompetencia("2026-08-31T23:59:59.999-03:00", from, to)).toBe(true);
   });
 
   /**
-   * A borda que estava errada. 22:00 de 31/08 em São Paulo é 01/09 01:00 UTC —
-   * um recorte por instante mandaria isto para setembro; o banco diz agosto.
+   * A borda que motivou tudo: 22:00 de 31/08 em São Paulo é 01/09 01:00 UTC.
+   * Continua sendo AGOSTO — mas agora porque o instante cai dentro da janela
+   * de São Paulo, não porque o offset foi jogado fora.
    */
-  it("21:00–23:59 do último dia (o buraco do recorte por instante) é DESTE mês", () => {
+  it("21:00–23:59 do último dia continua sendo DESTE mês", () => {
     expect(dentroDaCompetencia("2026-08-31T21:00:00.000-03:00", from, to)).toBe(true);
     expect(dentroDaCompetencia("2026-08-31T22:00:00.000-03:00", from, to)).toBe(true);
     expect(dentroDaCompetencia("2026-08-31T23:59:00.000-03:00", from, to)).toBe(true);
   });
 
-  /**
-   * O limite de cima é EXCLUSIVO — igual ao `lt` de `listPaymentsByPeriod`
-   * (lib/db/payments.ts).
-   */
+  /** Limite de cima EXCLUSIVO — igual ao `lt` de `listPaymentsByPeriod`. */
   it("rejeita o primeiro instante do mês SEGUINTE", () => {
     expect(dentroDaCompetencia("2026-09-01T00:00:00.000-03:00", from, to)).toBe(false);
   });
@@ -93,20 +99,53 @@ describe("dentroDaCompetencia — mesmo relógio de parede que o Postgres grava"
   });
 
   /**
-   * O offset é IGNORADO, não convertido — é o que o Postgres faz. Se um dia o
-   * MP passar a mandar `Z`, o banco vai gravar o relógio de parede em UTC e
-   * este filtro vai concordar com ele: continua sem faltante fantasma. Um
-   * recorte "converte para São Paulo" divergiria do banco justamente nesse
-   * caso.
+   * A INVERSÃO. Antes: "mesmo relógio de parede, offsets diferentes → mesma
+   * competência". Agora: o offset é HONRADO, então grafias diferentes do mesmo
+   * INSTANTE dão a mesma competência, e relógios de parede iguais em fusos
+   * diferentes NÃO dão.
+   *
+   * É exatamente isto que fecha o risco residual do desenho anterior: o MP
+   * mandando `Z` não desloca mais nada.
    */
-  it("ignora o offset em vez de converter — é o que o Postgres faz com timestamp sem tz", () => {
-    // Mesmo relógio de parede, offsets diferentes: mesma competência.
+  it("honra o offset — o que decide é o instante, não os dígitos", () => {
+    // Quatro grafias do MESMO instante (2026-08-31T22:00 em São Paulo):
+    // todas são agosto.
+    for (const grafia of [
+      "2026-08-31T22:00:00.000-03:00",
+      "2026-09-01T01:00:00.000Z",
+      "2026-09-01 01:00:00+00",
+      "2026-09-01T06:00:00.000+05:00",
+    ]) {
+      expect(dentroDaCompetencia(grafia, from, to), grafia).toBe(true);
+    }
+
+    // Mesmo relógio de parede, offset diferente = OUTRO instante. `12:00Z` é
+    // 09:00 em São Paulo do mesmo dia (agosto), mas `12:00+05:00` é 04:00 e
+    // `2026-09-01T00:30:00-03:00` já é setembro em São Paulo.
     expect(dentroDaCompetencia("2026-08-15T12:00:00.000-03:00", from, to)).toBe(true);
     expect(dentroDaCompetencia("2026-08-15T12:00:00.000Z", from, to)).toBe(true);
-    expect(dentroDaCompetencia("2026-08-15T12:00:00.000+05:00", from, to)).toBe(true);
-    // E o relógio de parede de setembro é setembro, com qualquer offset.
-    expect(dentroDaCompetencia("2026-09-01T00:00:00.000-03:00", from, to)).toBe(false);
-    expect(dentroDaCompetencia("2026-09-01T00:00:00.000+05:00", from, to)).toBe(false);
+    expect(dentroDaCompetencia("2026-09-01T00:30:00.000-03:00", from, to)).toBe(false);
+    // 01/09 00:30Z ainda é 31/08 21:30 em São Paulo → agosto.
+    expect(dentroDaCompetencia("2026-09-01T00:30:00.000Z", from, to)).toBe(true);
+  });
+
+  /**
+   * O outro lado da mesma moeda: o filtro e o classificador de competência não
+   * podem discordar, senão a reconciliação e a fila fiscal contam meses
+   * diferentes para o mesmo pagamento.
+   */
+  it("concorda com competenciaDeInstante em toda a faixa testada", () => {
+    for (const carimbo of [
+      "2026-08-01T00:00:00.000-03:00",
+      "2026-08-15T12:00:00.000-03:00",
+      "2026-08-31T22:00:00.000-03:00",
+      "2026-09-01T00:30:00.000Z",
+      "2026-09-01T00:00:00.000-03:00",
+      "2026-07-31T23:59:59.999-03:00",
+    ]) {
+      expect(dentroDaCompetencia(carimbo, from, to), carimbo)
+        .toBe(competenciaDeInstante(carimbo) === "2026-08");
+    }
   });
 
   it("aceita o formato sem milissegundos que o MP às vezes devolve", () => {
@@ -117,6 +156,16 @@ describe("dentroDaCompetencia — mesmo relógio de parede que o Postgres grava"
     expect(dentroDaCompetencia("nem data é", from, to)).toBe(false);
     expect(dentroDaCompetencia("2026-13-01T00:00:00.000-03:00", from, to)).toBe(false);
     expect(dentroDaCompetencia("2026-08-15T99:00:00.000-03:00", from, to)).toBe(false);
+  });
+
+  /**
+   * Carimbo SEM offset não designa instante — não dá para dizer se é agosto ou
+   * setembro. Sai como `false` aqui, e a rota o manda para `ignorados` em vez
+   * de descartá-lo em silêncio (que seria o "Tudo conferido" mentiroso).
+   */
+  it("carimbo sem offset é ilegível, não 'fora da competência'", () => {
+    expect(dentroDaCompetencia("2026-08-15 12:00:00", from, to)).toBe(false);
+    expect(dentroDaCompetencia("2026-08-15T12:00:00.000", from, to)).toBe(false);
   });
 });
 

@@ -1,6 +1,7 @@
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "./client";
 import { payments, tenants, type PaymentRow } from "@/lib/schema";
+import { periodoDaCompetencia, type PeriodoSemiaberto } from "@/lib/competencia";
 import { getPlan } from "@/lib/plans";
 
 /**
@@ -56,21 +57,37 @@ export async function recordPayment(input: RecordPaymentInput): Promise<{ create
   return { created: rows.length > 0 };
 }
 
-/** Limites [início, fim) de uma competência 'YYYY-MM', em ISO. */
-export function periodBounds(competencia: string): { from: string; to: string } {
-  const [y, m] = competencia.split("-").map(Number);
-  const from = new Date(Date.UTC(y, m - 1, 1)).toISOString();
-  const to = new Date(Date.UTC(y, m, 1)).toISOString();
-  return { from, to };
+/**
+ * Limites `[início, fim)` de uma competência `YYYY-MM`, como INSTANTES
+ * absolutos ancorados na meia-noite de São Paulo.
+ *
+ * A aritmética mora em `lib/competencia.ts` — este é só o nome pelo qual a
+ * camada de dados a chama. Ver a regra única de competência lá.
+ */
+export function periodBounds(competencia: string): PeriodoSemiaberto {
+  return periodoDaCompetencia(competencia);
+}
+
+/**
+ * O recorte de período do módulo, escrito UMA vez.
+ *
+ * `>= from` e `< to`: semiaberto, sempre. O limite de baixo é INCLUSIVO porque
+ * um pagamento às `00:00:00.000` do dia 1º é do mês que começa — e assinatura
+ * mensal é justamente o que mais cai em meia-noite; o de cima é EXCLUSIVO
+ * porque `to` já é o primeiro instante do mês seguinte, e com `<=` a virada
+ * exata contaria em dois períodos.
+ *
+ * Existe como função para que Caixa (`listPaymentsByPeriod`) e base do DAS
+ * (`sumGrossBetween`) não possam divergir: os dois números aparecem na mesma
+ * tela, e antes eram dois predicados escritos à mão, com convenções opostas.
+ */
+function dentroDoPeriodo({ from, to }: PeriodoSemiaberto) {
+  return and(gte(payments.paid_at, from), lt(payments.paid_at, to));
 }
 
 export async function listPaymentsByPeriod(competencia: string): Promise<PaymentRow[]> {
-  // `to` é o `from` do mês seguinte (periodBounds é semiaberto [from, to)) —
-  // por isso o limite superior é `lt`, não `lte`. Com `lte`, um pagamento no
-  // instante exato da virada do mês contaria em dois períodos.
-  const { from, to } = periodBounds(competencia);
   return db.select().from(payments)
-    .where(and(gte(payments.paid_at, from), lt(payments.paid_at, to)))
+    .where(dentroDoPeriodo(periodBounds(competencia)))
     .orderBy(desc(payments.paid_at));
 }
 
@@ -185,11 +202,22 @@ export async function clearNfse(paymentId: number): Promise<PaymentRow | null> {
   return row ?? null;
 }
 
-/** Base do RBT12: bruto aprovado num intervalo. */
-export async function sumGrossBetween(fromISO: string, toISO: string): Promise<number> {
+/**
+ * Base do RBT12: bruto aprovado num período.
+ *
+ * Recebe um `PeriodoSemiaberto` — não dois `string` soltos. O tipo é a amarra:
+ * esta função já foi INCLUSIVA nos dois lados enquanto `listPaymentsByPeriod`
+ * era semiaberta, e a única coisa que separava as duas convenções era uma
+ * função em outro arquivo que encolhia o `to` em 1 ms. Como
+ * `(fromISO: string, toISO: string)` é estruturalmente idêntico nas duas
+ * convenções, o `tsc` não via nada — e passar a competência direto aqui somava
+ * o pagamento da virada duas vezes na mesma RBT12, calando a função inteira.
+ * Agora só `periodoDaCompetencia` produz o tipo aceito.
+ */
+export async function sumGrossBetween(periodo: PeriodoSemiaberto): Promise<number> {
   const rows = await db.select({ gross: payments.gross_cents, status: payments.status })
     .from(payments)
-    .where(and(gte(payments.paid_at, fromISO), lte(payments.paid_at, toISO)))
+    .where(dentroDoPeriodo(periodo))
     .orderBy(payments.paid_at);
   return rows.filter((r) => r.status === "approved").reduce((a, r) => a + r.gross, 0);
 }

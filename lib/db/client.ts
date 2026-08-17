@@ -3,12 +3,18 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import type { SQL } from "drizzle-orm";
 import * as schema from "@/lib/schema";
 import { buildPoolConfig } from "./pool-config";
+import { registrarParsersDeData } from "./date-parsers";
 import { invalidateDbPassword, isInvalidPasswordError } from "./secret-password";
 
 // COUNT()/SUM() retornam int8 (bigint), que o node-postgres entrega como string
 // por padrão. Nossos agregados (contagens, somas de centavos) cabem com folga
 // em Number — então parseamos int8 como número.
 types.setTypeParser(20, (val: string) => Number(val));
+
+// `timestamptz` chega como texto cru, com o offset do DADO — e não como `Date`
+// remontado pelo drizzle com o offset da MÁQUINA. Ver ./date-parsers.ts: sem
+// isto a competência escorrega 3 h em qualquer host que não seja UTC.
+registrarParsersDeData((oid, parser) => types.setTypeParser(oid, parser));
 
 /** Conexão única do Drizzle com o PostgreSQL. Config em ./pool-config. */
 const pool = new Pool(buildPoolConfig());

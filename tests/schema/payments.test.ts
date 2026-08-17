@@ -27,6 +27,23 @@ describe("tabela payments", () => {
     expect(cols.mp_payment_id.notNull).toBe(true);
   });
 
+  /**
+   * `paid_at` decide competência, mês do DAS e mês da NFS-e. Como `timestamp`
+   * SEM time zone o Postgres DESCARTA o offset do literal e guarda o relógio
+   * de parede — e a coluna recebia dois relógios diferentes: o `date_approved`
+   * do Mercado Pago (com `-03:00`) e o fallback `new Date().toISOString()` do
+   * webhook (UTC). Um pagamento das 22h de 31/08 que caísse no fallback era
+   * gravado como `2026-09-01 01:00` e a informação de qual instante era ficava
+   * irrecuperável — competência, DAS e NFS-e do mês seguinte.
+   *
+   * Com `timestamptz` o offset é honrado na escrita e a coluna guarda o
+   * instante absoluto; a competência passa a ser decidida convertendo para
+   * `America/Sao_Paulo` num lugar só (lib/competencia.ts).
+   */
+  it("paid_at é timestamptz — guarda o instante, não o relógio de parede", () => {
+    expect(cols.paid_at.getSQLType()).toBe("timestamp with time zone");
+  });
+
   it("nasce sem nota emitida", () => {
     expect(cols.nfse_issued_at.notNull).toBe(false);
     expect(cols.nfse_number.notNull).toBe(false);

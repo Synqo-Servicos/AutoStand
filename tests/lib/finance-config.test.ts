@@ -7,11 +7,14 @@ import { ImpostoCard } from "@/components/superadmin/ImpostoCard";
 import {
   SYNQO_ABERTURA,
   consultarBaseRbt12,
-  mesBoundsInclusivos,
   mesesEmOperacao,
   planoRbt12,
   vencimentoDas,
+  type SomarBrutoNoIntervalo,
 } from "@/lib/finance-config";
+import {
+  competenciaDeInstante, instanteMs, periodoDaCompetencia,
+} from "@/lib/competencia";
 
 /**
  * `FINANCE_TAX_VALIDATED` e `FINANCE_ANEXO` são lidos no TOPO do módulo (uma
@@ -277,63 +280,72 @@ describe("planoRbt12 × rbt12 — o contrato de comprimento fecha", () => {
   });
 });
 
-describe("mesBoundsInclusivos — o lte de sumGrossBetween", () => {
-  /** Espelha o predicado real de `sumGrossBetween`: gte(from) E lte(to). */
-  function dentro(paidAt: string, janela: { from: string; to: string }): boolean {
-    return paidAt >= janela.from && paidAt <= janela.to;
+/**
+ * ============================================================================
+ * A JANELA DO RBT12 PARTICIONA A LINHA DO TEMPO
+ * ============================================================================
+ *
+ * Aqui morava `mesBoundsInclusivos`, que existia só para encolher o `to` em
+ * 1 ms e compensar o `lte` de `sumGrossBetween`. As duas convenções foram
+ * unificadas em semiaberto e a função foi removida — ver o comentário no lugar
+ * dela em lib/finance-config.ts.
+ *
+ * O que continua precisando de teste é a PROPRIEDADE que ela protegia: dentro
+ * do array do RBT12, cada pagamento entra em exatamente um mês. Se entrasse em
+ * dois, seria somado duas vezes na mesma apuração e a alíquota efetiva subiria
+ * sozinha; se não entrasse em nenhum, a base do DAS ficaria a menor.
+ *
+ * A asserção NÃO reimplementa o predicado (foi assim que a mutação
+ * `lte`→`lt` passou verde antes): ela cruza as duas implementações
+ * independentes que precisam concordar — a aritmética de limites
+ * (`periodoDaCompetencia`) e o classificador por fuso (`competenciaDeInstante`).
+ */
+describe("periodoDaCompetencia — a janela que alimenta o RBT12", () => {
+  /** O recorte real: `>= from` e `< to`. Ver `dentroDoPeriodo` (lib/db/payments.ts). */
+  function dentro(instante: string, janela: { from: string; to: string }): boolean {
+    const t = instanteMs(instante)!;
+    return t >= instanteMs(janela.from)! && t < instanteMs(janela.to)!;
   }
 
-  /** O `to` SEMIABERTO de `periodBounds` — a alternativa errada. */
-  function toSemiaberto(competencia: string): string {
-    const [y, m] = competencia.split("-").map(Number);
-    return new Date(Date.UTC(y, m, 1)).toISOString();
-  }
+  const MESES = ["2026-06", "2026-07", "2026-08"];
 
-  it("from é o primeiro instante do mês", () => {
-    expect(mesBoundsInclusivos("2026-06").from).toBe("2026-06-01T00:00:00.000Z");
-    expect(mesBoundsInclusivos("2027-01").from).toBe("2027-01-01T00:00:00.000Z");
-  });
-
-  it("to é o último instante DESTE mês, não o primeiro do seguinte", () => {
-    expect(mesBoundsInclusivos("2026-06").to).toBe("2026-06-30T23:59:59.999Z");
-    expect(mesBoundsInclusivos("2026-02").to).toBe("2026-02-28T23:59:59.999Z");
-    expect(mesBoundsInclusivos("2028-02").to).toBe("2028-02-29T23:59:59.999Z"); // bissexto
-    expect(mesBoundsInclusivos("2026-12").to).toBe("2026-12-31T23:59:59.999Z");
-  });
-
-  it("a virada do mês cai em EXATAMENTE um mês — o caso que divergiria", () => {
-    const junho = mesBoundsInclusivos("2026-06");
-    const julho = mesBoundsInclusivos("2026-07");
-    const virada = "2026-07-01T00:00:00.000Z";
-
-    // Com o limite correto: pertence só a julho.
-    expect(dentro(virada, junho)).toBe(false);
-    expect(dentro(virada, julho)).toBe(true);
-
-    // Com o `to` semiaberto passado direto ao `lte`: pertence aos DOIS.
-    const junhoErrado = { from: junho.from, to: toSemiaberto("2026-06") };
-    expect(dentro(virada, junhoErrado)).toBe(true);
-    expect(dentro(virada, julho)).toBe(true);
-    // Ou seja: dentro do array do RBT12 esse pagamento seria somado 2x.
-    expect(dentro(virada, junhoErrado)).not.toBe(dentro(virada, junho));
-  });
-
-  it("nenhum instante de milissegundo cai em dois meses nem em nenhum", () => {
-    const meses = ["2026-06", "2026-07", "2026-08"];
-    const janelas = meses.map(mesBoundsInclusivos);
+  it("nenhum instante cai em dois meses nem em nenhum", () => {
+    const janelas = MESES.map(periodoDaCompetencia);
     const instantes = [
-      "2026-06-01T00:00:00.000Z",
-      "2026-06-30T23:59:59.998Z",
+      "2026-06-01T03:00:00.000Z", // 00:00 de 01/06 em São Paulo
       "2026-06-30T23:59:59.999Z",
-      "2026-07-01T00:00:00.000Z",
-      "2026-07-01T00:00:00.001Z",
-      "2026-07-31T23:59:59.999Z",
-      "2026-08-01T00:00:00.000Z",
-      "2026-08-31T23:59:59.999Z",
+      "2026-07-01T02:59:59.999Z", // 23:59:59.999 de 30/06 em São Paulo
+      "2026-07-01T03:00:00.000Z", // 00:00 de 01/07 em São Paulo
+      "2026-07-01T03:00:00.001Z",
+      "2026-08-01T02:59:59.999Z",
+      "2026-08-01T03:00:00.000Z",
+      "2026-08-31T22:00:00.000-03:00", // a borda que quebrava tudo
     ];
     for (const t of instantes) {
-      const quantos = janelas.filter((j) => dentro(t, j)).length;
-      expect(quantos, `instante ${t}`).toBe(1);
+      expect(janelas.filter((j) => dentro(t, j)).length, `instante ${t}`).toBe(1);
+    }
+  });
+
+  /**
+   * O cruzamento que importa: quem a janela aceita é exatamente quem o
+   * classificador chama de daquele mês. Se as duas discordassem, existiria uma
+   * segunda opinião sobre em que mês a linha está — e ela apareceria como
+   * Caixa e fila fiscal mostrando meses diferentes para o mesmo pagamento.
+   */
+  it("a janela e o classificador de competência concordam instante a instante", () => {
+    for (const competencia of MESES) {
+      const janela = periodoDaCompetencia(competencia);
+      for (const t of [
+        "2026-06-01T03:00:00.000Z",
+        "2026-07-01T02:59:59.999Z",
+        "2026-07-01T03:00:00.000Z",
+        "2026-08-31T22:00:00.000-03:00",
+        "2026-09-01T01:00:00.000Z",
+        "2026-09-01T03:00:00.000Z",
+      ]) {
+        expect(dentro(t, janela), `${t} em ${competencia}`)
+          .toBe(competenciaDeInstante(t) === competencia);
+      }
     }
   });
 
@@ -343,10 +355,9 @@ describe("mesBoundsInclusivos — o lte de sumGrossBetween", () => {
       ["2026-12", "2027-01"],
       ["2028-02", "2028-03"],
     ] as const) {
-      const anterior = mesBoundsInclusivos(a);
-      const seguinte = mesBoundsInclusivos(b);
-      expect(anterior.to < seguinte.from).toBe(true);
-      expect(Date.parse(seguinte.from) - Date.parse(anterior.to)).toBe(1);
+      // Contíguas por identidade: o fim de um É o começo do outro. Não há
+      // "1 ms de folga" para acertar ou errar.
+      expect(periodoDaCompetencia(a).to).toBe(periodoDaCompetencia(b).from);
     }
   });
 });
@@ -355,9 +366,12 @@ describe("consultarBaseRbt12 — a guarda que impede a página de cair", () => {
   /** Banco de mentira que registra o que foi perguntado. */
   function fetcherFake(receitaPorMes: Record<string, number> = {}) {
     const chamadas: Array<{ from: string; to: string }> = [];
-    const somar = async (from: string, to: string) => {
+    const somar: SomarBrutoNoIntervalo = async ({ from, to }) => {
       chamadas.push({ from, to });
-      return receitaPorMes[from.slice(0, 7)] ?? 0;
+      // A chave é a competência do PRIMEIRO instante da janela — o mesmo
+      // classificador que o resto do módulo usa, não um `slice(0, 7)` no ISO
+      // (que devolveria o mês de UTC e erraria a janela de São Paulo).
+      return receitaPorMes[competenciaDeInstante(from)!] ?? 0;
     };
     return { chamadas, somar };
   }
@@ -383,7 +397,7 @@ describe("consultarBaseRbt12 — a guarda que impede a página de cair", () => {
     expect(chamadas).toEqual([]);
   });
 
-  it("consulta um mês por competência do plano, com os limites inclusivos", async () => {
+  it("consulta um mês por competência do plano, com a janela de São Paulo", async () => {
     const { chamadas, somar } = fetcherFake({
       "2026-06": 3_000_00,
       "2026-07": 1_000_00,
@@ -393,11 +407,12 @@ describe("consultarBaseRbt12 — a guarda que impede a página de cair", () => {
     expect(base?.plano.competencias).toEqual(["2026-06", "2026-07"]);
     // Na MESMA ordem do plano — trocar a ordem trocaria as receitas de mês.
     expect(base?.brutoPorMes).toEqual([3_000_00, 1_000_00]);
-    // Os limites são os de `mesBoundsInclusivos` (o `to` é o último instante
-    // DESTE mês), não o `to` semiaberto de `periodBounds`.
+    // Janelas semiabertas ancoradas na meia-noite de São Paulo (03:00Z), e
+    // contíguas: o `to` de junho é o `from` de julho. Com limites de UTC
+    // (00:00Z) as 21h–24h do último dia de cada mês entrariam no mês errado.
     expect(chamadas).toEqual([
-      { from: "2026-06-01T00:00:00.000Z", to: "2026-06-30T23:59:59.999Z" },
-      { from: "2026-07-01T00:00:00.000Z", to: "2026-07-31T23:59:59.999Z" },
+      { from: "2026-06-01T03:00:00.000Z", to: "2026-07-01T03:00:00.000Z" },
+      { from: "2026-07-01T03:00:00.000Z", to: "2026-08-01T03:00:00.000Z" },
     ]);
   });
 
@@ -437,18 +452,18 @@ type ConfigModule = Awaited<ReturnType<typeof loadConfig>>;
  * competência anterior à abertura nem a montagem do plano: reimplementar
  * testaria uma cópia, e a guarda é justamente o caminho que derruba a página.
  *
- * O fetcher recebe os limites reais de `mesBoundsInclusivos`, então o mês é
- * lido de volta do `from` (`YYYY-MM-01T00:00:00.000Z`) — se um dia o `from`
- * deixar de ser o primeiro instante do mês, estes cenários param de achar
- * receita e o teste denuncia.
+ * O fetcher recebe os limites reais de `periodoDaCompetencia`, e o mês é lido
+ * de volta pelo MESMO classificador que o resto do módulo usa — se um dia o
+ * `from` deixar de ser o primeiro instante do mês em São Paulo, estes cenários
+ * param de achar receita e o teste denuncia.
  */
 function baseFake(
   mod: ConfigModule,
   competencia: string,
   receitaPorMes: Record<string, number>,
 ) {
-  return mod.consultarBaseRbt12(competencia, async (from) => {
-    return receitaPorMes[from.slice(0, 7)] ?? 0;
+  return mod.consultarBaseRbt12(competencia, async ({ from }) => {
+    return receitaPorMes[competenciaDeInstante(from)!] ?? 0;
   });
 }
 

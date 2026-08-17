@@ -21,7 +21,9 @@
  * Ver `showsTaxValue`.
  */
 
-import { isValidCompetencia } from "@/lib/competencia";
+import {
+  isValidCompetencia, periodoDaCompetencia, type PeriodoSemiaberto,
+} from "@/lib/competencia";
 import { aliquotaEfetiva, dasEstimado, rbt12, type SimplesAnexo } from "@/lib/simples";
 import type { ImpostoCardProps } from "@/components/superadmin/ImpostoCard";
 
@@ -191,39 +193,22 @@ export function planoRbt12(competencia: string, meses: number): PlanoRbt12 {
   return { competencias, zerosAntes, usaMesDeApuracao: false };
 }
 
-/**
- * Limites de uma competência para `sumGrossBetween` (lib/db/payments.ts) —
- * que compara com `gte(from)` **e `lte(to)`**, inclusivo nos DOIS lados.
+/*
+ * `mesBoundsInclusivos` morava aqui e foi REMOVIDA.
  *
- * Este é o motivo de a função existir em vez de reusar `periodBounds`:
- * `periodBounds` devolve o intervalo SEMIABERTO `[from, to)`, cujo `to` é o
- * primeiro instante do mês SEGUINTE. Passar aquele `to` direto para o `lte`
- * de `sumGrossBetween` faria um pagamento na virada exata do mês contar em
- * DOIS meses seguidos — e, dentro do array do RBT12, contar duas vezes na
- * mesma soma. O mesmo bug já foi corrigido uma vez neste projeto, em
- * `listPaymentsByPeriod`, que resolveu trocando `lte` por `lt`; aqui não dá
- * para mudar o operador (não tocamos `lib/db/payments.ts`), então o ajuste
- * vai no limite: `to` é o último instante que AINDA é deste mês.
+ * Ela existia só para contornar um descasamento de convenção: `periodBounds`
+ * era semiaberto `[from, to)` e `sumGrossBetween` comparava com `lte` nos dois
+ * lados, então passar um ao outro somava o pagamento da virada do mês duas
+ * vezes dentro da mesma RBT12. A função encolhia o `to` em 1 ms para
+ * compensar — uma correção que morava em OUTRO arquivo, longe do operador que
+ * ela corrigia, e que evaporava se alguém passasse a competência direto.
  *
- * "Último instante" = 1 milissegundo antes da virada. É a granularidade real
- * do dado: `paid_at` vem do `date_approved` do Mercado Pago, ISO-8601 com
- * milissegundos. Um pagamento entre `23:59:59.999` e `00:00:00.000` (portanto
- * sub-milissegundo) escaparia das duas janelas — não existe pelo formato da
- * origem, mas fica registrado por honestidade.
+ * As duas convenções foram unificadas em semiaberto (ver `dentroDoPeriodo` em
+ * lib/db/payments.ts), e `sumGrossBetween` passou a receber um
+ * `PeriodoSemiaberto` — tipo nominal que só `periodoDaCompetencia` produz —,
+ * então o descasamento não é mais possível de cometer. Sem descasamento, não
+ * há o que compensar.
  */
-export function mesBoundsInclusivos(competencia: string): {
-  from: string;
-  to: string;
-} {
-  if (!isValidCompetencia(competencia)) {
-    throw new RangeError(`competência inválida: ${competencia}`);
-  }
-  const [y, m] = competencia.split("-").map(Number);
-  const from = new Date(Date.UTC(y, m - 1, 1)).toISOString();
-  const proximoMes = Date.UTC(y, m, 1);
-  const to = new Date(proximoMes - 1).toISOString();
-  return { from, to };
-}
 
 /**
  * Vencimento do DAS da competência: dia 20 do mês SUBSEQUENTE (LC 123/2006,
@@ -259,10 +244,14 @@ export interface BaseRbt12 {
  * módulo puro (sem banco) e, principalmente, é o que permite testar a guarda
  * abaixo — o caminho perigoso — sem subir Postgres. Mesmo motivo que trouxe
  * `montarImposto` para cá.
+ *
+ * Recebe um `PeriodoSemiaberto`, não dois `string`: com `(fromISO, toISO)` o
+ * tipo era puramente estrutural e o `tsc` não distinguia um fetcher inclusivo
+ * de um semiaberto — que foi exatamente o descasamento que somava o pagamento
+ * da virada do mês duas vezes na RBT12.
  */
 export type SomarBrutoNoIntervalo = (
-  fromISO: string,
-  toISO: string,
+  periodo: PeriodoSemiaberto,
 ) => Promise<number>;
 
 /**
@@ -275,11 +264,9 @@ export type SomarBrutoNoIntervalo = (
  * Server Component derruba a página inteira, com a flag ligada ou desligada.
  * Por isso ela mora aqui, coberta por teste, e não solta dentro do `page.tsx`.
  *
- * As consultas usam `mesBoundsInclusivos`, NÃO `periodBounds`:
- * `sumGrossBetween` compara com `lte` no limite de cima, então o `to`
- * semiaberto de `periodBounds` faria o pagamento da virada do mês entrar em
- * dois meses do array e ser somado duas vezes na mesma RBT12. Ver a docstring
- * de `mesBoundsInclusivos`.
+ * Cada mês do array é consultado com o MESMO recorte semiaberto que o Caixa
+ * usa (`periodoDaCompetencia`), então um pagamento pertence a exatamente um
+ * elemento do array — nunca a dois, nunca a nenhum.
  */
 export async function consultarBaseRbt12(
   competencia: string,
@@ -290,10 +277,7 @@ export async function consultarBaseRbt12(
 
   const plano = planoRbt12(competencia, meses);
   const brutoPorMes = await Promise.all(
-    plano.competencias.map((c) => {
-      const { from, to } = mesBoundsInclusivos(c);
-      return somarBruto(from, to);
-    }),
+    plano.competencias.map((c) => somarBruto(periodoDaCompetencia(c))),
   );
   return { meses, plano, brutoPorMes };
 }
