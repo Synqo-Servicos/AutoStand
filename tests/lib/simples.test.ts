@@ -111,6 +111,22 @@ describe("aliquotaEfetiva — escolha de faixa", () => {
     }
   });
 
+  it("no teto de R$ 4,8 mi a efetiva bate a máxima publicada: 19,50% no III, 19,25% no V", () => {
+    // A continuidade não alcança a 6ª faixa (ela é descontínua por
+    // construção), então nominal e parcela a deduzir dela ficariam sem
+    // nenhuma checagem. As alíquotas efetivas MÁXIMAS de cada anexo são
+    // valores publicados por fora da tabela — conferi-las aqui é cross-check
+    // com fonte independente, não redigitação da constante.
+    expect(aliquotaEfetiva(LIMITE_SIMPLES_CENTS, "III").efetiva).toBeCloseTo(
+      0.195,
+      12,
+    );
+    expect(aliquotaEfetiva(LIMITE_SIMPLES_CENTS, "V").efetiva).toBeCloseTo(
+      0.1925,
+      12,
+    );
+  });
+
   it("da 5ª pra 6ª faixa a efetiva CAI — é o ISS saindo do DAS, não regressão", () => {
     // Documentado em lib/simples-tabela.ts: na 6ª faixa o ISS é recolhido à
     // parte, então a guia unificada encolhe enquanto o imposto total sobe.
@@ -195,8 +211,15 @@ describe("rbt12 — empresa nova, proporcionalização", () => {
     expect(rbt12(dozeMeses, 13)).toBe(360_000_00);
   });
 
-  it("com mais de 12 meses no array, só os 12 últimos contam", () => {
-    const historicoLongo = [900_000_00, 900_000_00, ...Array<number>(12).fill(30_000_00)];
+  it("com histórico mais longo que 12 meses, só os 12 últimos entram na soma", () => {
+    // 20 meses de operação => os 19 anteriores entram no array, e a soma
+    // pega só os 12 últimos. Os 7 primeiros existem para provar que o mês de
+    // apuração ficou de fora da contagem, não para somar.
+    const historicoLongo = [
+      ...Array<number>(7).fill(900_000_00),
+      ...Array<number>(12).fill(30_000_00),
+    ];
+    expect(historicoLongo).toHaveLength(19);
     expect(rbt12(historicoLongo, 20)).toBe(360_000_00);
   });
 
@@ -235,6 +258,22 @@ describe("rbt12 — contratos que estouram em vez de estimar errado", () => {
     expect(() => rbt12(Array<number>(11).fill(30_000_00), 13)).toThrow(RangeError);
   });
 
+  it("do 13º mês em diante a guarda é a MESMA: array com o mês de apuração dentro estoura", () => {
+    // O array que inclui o mês corrente tem um elemento a mais do que os
+    // meses anteriores. Antes, o ramo de >= 13 meses só exigia "pelo menos
+    // 12" e engolia isso: 12 meses de R$ 10.000,00 mais um mês de apuração
+    // de R$ 99.000,00 devolvia R$ 209.000,00 em silêncio, no lugar dos
+    // R$ 120.000,00 legais. Com mês corrente fraco o erro ia PARA MENOS.
+    const dozeAnterioresMaisOMesCorrente = [
+      ...Array<number>(12).fill(10_000_00),
+      99_000_00,
+    ];
+    expect(() => rbt12(dozeAnterioresMaisOMesCorrente, 13)).toThrow(RangeError);
+
+    // Só os 12 anteriores, sem o mês de apuração: aí sim.
+    expect(rbt12(Array<number>(12).fill(10_000_00), 13)).toBe(120_000_00);
+  });
+
   it("rejeita receita negativa ou fracionada", () => {
     expect(() => rbt12([-1], 1)).toThrow(RangeError);
     expect(() => rbt12([10.5], 1)).toThrow(RangeError);
@@ -247,13 +286,38 @@ describe("dasEstimado", () => {
     expect(dasEstimado(10_000_00, 0.086)).toBe(860_00);
   });
 
-  it("arredonda pro centavo mais próximo", () => {
-    // 333.333 × 0,086 = 28.666,638 centavos
+  it("arredonda pra CIMA — é provisão de imposto, não pagamento", () => {
+    // 100.001 × 0,086 = 8.600,086 centavos. Arredondar ao mais próximo daria
+    // 8.600 e deixaria o dono a descoberto na fração; provisão sobe.
+    expect(dasEstimado(1_000_01, 0.086)).toBe(8_601);
+
+    // 333.333 × 0,086 = 28.666,638 centavos — sobe igual.
     expect(dasEstimado(3_333_33, 0.086)).toBe(28_667);
   });
 
-  it("mês sem receita não gera DAS", () => {
+  it("não cobra centavo fantasma quando a conta fecha exata", () => {
+    // 8,60% de R$ 30.000,00 é exatamente R$ 2.580,00, mas o produto em ponto
+    // flutuante dá 257999.99999999997. Sem a folga do epsilon, arredondar pra
+    // cima em cima desse ruído cobraria um centavo inexistente — e no sentido
+    // contrário (ruído pro lado de cima) cobraria em qualquer valor redondo.
+    const efetiva = aliquotaEfetiva(360_000_00, "III").efetiva;
+    expect(dasEstimado(30_000_00, efetiva)).toBe(2_580_00);
+    expect(dasEstimado(10_000_00, 0.086)).toBe(860_00);
+    expect(dasEstimado(1_500_00, 0.155)).toBe(232_50);
+
+    // O caso em que o ruído cai pro lado de CIMA, que é o que a folga existe
+    // para pegar: RBT12 de R$ 62,85 no Anexo III dá 6,00% cravados, e 6% de
+    // R$ 1.000,00 é R$ 60,00 exatos — mas o produto em ponto flutuante dá
+    // 6000.000000000001. Sem a folga, o DAS sairia R$ 60,01.
+    const seisPorCento = aliquotaEfetiva(62_85, "III").efetiva;
+    expect(dasEstimado(1_000_00, seisPorCento)).toBe(60_00);
+  });
+
+  it("mês sem receita não gera DAS, e não gera -0", () => {
+    // `Math.ceil(0 - epsilon)` devolve -0, que sobrevive a `=== 0` mas sai
+    // como "-0" na formatação de moeda. `toBe` usa Object.is e pega isso.
     expect(dasEstimado(0, 0.086)).toBe(0);
+    expect(Object.is(dasEstimado(0, 0.086), -0)).toBe(false);
   });
 
   it("recusa alíquota em centésimos de % — o erro de unidade mais provável", () => {

@@ -58,6 +58,14 @@ const ULTIMO_MES_ANUALIZADO = 12;
 /** Quantos meses entram na RBT12 de uma empresa já madura. */
 const MESES_RBT12 = 12;
 
+/**
+ * Folga para descontar ruído de ponto flutuante antes de arredondar o DAS
+ * pra cima. O erro de representação de `efetiva` num produto da ordem de
+ * 1e9 centavos fica na casa de 1e-7; frações reais de centavo ficam na casa
+ * de 1e-3. 1e-6 separa as duas com margem dos dois lados.
+ */
+const EPSILON_CENTAVO = 1e-6;
+
 export interface AliquotaEfetiva {
   /** Faixa da tabela do anexo, de 1 a 6. */
   faixa: number;
@@ -100,15 +108,20 @@ function assertCentavos(valor: number, campo: string): void {
  *   antigo para o mais recente. O QUE ENTRA AQUI MUDA COM `mesesEmOperacao`:
  *   - `mesesEmOperacao === 1`: exatamente 1 elemento — a receita do PRÓPRIO
  *     mês de apuração (§ 2º);
- *   - `mesesEmOperacao` de 2 a 12: exatamente `mesesEmOperacao - 1`
- *     elementos — os meses ANTERIORES ao de apuração, incluindo os que
- *     faturaram zero, porque a lei fala em média dos meses anteriores e um
- *     mês zerado omitido inflaria a média (§ 3º);
- *   - `mesesEmOperacao >= 13`: pelo menos 12 elementos; os 12 últimos são os
- *     que contam (§ 1º).
+ *   - `mesesEmOperacao >= 2`: exatamente `mesesEmOperacao - 1` elementos — os
+ *     meses ANTERIORES ao de apuração, incluindo os que faturaram zero,
+ *     porque a lei fala em média dos meses anteriores e um mês zerado
+ *     omitido inflaria a média (§ 3º). Do 13º mês em diante o array continua
+ *     sendo o histórico inteiro de meses anteriores; só os 12 últimos entram
+ *     na soma (§ 1º), mas os anteriores precisam vir para que a contagem
+ *     prove que o mês de apuração ficou de fora.
+ *   Ou seja: a regra é sempre a mesma — o array traz o próprio mês quando ele
+ *   é o 1º, e os meses anteriores em todo o resto. Nunca os dois.
  *   Contagem errada estoura `RangeError` de propósito: para um número que
  *   existe para separar dinheiro, não ter número é melhor que ter um número
- *   baixo demais em silêncio.
+ *   baixo demais em silêncio. Sem essa amarração, um array que INCLUÍSSE o
+ *   mês de apuração passaria batido a partir do 13º mês e inflaria ou
+ *   desinflaria a RBT12 em silêncio, conforme o mês corrente.
  *
  * @param mesesEmOperacao Quantos meses de atividade a empresa terá completado
  *   NO mês de apuração, contando o próprio mês como 1. Fração de mês conta
@@ -124,19 +137,11 @@ export function rbt12(monthlyGross: number[], mesesEmOperacao: number): number {
   }
   monthlyGross.forEach((valor, i) => assertCentavos(valor, `monthlyGross[${i}]`));
 
-  if (mesesEmOperacao > ULTIMO_MES_ANUALIZADO) {
-    if (monthlyGross.length < MESES_RBT12) {
-      throw new RangeError(
-        `com ${mesesEmOperacao} meses de operação a RBT12 é a soma dos 12 meses ` +
-          `anteriores, mas vieram só ${monthlyGross.length}`,
-      );
-    }
-    return monthlyGross
-      .slice(-MESES_RBT12)
-      .reduce((soma, valor) => soma + valor, 0);
-  }
-
-  // No 1º mês o array traz o próprio mês; do 2º ao 12º traz os anteriores.
+  // No 1º mês o array traz o próprio mês; do 2º em diante, os anteriores.
+  // A guarda é a MESMA nos dois regimes de cálculo de propósito: é ela que
+  // prova que o mês de apuração não entrou no array. Afrouxá-la no ramo de
+  // cima (aceitando "pelo menos 12") deixaria passar um histórico que inclui
+  // o mês corrente, e o erro seria silencioso.
   const esperado = Math.max(1, mesesEmOperacao - 1);
   if (monthlyGross.length !== esperado) {
     throw new RangeError(
@@ -144,6 +149,12 @@ export function rbt12(monthlyGross: number[], mesesEmOperacao: number): number {
         `operação esperava ${esperado} ${esperado === 1 ? "receita mensal" : "receitas mensais"}, ` +
         `recebeu ${monthlyGross.length}`,
     );
+  }
+
+  if (mesesEmOperacao > ULTIMO_MES_ANUALIZADO) {
+    return monthlyGross
+      .slice(-MESES_RBT12)
+      .reduce((soma, valor) => soma + valor, 0);
   }
 
   const soma = monthlyGross.reduce((acc, valor) => acc + valor, 0);
@@ -194,6 +205,12 @@ export function aliquotaEfetiva(
 /**
  * DAS estimado do mês, em centavos.
  *
+ * Arredonda pra CIMA, pelo mesmo motivo que `rbt12` arredonda a média pra
+ * cima: este número existe para provisionar imposto, e uma provisão que erra
+ * meio centavo pra baixo erra no sentido que deixa o dono a descoberto. É
+ * deliberadamente diferente de `lib/commission.ts`, que arredonda ao mais
+ * próximo — lá o número é um pagamento a fazer, e o incentivo é o inverso.
+ *
  * @param receitaMesCents Receita bruta DO MÊS de apuração (não a RBT12).
  * @param aliquotaEfetiva Fração decimal — o campo `efetiva` devolvido por
  *   `aliquotaEfetiva()`, não a nominal em centésimos de %.
@@ -213,5 +230,15 @@ export function dasEstimado(
         `recebido: ${aliquotaEfetiva}`,
     );
   }
-  return Math.round(receitaMesCents * aliquotaEfetiva);
+  // O produto passa por ponto flutuante, e `efetiva` quase nunca é
+  // representável em binário: 8,60% de R$ 30.000,00 dá 257999.99999999997 em
+  // vez de 258000. Arredondar pra cima em cima do ruído cobraria um centavo
+  // fantasma sempre que a sujeira caísse pro lado de cima do inteiro. O
+  // `EPSILON_CENTAVO` limpa a sujeira (ela é da ordem de 1e-7 centavo) sem
+  // chegar perto de engolir uma fração de verdade (da ordem de 1e-3).
+  // `Math.max(0, …)` não é enfeite: com receita zero a subtração do epsilon
+  // deixa `Math.ceil` devolvendo `-0`, que passa em `> 0` mas imprime com
+  // sinal na formatação de moeda. Também impede DAS negativo por qualquer
+  // caminho.
+  return Math.max(0, Math.ceil(receitaMesCents * aliquotaEfetiva - EPSILON_CENTAVO));
 }
