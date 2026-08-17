@@ -1,7 +1,8 @@
-import { getRecorrencia, sumCaixa } from "@/lib/db";
+import { getRecorrencia, listPendingNfse, sumCaixa } from "@/lib/db";
 import { normalizeCompetencia } from "@/lib/competencia";
 import { CaixaCard } from "@/components/superadmin/CaixaCard";
 import { RecorrenciaCard } from "@/components/superadmin/RecorrenciaCard";
+import { FilaFiscal } from "@/components/superadmin/FilaFiscal";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +22,13 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
   // em silêncio. Ver lib/competencia.ts.
   const competencia = normalizeCompetencia(sp.competencia, competenciaAtual());
 
-  const [caixa, recorrencia] = await Promise.all([
+  const [caixa, recorrencia, pendentesNfse] = await Promise.all([
     sumCaixa(competencia),
     getRecorrencia(),
+    // Fila fiscal não é filtrada pela competência do topo: é "o que falta
+    // emitir" agora, não um recorte de mês — nasce zerada e cresce a cada
+    // pagamento aprovado, independente de qual competência está selecionada.
+    listPendingNfse(),
   ]);
 
   return (
@@ -39,6 +44,10 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CaixaCard competencia={competencia} caixa={caixa} />
         <RecorrenciaCard recorrencia={recorrencia} />
+      </div>
+
+      <div className="mt-4">
+        <FilaFiscal payments={pendentesNfse} />
       </div>
     </div>
   );

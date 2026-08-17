@@ -360,3 +360,10 @@ export const createCouponSchema = z.object({
 export const marketplaceOptInSchema = z.object({
   marketplace_opt_in: z.boolean(),
 });
+
+// ---------- Superadmin: financeiro (NFS-e) ----------
+
+/** POST /api/superadmin/payments/[id]/nfse — número colado pelo contador após emitir no portal. */
+export const nfseInputSchema = z.object({
+  numero: z.string().trim().min(1).max(60),
+});
