@@ -27,10 +27,16 @@ import { shouldOverwriteStatus } from "@/lib/mp-payment";
 export interface CandidatoMp {
   mpPaymentId: string;
   tenantId: number;
-  /** Snapshot do pagador: `payments.tenant_id` é SET NULL, o nome sobrevive. */
+  /**
+   * Snapshots do pagador no momento da importação. Existem porque
+   * `payments.tenant_id` é SET NULL, nunca CASCADE: o registro fiscal
+   * sobrevive à exclusão da loja, e sem estes campos ele sobreviveria anônimo.
+   */
   tenantName: string;
   tenantDocument: string | null;
   plan: string | null;
+  mpPreapprovalId: string | null;
+  couponId: number | null;
   /** ISO-8601 como o MP devolveu (pode vir com offset, ex. `-03:00`). */
   paidAt: string;
   grossCents: number;

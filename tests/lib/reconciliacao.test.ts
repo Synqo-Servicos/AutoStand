@@ -20,6 +20,8 @@ function candidato(over: Partial<CandidatoMp> = {}): CandidatoMp {
     tenantName: "Auto Brasil",
     tenantDocument: "123",
     plan: "pro",
+    mpPreapprovalId: "preap-7",
+    couponId: null,
     paidAt: "2026-08-15T12:00:00.000Z",
     grossCents: 24990,
     status: "approved",
