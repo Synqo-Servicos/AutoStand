@@ -212,12 +212,14 @@ describe("janela consultada no Mercado Pago", () => {
       sort: "date_approved",
       criteria: "asc",
       range: "date_approved",
-      begin_date: AGOSTO.from,
     });
-    // O limite de cima vira o ÚLTIMO instante do mês, porque o `end_date` do
-    // MP é inclusivo — mandar o `to` semiaberto (00:00 do dia 1º seguinte)
-    // arrastaria o pagamento da virada para dentro do mês errado.
-    expect(options.end_date).toBe("2026-08-31T23:59:59.999Z");
+    // A janela pedida ao MP é DELIBERADAMENTE mais larga que a competência —
+    // um dia de folga de cada lado. O MP filtra por INSTANTE e a competência é
+    // relógio de parede: sem a folga, o pagamento das 22:00 de 31/08 (que o
+    // banco conta em agosto) nem sequer voltaria da busca de agosto. Quem
+    // recorta de verdade é `dentroDaCompetencia`, em cima do que voltou.
+    expect(options.begin_date).toBe("2026-07-31T00:00:00.000Z");
+    expect(options.end_date).toBe("2026-09-02T00:00:00.000Z");
   });
 
   it("pagina até acabar e junta os resultados", async () => {
@@ -365,18 +367,41 @@ describe("recorte de período", () => {
     expect(mocks.recordPayment).not.toHaveBeenCalled();
   });
 
-  it("data com offset -03:00 na virada cai no mês certo (instante, não string)", async () => {
+  /**
+   * A competência é decidida pelo relógio de parede que o Postgres grava
+   * (`paid_at` é `timestamp` SEM time zone: o offset do MP é descartado na
+   * gravação). Com `-03:00`, esse relógio é o de São Paulo.
+   *
+   * Um recorte por instante mandaria o pagamento das 22:00 de 31/08 para
+   * setembro enquanto o banco o conta em agosto — e aí ele não apareceria em
+   * categoria nenhuma na conferência de agosto: "Tudo conferido" com o mês
+   * faturando a menos, que é exatamente o que esta rota existe para pegar.
+   */
+  it("22:00 de 31/08 (São Paulo) é AGOSTO — o mesmo mês em que o banco o grava", async () => {
     umaPagina([
-      // 31/08 22:00 em São Paulo = 01/09 01:00 UTC → setembro, fica de fora.
-      mpResult({ id: "setembro", date_approved: "2026-08-31T22:00:00.000-03:00" }),
-      // 31/07 22:00 em São Paulo = 01/08 01:00 UTC → agosto, entra.
-      mpResult({ id: "agosto", date_approved: "2026-07-31T22:00:00.000-03:00" }),
+      mpResult({ id: "agosto-tarde", date_approved: "2026-08-31T22:00:00.000-03:00" }),
+      mpResult({ id: "julho-tarde", date_approved: "2026-07-31T22:00:00.000-03:00" }),
+      mpResult({ id: "setembro-cedo", date_approved: "2026-09-01T00:30:00.000-03:00" }),
     ]);
     const POST = await route();
 
     const body = await (await POST(post({ competencia: "2026-08" }, "true"), ctx())).json();
 
-    expect(body.faltantes.map((f: { mpPaymentId: string }) => f.mpPaymentId)).toEqual(["agosto"]);
+    expect(body.faltantes.map((f: { mpPaymentId: string }) => f.mpPaymentId)).toEqual([
+      "agosto-tarde",
+    ]);
+  });
+
+  it("a borda de baixo também: 00:00 do dia 1º entra, 23:59 do último dia anterior não", async () => {
+    umaPagina([
+      mpResult({ id: "primeiro", date_approved: "2026-08-01T00:00:00.000-03:00" }),
+      mpResult({ id: "ultimo-do-anterior", date_approved: "2026-07-31T23:59:59.999-03:00" }),
+    ]);
+    const POST = await route();
+
+    const body = await (await POST(post({ competencia: "2026-08" }, "true"), ctx())).json();
+
+    expect(body.faltantes.map((f: { mpPaymentId: string }) => f.mpPaymentId)).toEqual(["primeiro"]);
   });
 });
 

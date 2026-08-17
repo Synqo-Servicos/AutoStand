@@ -49,6 +49,12 @@ const MP_PAGE_SIZE = 50;
  */
 const MP_MAX_PAGES = 20;
 
+/**
+ * Folga de cada lado da janela pedida ao MP. 24 h cobre qualquer offset que o
+ * recurso possa trazer — ver a docstring de `buscarNoMp`.
+ */
+const MP_FOLGA_MS = 24 * 60 * 60 * 1000;
+
 function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
 }
@@ -86,12 +92,16 @@ interface MpSearchResult {
  *    mesma que vira `payments.paid_at`. Com `range=date_created`, um pagamento
  *    criado em 31/07 e aprovado em 01/08 seria buscado em julho e gravado em
  *    agosto, e nenhuma reconciliação fecharia;
- *  - `begin_date`/`end_date` — ISO-8601. `begin_date` é o `from` de
- *    `periodBounds`; `end_date` é o `to` MENOS 1 ms, porque o `to` de
- *    `periodBounds` é o intervalo SEMIABERTO (primeiro instante do mês
- *    seguinte) e o `end_date` do MP é inclusivo. Mesmo raciocínio do
- *    `mesBoundsInclusivos` de lib/finance-config.ts, aqui derivado do próprio
- *    `periodBounds` para não existir uma segunda definição de "agosto".
+ *  - `begin_date`/`end_date` — ISO-8601, com **um dia de folga de cada lado**
+ *    da competência. A folga não é preguiça: o MP filtra por INSTANTE, e a
+ *    competência desta base é RELÓGIO DE PAREDE (`paid_at` é `timestamp` sem
+ *    time zone — ver `dentroDaCompetencia` em lib/reconciliacao.ts). Pedir ao
+ *    MP exatamente `[00:00Z do dia 1º, 00:00Z do dia 1º seguinte)` deixaria de
+ *    fora o pagamento das 22:00 de 31/08 em São Paulo, que o banco conta em
+ *    agosto — e ele não voltaria da busca de agosto nem para ser mostrado como
+ *    faltante. Com a folga ele volta, e quem recorta é `dentroDaCompetencia`,
+ *    pelo mesmo relógio do banco. O custo é alguns resultados a mais,
+ *    descartados localmente.
  *
  * Consequência deliberada de `range=date_approved`: pagamento que nunca foi
  * aprovado (recusado, pendente) não aparece. É o que se quer — o que falta no
@@ -103,8 +113,8 @@ interface MpSearchResult {
  */
 async function buscarNoMp(fromISO: string, toISO: string): Promise<MpSearchResult[]> {
   const client = new Payment(getMpClient());
-  const beginDate = fromISO;
-  const endDate = new Date(Date.parse(toISO) - 1).toISOString();
+  const beginDate = new Date(Date.parse(fromISO) - MP_FOLGA_MS).toISOString();
+  const endDate = new Date(Date.parse(toISO) + MP_FOLGA_MS).toISOString();
 
   const todos: MpSearchResult[] = [];
   for (let pagina = 0; pagina < MP_MAX_PAGES; pagina++) {
