@@ -1,13 +1,7 @@
 import { auth } from "@/lib/auth";
 import { getRecorrencia, listPendingNfse, sumCaixa, sumGrossBetween } from "@/lib/db";
 import { normalizeCompetencia } from "@/lib/competencia";
-import {
-  mesBoundsInclusivos,
-  mesesEmOperacao,
-  montarImposto,
-  planoRbt12,
-  type BaseRbt12,
-} from "@/lib/finance-config";
+import { consultarBaseRbt12, montarImposto } from "@/lib/finance-config";
 import { CaixaCard } from "@/components/superadmin/CaixaCard";
 import { RecorrenciaCard } from "@/components/superadmin/RecorrenciaCard";
 import { FilaFiscal } from "@/components/superadmin/FilaFiscal";
@@ -22,33 +16,6 @@ function competenciaAtual(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" })
     .format(new Date())
     .slice(0, 7);
-}
-
-/**
- * Receita bruta de cada mês que alimenta a RBT12 desta competência.
- *
- * Devolve `null` para competência anterior à abertura da empresa (o picker do
- * topo aceita qualquer mês): sem isso, `mesesEmOperacao <= 0` chegaria em
- * `rbt12`, que estoura `RangeError` — e um `RangeError` aqui derruba a página
- * inteira, com flag ligada ou desligada.
- *
- * As consultas usam `mesBoundsInclusivos`, NÃO `periodBounds`: `sumGrossBetween`
- * compara com `lte` no limite de cima, então o `to` semiaberto de `periodBounds`
- * faria o pagamento da virada do mês entrar em dois meses do array e ser somado
- * duas vezes na mesma RBT12. Ver a docstring de `mesBoundsInclusivos`.
- */
-async function consultarBaseRbt12(competencia: string): Promise<BaseRbt12 | null> {
-  const meses = mesesEmOperacao(competencia);
-  if (meses < 1) return null;
-
-  const plano = planoRbt12(competencia, meses);
-  const brutoPorMes = await Promise.all(
-    plano.competencias.map((c) => {
-      const { from, to } = mesBoundsInclusivos(c);
-      return sumGrossBetween(from, to);
-    }),
-  );
-  return { meses, plano, brutoPorMes };
 }
 
 export default async function FinanceiroPage({ searchParams }: { searchParams: SearchParams }) {
@@ -71,7 +38,10 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
     // emitir" agora, não um recorte de mês — nasce zerada e cresce a cada
     // pagamento aprovado, independente de qual competência está selecionada.
     listPendingNfse(),
-    consultarBaseRbt12(competencia),
+    // A guarda de competência anterior à abertura (a que impede o `RangeError`
+    // de derrubar esta página) mora dentro de `consultarBaseRbt12`, em
+    // lib/finance-config.ts — lá ela tem teste; aqui só entra a query.
+    consultarBaseRbt12(competencia, sumGrossBetween),
   ]);
 
   // A regra de visibilidade e a montagem do array da RBT12 ficam em

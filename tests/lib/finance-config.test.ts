@@ -2,10 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { formatBRLFull } from "@/lib/money";
-import { rbt12 } from "@/lib/simples";
+import { LIMITE_SIMPLES_CENTS, rbt12 } from "@/lib/simples";
 import { ImpostoCard } from "@/components/superadmin/ImpostoCard";
 import {
   SYNQO_ABERTURA,
+  consultarBaseRbt12,
   mesBoundsInclusivos,
   mesesEmOperacao,
   planoRbt12,
@@ -350,6 +351,63 @@ describe("mesBoundsInclusivos — o lte de sumGrossBetween", () => {
   });
 });
 
+describe("consultarBaseRbt12 — a guarda que impede a página de cair", () => {
+  /** Banco de mentira que registra o que foi perguntado. */
+  function fetcherFake(receitaPorMes: Record<string, number> = {}) {
+    const chamadas: Array<{ from: string; to: string }> = [];
+    const somar = async (from: string, to: string) => {
+      chamadas.push({ from, to });
+      return receitaPorMes[from.slice(0, 7)] ?? 0;
+    };
+    return { chamadas, somar };
+  }
+
+  it("competência ANTERIOR à abertura devolve null em vez de estourar", async () => {
+    const { chamadas, somar } = fetcherFake();
+    // Sem a guarda, `mesesEmOperacao("2026-03") === 0` desce para `planoRbt12`
+    // /`rbt12`, que estouram `RangeError` — e um `RangeError` num Server
+    // Component derruba a página INTEIRA, com a flag ligada ou desligada. É o
+    // caminho mais fácil de quebrar a tela: basta digitar um mês no picker.
+    await expect(consultarBaseRbt12("2026-03", somar)).resolves.toBeNull();
+    await expect(consultarBaseRbt12("2025-08", somar)).resolves.toBeNull();
+    // E nem chega a consultar o banco por um mês em que a empresa não existia.
+    expect(chamadas).toEqual([]);
+  });
+
+  it("o mês da abertura já passa pela guarda (meses === 1, não 0)", async () => {
+    const { chamadas, somar } = fetcherFake();
+    const base = await consultarBaseRbt12(SYNQO_ABERTURA, somar);
+    expect(base?.meses).toBe(1);
+    // 1º mês usa o PRÓPRIO mês de apuração, que a página já tem em mãos.
+    expect(base?.plano.usaMesDeApuracao).toBe(true);
+    expect(chamadas).toEqual([]);
+  });
+
+  it("consulta um mês por competência do plano, com os limites inclusivos", async () => {
+    const { chamadas, somar } = fetcherFake({
+      "2026-06": 3_000_00,
+      "2026-07": 1_000_00,
+    });
+    const base = await consultarBaseRbt12("2026-08", somar);
+    expect(base?.meses).toBe(3);
+    expect(base?.plano.competencias).toEqual(["2026-06", "2026-07"]);
+    // Na MESMA ordem do plano — trocar a ordem trocaria as receitas de mês.
+    expect(base?.brutoPorMes).toEqual([3_000_00, 1_000_00]);
+    // Os limites são os de `mesBoundsInclusivos` (o `to` é o último instante
+    // DESTE mês), não o `to` semiaberto de `periodBounds`.
+    expect(chamadas).toEqual([
+      { from: "2026-06-01T00:00:00.000Z", to: "2026-06-30T23:59:59.999Z" },
+      { from: "2026-07-01T00:00:00.000Z", to: "2026-07-31T23:59:59.999Z" },
+    ]);
+  });
+
+  it("mês sem pagamento nenhum entra com 0, não some do array", async () => {
+    const { somar } = fetcherFake({ "2026-06": 3_000_00 });
+    const base = await consultarBaseRbt12("2026-08", somar);
+    expect(base?.brutoPorMes).toEqual([3_000_00, 0]);
+  });
+});
+
 describe("vencimentoDas", () => {
   it("é o dia 20 do mês subsequente", () => {
     expect(vencimentoDas("2026-08")).toBe("2026-09-20");
@@ -373,20 +431,25 @@ describe("vencimentoDas", () => {
  */
 type ConfigModule = Awaited<ReturnType<typeof loadConfig>>;
 
-/** Espelha `consultarBaseRbt12` da página, trocando o banco por um dicionário. */
+/**
+ * Chama o `consultarBaseRbt12` DE VERDADE — o mesmo que a página chama —
+ * trocando só o banco por um dicionário. Nada aqui reimplementa a guarda de
+ * competência anterior à abertura nem a montagem do plano: reimplementar
+ * testaria uma cópia, e a guarda é justamente o caminho que derruba a página.
+ *
+ * O fetcher recebe os limites reais de `mesBoundsInclusivos`, então o mês é
+ * lido de volta do `from` (`YYYY-MM-01T00:00:00.000Z`) — se um dia o `from`
+ * deixar de ser o primeiro instante do mês, estes cenários param de achar
+ * receita e o teste denuncia.
+ */
 function baseFake(
   mod: ConfigModule,
   competencia: string,
   receitaPorMes: Record<string, number>,
 ) {
-  const meses = mod.mesesEmOperacao(competencia);
-  if (meses < 1) return null;
-  const plano = mod.planoRbt12(competencia, meses);
-  return {
-    meses,
-    plano,
-    brutoPorMes: plano.competencias.map((c) => receitaPorMes[c] ?? 0),
-  };
+  return mod.consultarBaseRbt12(competencia, async (from) => {
+    return receitaPorMes[from.slice(0, 7)] ?? 0;
+  });
 }
 
 /**
@@ -401,16 +464,31 @@ const RECEITA_AGOSTO = 30_000_00;
 const RBT12_ESPERADO = 360_000_00;
 const DAS_ESPERADO = 2_580_00;
 
-async function renderizar(role: string | undefined, flag: string | undefined) {
+/**
+ * O MESMO cenário lido pelo Anexo V, que é o que a SYNQO vira se o Fator R
+ * cair abaixo de 28%: faixa 2, nominal 18,00%, parcela a deduzir R$ 4.500,00
+ *   →  efetiva = (360.000 × 18% − 4.500) / 360.000 = 16,75%
+ *   →  DAS de R$ 30.000,00 = R$ 5.025,00
+ * Nenhum desses números existe no Anexo III — é o que faz o teste distinguir
+ * os dois anexos em vez de só conferir o rótulo da tela.
+ */
+const EFETIVA_V = 0.1675;
+const DAS_V_ESPERADO = 5_025_00;
+
+async function renderizar(
+  role: string | undefined,
+  flag: string | undefined,
+  anexo?: string,
+) {
   const mod = await loadConfig({
     FINANCE_TAX_VALIDATED: flag,
-    FINANCE_ANEXO: undefined,
+    FINANCE_ANEXO: anexo,
   });
   const props = mod.montarImposto({
     competencia: "2026-08",
     receitaMesCents: RECEITA_AGOSTO,
     role,
-    base: baseFake(mod, "2026-08", RECEITAS),
+    base: await baseFake(mod, "2026-08", RECEITAS),
   });
   return { props, html: renderToStaticMarkup(createElement(ImpostoCard, props)) };
 }
@@ -494,6 +572,81 @@ describe("montarImposto × ImpostoCard — papel × flag no HTML", () => {
   });
 });
 
+describe("FINANCE_ANEXO chega na CONTA, não só no rótulo da tela", () => {
+  it("com FINANCE_ANEXO=V a alíquota e o DAS são os do Anexo V", async () => {
+    const { props, html } = await renderizar("contador", "true", "V");
+
+    expect(props.anexo).toBe("V");
+    // A RBT12 não depende do anexo: é a MESMA do cenário de cima. O que muda
+    // daqui para baixo é só o que o anexo determina.
+    expect(props.rbt12Cents).toBe(RBT12_ESPERADO);
+    expect(props.valores?.faixa).toBe(2);
+    expect(props.valores?.efetiva).toBeCloseTo(EFETIVA_V, 12);
+    expect(props.valores?.dasCents).toBe(DAS_V_ESPERADO);
+
+    expect(html).toContain("Anexo V");
+    expect(html).toContain("Alíquota efetiva (faixa 2)");
+    expect(html).toContain("16,75%");
+    expect(html).toContain(formatBRLFull(DAS_V_ESPERADO)); // R$ 5.025,00
+
+    // E NENHUM número do Anexo III sobra. É esta metade que denuncia a tela
+    // exibindo "Anexo V" enquanto a conta sai pelo III — o modo de falha que
+    // custaria 8,15 pontos percentuais de alíquota em silêncio.
+    expect(html).not.toContain("Anexo III");
+    expect(html).not.toContain("8,60%");
+    expect(html).not.toContain(formatBRLFull(DAS_ESPERADO)); // R$ 2.580,00
+  });
+
+  it("o mesmo cenário no Anexo III dá outro imposto — os dois divergem", async () => {
+    const iii = await renderizar("contador", "true", undefined);
+    const v = await renderizar("contador", "true", "V");
+
+    expect(iii.props.rbt12Cents).toBe(v.props.rbt12Cents);
+    expect(iii.props.valores?.faixa).toBe(v.props.valores?.faixa);
+    // Mesma RBT12, mesma faixa, imposto quase o DOBRO: R$ 2.580,00 × R$ 5.025,00.
+    expect(iii.props.valores?.dasCents).toBe(DAS_ESPERADO);
+    expect(v.props.valores?.dasCents).toBe(DAS_V_ESPERADO);
+    expect(iii.props.valores?.efetiva).not.toBe(v.props.valores?.efetiva);
+  });
+});
+
+describe("ImpostoCard — o rótulo diz sob QUAL regra a RBT12 foi feita", () => {
+  /** Renderiza a competência inteira, do plano ao HTML. */
+  async function renderMes(mod: ConfigModule, competencia: string) {
+    const meses = mod.mesesEmOperacao(competencia);
+    const plano = mod.planoRbt12(competencia, meses);
+    const props = mod.montarImposto({
+      competencia,
+      receitaMesCents: 10_000_00,
+      role: "contador",
+      base: await baseFake(
+        mod,
+        competencia,
+        Object.fromEntries(plano.competencias.map((c) => [c, 10_000_00])),
+      ),
+    });
+    return { meses, html: renderToStaticMarkup(createElement(ImpostoCard, props)) };
+  }
+
+  it("até o 12º mês a RBT12 é ANUALIZADA (§ 3º: média × 12)", async () => {
+    const mod = await loadConfig({ FINANCE_TAX_VALIDATED: "true" });
+    const { meses, html } = await renderMes(mod, "2027-05");
+    expect(meses).toBe(12); // último mês do regime anualizado
+    expect(html).toContain("RBT12 anualizada");
+    expect(html).not.toContain("acumulada");
+  });
+
+  it("do 13º mês em diante é ACUMULADA (§ 1º: soma real dos 12 anteriores)", async () => {
+    const mod = await loadConfig({ FINANCE_TAX_VALIDATED: "true" });
+    const { meses, html } = await renderMes(mod, "2027-06");
+    expect(meses).toBe(13); // primeiro mês do regime acumulado
+    expect(html).toContain("RBT12 acumulada");
+    expect(html).not.toContain("anualizada");
+    // O rótulo é o que diz ao contador sob qual interpretação conferir o
+    // número; fixo, ele validaria a conta certa pela regra errada.
+  });
+});
+
 describe("ImpostoCard — bordas que não podem virar tela quebrada", () => {
   it("competência anterior à abertura não estoura e não mostra zero", async () => {
     const mod = await loadConfig({ FINANCE_TAX_VALIDATED: "true" });
@@ -501,7 +654,7 @@ describe("ImpostoCard — bordas que não podem virar tela quebrada", () => {
       competencia: "2026-03",
       receitaMesCents: 0,
       role: "contador",
-      base: baseFake(mod, "2026-03", {}),
+      base: await baseFake(mod, "2026-03", {}),
     });
     expect(props.meses).toBeLessThan(1);
     expect(props.rbt12Cents).toBeNull();
@@ -515,7 +668,7 @@ describe("ImpostoCard — bordas que não podem virar tela quebrada", () => {
 
   it("1º mês de operação usa o PRÓPRIO mês e não consulta nada", async () => {
     const mod = await loadConfig({ FINANCE_TAX_VALIDATED: "true" });
-    const base = baseFake(mod, "2026-06", {});
+    const base = await baseFake(mod, "2026-06", {});
     expect(base?.plano.usaMesDeApuracao).toBe(true);
     expect(base?.plano.competencias).toEqual([]);
 
@@ -543,7 +696,7 @@ describe("ImpostoCard — bordas que não podem virar tela quebrada", () => {
       competencia,
       receitaMesCents: 1_000_00,
       role: "contador",
-      base: baseFake(
+      base: await baseFake(
         mod,
         competencia,
         Object.fromEntries(plano.competencias.map((c) => [c, 1_000_00])),
@@ -563,7 +716,7 @@ describe("ImpostoCard — bordas que não podem virar tela quebrada", () => {
       competencia: "2026-08",
       receitaMesCents: 0,
       role: "contador",
-      base: baseFake(mod, "2026-08", {}),
+      base: await baseFake(mod, "2026-08", {}),
     });
     expect(props.rbt12Cents).toBe(0);
     // Parágrafo único do art. 21: RBT12 zero vira R$ 1,00 só para achar a
@@ -573,6 +726,34 @@ describe("ImpostoCard — bordas que não podem virar tela quebrada", () => {
     expect(() =>
       renderToStaticMarkup(createElement(ImpostoCard, props)),
     ).not.toThrow();
+  });
+
+  it("RBT12 acima do teto do Simples avisa na tela", async () => {
+    const mod = await loadConfig({ FINANCE_TAX_VALIDATED: "true" });
+    // 2 meses de R$ 500.000,00 → média × 12 = R$ 6.000.000,00, acima do teto
+    // de R$ 4.800.000,00: a empresa está fora do regime e a estimativa deixa
+    // de valer. `lib/simples-tabela.ts` pede explicitamente que quem exibe o
+    // número avise em vez de só mostrar.
+    const props = mod.montarImposto({
+      competencia: "2026-08",
+      receitaMesCents: 500_000_00,
+      role: "contador",
+      base: await baseFake(mod, "2026-08", {
+        "2026-06": 500_000_00,
+        "2026-07": 500_000_00,
+      }),
+    });
+    expect(props.rbt12Cents).toBeGreaterThan(LIMITE_SIMPLES_CENTS);
+
+    const html = renderToStaticMarkup(createElement(ImpostoCard, props));
+    expect(html).toContain("RBT12 acima do teto do Simples");
+    expect(html).toContain(formatBRLFull(LIMITE_SIMPLES_CENTS));
+  });
+
+  it("abaixo do teto o aviso NÃO aparece — senão ele viraria ruído", async () => {
+    const { props, html } = await renderizar("contador", "true");
+    expect(props.rbt12Cents).toBeLessThan(LIMITE_SIMPLES_CENTS);
+    expect(html).not.toContain("acima do teto do Simples");
   });
 
   it("nenhum mês do 1º ao 24º derruba a montagem, com a flag nas duas posições", async () => {
@@ -585,7 +766,7 @@ describe("ImpostoCard — bordas que não podem virar tela quebrada", () => {
           competencia,
           receitaMesCents: 20_000_00,
           role: "super_admin",
-          base: baseFake(
+          base: await baseFake(
             mod,
             competencia,
             Object.fromEntries(

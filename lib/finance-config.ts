@@ -253,6 +253,51 @@ export interface BaseRbt12 {
   brutoPorMes: number[];
 }
 
+/**
+ * Assinatura de `sumGrossBetween` (lib/db/payments.ts). Entra como PARÂMETRO
+ * de `consultarBaseRbt12` em vez de ser importada aqui: é o que mantém este
+ * módulo puro (sem banco) e, principalmente, é o que permite testar a guarda
+ * abaixo — o caminho perigoso — sem subir Postgres. Mesmo motivo que trouxe
+ * `montarImposto` para cá.
+ */
+export type SomarBrutoNoIntervalo = (
+  fromISO: string,
+  toISO: string,
+) => Promise<number>;
+
+/**
+ * Receita bruta de cada mês que alimenta a RBT12 desta competência.
+ *
+ * **Devolve `null` para competência anterior à abertura da empresa**, e essa
+ * guarda é a única coisa que separa a página de um erro fatal: o picker do
+ * topo aceita qualquer mês, `normalizeCompetencia` só valida formato, e um
+ * `mesesEmOperacao <= 0` chegando em `rbt12` estoura `RangeError` — que num
+ * Server Component derruba a página inteira, com a flag ligada ou desligada.
+ * Por isso ela mora aqui, coberta por teste, e não solta dentro do `page.tsx`.
+ *
+ * As consultas usam `mesBoundsInclusivos`, NÃO `periodBounds`:
+ * `sumGrossBetween` compara com `lte` no limite de cima, então o `to`
+ * semiaberto de `periodBounds` faria o pagamento da virada do mês entrar em
+ * dois meses do array e ser somado duas vezes na mesma RBT12. Ver a docstring
+ * de `mesBoundsInclusivos`.
+ */
+export async function consultarBaseRbt12(
+  competencia: string,
+  somarBruto: SomarBrutoNoIntervalo,
+): Promise<BaseRbt12 | null> {
+  const meses = mesesEmOperacao(competencia);
+  if (meses < 1) return null;
+
+  const plano = planoRbt12(competencia, meses);
+  const brutoPorMes = await Promise.all(
+    plano.competencias.map((c) => {
+      const { from, to } = mesBoundsInclusivos(c);
+      return somarBruto(from, to);
+    }),
+  );
+  return { meses, plano, brutoPorMes };
+}
+
 export interface ImpostoInput {
   competencia: string;
   /**
