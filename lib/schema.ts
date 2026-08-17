@@ -91,7 +91,14 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
-  /** 'super_admin' | 'tenant_admin' */
+  /**
+   * `'super_admin' | 'tenant_admin' | 'contador'`.
+   *
+   * `contador` é externo e vê SÓ o módulo financeiro do console: quem decide
+   * é `hasFinanceAccess` (lib/finance-access.ts), e `withSuperAdmin`
+   * deliberadamente não o reconhece, para que tela antiga continue negando
+   * por padrão.
+   */
   role: text("role").notNull().default("tenant_admin"),
   /** Senha provisória → força troca no 1º login (admin provisionado pelo super-admin). */
   must_change_password: boolean("must_change_password").notNull().default(false),
@@ -339,6 +346,74 @@ export const sent_notifications = pgTable("sent_notifications", {
   uniqRef: uniqueIndex("uniq_sent_notif").on(table.tenant_id, table.kind, table.ref_key),
 }));
 
+// --- Pagamentos da plataforma (assinaturas) ---
+
+/**
+ * Um pagamento de assinatura recebido. Fonte da verdade sobre receita.
+ *
+ * NÃO cascateia com o tenant: registro fiscal precisa sobreviver à saída
+ * do cliente, e a nota tem que dizer quem era o pagador NAQUELE dia — por
+ * isso nome e documento ficam copiados na linha, não lidos de `tenants`.
+ */
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  tenant_id: integer("tenant_id").references(() => tenants.id, { onDelete: "set null" }),
+  /** Snapshot do pagador no momento do pagamento. */
+  tenant_name: text("tenant_name").notNull(),
+  tenant_document: text("tenant_document"),
+  /** Plano cobrado, snapshot — cliente muda de plano, nota emitida não muda. */
+  plan: text("plan"),
+  /** Id do pagamento no MP. Único = idempotência de webhook e reconciliação. */
+  mp_payment_id: text("mp_payment_id").notNull(),
+  mp_preapproval_id: text("mp_preapproval_id"),
+  /** Três colunas, não uma conta: a taxa do MP muda com o tempo. */
+  gross_cents: integer("gross_cents").notNull(),
+  fee_cents: integer("fee_cents"),
+  net_cents: integer("net_cents"),
+  /**
+   * `'approved' | 'pending' | 'refunded' | 'charged_back'` — o que o Mercado
+   * Pago manda. Chargeback é `charged_back`, COM underscore; a grafia
+   * `chargeback` nunca vem do MP.
+   *
+   * Os conjuntos que decidem estorno (`STATUS_ESTORNADOS` em lib/db/payments.ts
+   * e `TERMINAL_NEGATIVE_STATUSES` em lib/mp-payment.ts) aceitam AS DUAS de
+   * propósito: `charged_back` é o que chega pela API, `chargeback` é o que uma
+   * linha corrigida à mão no banco pode ter. Não troque uma pela outra — com só
+   * `chargeback` no conjunto, a guarda não cobria chargeback nenhum, e um
+   * `approved` relido sobrescrevia um estorno bancário.
+   */
+  status: text("status").notNull(),
+  /**
+   * Instante ABSOLUTO da aprovação — `timestamptz`, nunca `timestamp`.
+   *
+   * Esta coluna decide competência, mês do DAS e mês da NFS-e, e recebe dois
+   * relógios diferentes: o `date_approved` do Mercado Pago (ISO com offset
+   * `-03:00`) e, no fallback do webhook, `new Date().toISOString()` (UTC).
+   * Como `timestamp` sem time zone o Postgres DESCARTA o offset e guarda o
+   * relógio de parede, então os dois relógios viravam o mesmo tipo de dado
+   * significando coisas diferentes — e a informação de qual instante era ficava
+   * irrecuperável. Com `timestamptz` o offset é honrado na escrita e a coluna
+   * guarda um instante só, sem ambiguidade.
+   *
+   * A competência NÃO é lida daqui direto: converte-se para
+   * `America/Sao_Paulo` em `competenciaDeInstante` (lib/competencia.ts), que é
+   * o único lugar autorizado a transformar instante em mês.
+   */
+  paid_at: timestamp("paid_at", { mode: "string", withTimezone: true }).notNull(),
+  coupon_id: integer("coupon_id").references(() => coupons.id, { onDelete: "set null" }),
+  /** Nulos até a nota ser emitida — no portal (hoje) ou por API (camada 3). */
+  nfse_issued_at: timestamp("nfse_issued_at", { mode: "string" }),
+  nfse_number: text("nfse_number"),
+  nfse_issued_by: integer("nfse_issued_by").references(() => users.id, { onDelete: "set null" }),
+  /** Taxa não veio na resposta do MP: net = gross e o número fica marcado. */
+  incomplete: boolean("incomplete").notNull().default(false),
+  created_at: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  uniqMpPayment: uniqueIndex("uniq_payments_mp_id").on(table.mp_payment_id),
+  byPaidAt: index("idx_payments_paid_at").on(table.paid_at),
+  byTenant: index("idx_payments_tenant").on(table.tenant_id),
+}));
+
 // --- Sellers (vendedores da concessionária) ---
 
 export const sellers = pgTable("sellers", {
@@ -511,3 +586,5 @@ export type PayableRow = typeof payables.$inferSelect;
 export type NewPayable = typeof payables.$inferInsert;
 export type PayableAttachmentRow = typeof payable_attachments.$inferSelect;
 export type SentNotificationRow = typeof sent_notifications.$inferSelect;
+export type PaymentRow = typeof payments.$inferSelect;
+export type NewPayment = typeof payments.$inferInsert;

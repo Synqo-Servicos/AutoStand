@@ -47,9 +47,11 @@ Ver também: [[Modelo de Dados]].
 ## Autenticação
 
 - NextAuth 5, provider **Credentials** (email + senha), sessão **JWT**.
-- O JWT carrega `id`, `tenantId` e `role` (`super_admin` | `tenant_admin`).
-- Login único — o mesmo `/api/auth` autentica os dois tipos; o `role` diferencia.
-- Gating é feito **nos layouts**: `admin/(protected)/layout.tsx` exige `tenant_admin` do tenant do host; `superadmin/(panel)/layout.tsx` exige `super_admin` em host de plataforma.
+- O JWT carrega `id`, `tenantId` e `role` (`super_admin` | `tenant_admin` | `contador`).
+- Login único — o mesmo `/api/auth` autentica os três tipos; o `role` diferencia.
+- `contador` é um papel externo que enxerga **só** o módulo financeiro do console. Ele vive no grupo de rota `superadmin/(financeiro)`, separado do `(panel)` de propósito: assim página nova nasce fechada, e `withSuperAdmin` continua negando o contador sem precisar ser alterado.
+- Gating de **página** é feito nos layouts: `admin/(protected)/layout.tsx` exige `tenant_admin` do tenant do host; `superadmin/(panel)/layout.tsx` exige `super_admin` em host de plataforma; `superadmin/(financeiro)/layout.tsx` aceita `super_admin` ou `contador`.
+- ⚠️ **Route handler não passa por layout nenhum.** Um `route.ts` sob `app/superadmin/**` não vê nem o fence de host nem o gate de auth do layout — toda a proteção precisa estar na própria rota (`withSuperAdmin` ou `withFinanceAccess` de lib/api.ts e lib/finance-access.ts). Já houve rota respondendo 200 sem cookie, em qualquer host, por confiar no layout.
 
 ## Branding dinâmico
 

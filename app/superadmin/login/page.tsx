@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { Building2, Loader2 } from "lucide-react";
 
 function LoginForm() {
@@ -22,7 +22,12 @@ function LoginForm() {
       setLoading(false);
       return;
     }
-    window.location.href = "/superadmin/dashboard";
+    // O papel `contador` só alcança `(financeiro)` — mandar ele sempre para
+    // /superadmin/dashboard autentica, o layout de (panel) rejeita, e ele
+    // volta ao formulário sem mensagem: indistinguível de senha errada.
+    const session = await getSession();
+    const destino = session?.user.role === "contador" ? "/superadmin/financeiro" : "/superadmin/dashboard";
+    window.location.href = destino;
   }
 
   return (

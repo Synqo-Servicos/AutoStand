@@ -205,3 +205,71 @@ export const LEAD_INTERACTION_LABELS: Record<LeadInteractionType, string> = {
 };
 
 // Branding (nome, contatos, cores) vem do tenant — ver tabela `tenants` em lib/schema.ts.
+
+// --- Financeiro da plataforma ---
+
+/**
+ * Vocabulário da coluna `payments.status`. Estorno NUNCA vira delete — muda
+ * de status.
+ *
+ * São os status do Mercado Pago, VERBATIM, porque é isso que fica gravado: o
+ * webhook grava `String(payment.status)` sem traduzir, e a reconciliação lê
+ * o mesmo campo. A lista da API é `pending | approved | authorized |
+ * in_process | in_mediation | rejected | cancelled | refunded |
+ * charged_back` (doc "Get payment status / Collection creation results").
+ *
+ * `charged_back` COM underscore é a grafia real do MP — a que chega numa
+ * notificação. `chargeback` sem underscore nunca vem do MP; está aqui porque
+ * é a grafia do comentário da coluna em `lib/schema.ts` e do plano, ou seja,
+ * o que uma linha corrigida à mão no banco pode ter. As duas precisam ser
+ * reconhecidas — ver `TERMINAL_NEGATIVE_STATUSES` em lib/mp-payment.ts, que
+ * é a lista NÃO inerte e decide se um `approved` atrasado pode reverter um
+ * estorno.
+ *
+ * Esta constante ainda não tem consumidor (`PaymentStatus` não é usado em
+ * lugar nenhum) — foi por isso que ela derivou do dado real sem ninguém
+ * notar. O teste em tests/lib/mp-payment.test.ts a amarra à lista que é
+ * usada de verdade, para a divergência não voltar em silêncio.
+ */
+export const PAYMENT_STATUSES = [
+  "pending",
+  "approved",
+  "authorized",
+  "in_process",
+  "in_mediation",
+  "rejected",
+  "cancelled",
+  "refunded",
+  "charged_back",
+  /** Legado: só existe em linha corrigida à mão. O MP manda `charged_back`. */
+  "chargeback",
+] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+/**
+ * O anexo do Simples NÃO mora aqui.
+ *
+ * Ele depende do fator R (folha ÷ receita bruta), que muda mês a mês — é
+ * CONFIGURAÇÃO, não constante de código: `FINANCE_ANEXO` em
+ * lib/finance-config.ts. E a união de tipo vive junto da tabela que ela
+ * indexa, em lib/simples-tabela.ts, para que acrescentar um anexo seja uma
+ * edição só.
+ *
+ * Havia aqui um `SIMPLES_ANEXOS`/`SimplesAnexo` sem nenhuma referência,
+ * duplicando aquela união — duas fontes de verdade para a mesma coisa, uma
+ * delas órfã.
+ */
+
+// --- Papéis de usuário ---
+
+/**
+ * Papéis conhecidos em `users.role`. `contador` é papel de escopo
+ * financeiro: opera a fila de NFS-e (emite a nota e registra o número) e
+ * nada mais — não vê concessionárias, cupons, parceiros nem diagnóstico.
+ *
+ * Esta lista NÃO decide permissão; é só o vocabulário. Quem decide é o
+ * gate: `withSuperAdmin`/layout de `(panel)` para o console, e
+ * `lib/finance-access.ts` para o financeiro.
+ */
+export const USER_ROLES = ["super_admin", "tenant_admin", "contador"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
