@@ -80,6 +80,22 @@ describe("shouldOverwriteStatus", () => {
     expect(shouldOverwriteStatus("chargeback", "approved")).toBe(false);
   });
 
+  /**
+   * `charged_back` — com underscore — é a grafia REAL do Mercado Pago
+   * ("a chargeback was made in the buyer's credit card", doc de query-results).
+   * `chargeback` sem underscore nunca chega numa notificação; ela existe aqui
+   * porque é a grafia do comentário do schema (`lib/schema.ts`, coluna
+   * `status`) e pode ter entrado em linha gravada à mão. As duas precisam
+   * barrar a regressão: um estorno bancário revertido para `approved` é
+   * receita contada sobre dinheiro que o banco já tirou de volta.
+   */
+  it("reconhece a grafia REAL do MP (`charged_back`, com underscore)", () => {
+    expect(shouldOverwriteStatus("charged_back", "approved")).toBe(false);
+    expect(shouldOverwriteStatus("approved", "charged_back")).toBe(true);
+    expect(shouldOverwriteStatus("refunded", "charged_back")).toBe(true);
+    expect(shouldOverwriteStatus("charged_back", "refunded")).toBe(true);
+  });
+
   it("deixa um terminal negativo sobrescrever um approved", () => {
     expect(shouldOverwriteStatus("approved", "refunded")).toBe(true);
     expect(shouldOverwriteStatus("approved", "chargeback")).toBe(true);

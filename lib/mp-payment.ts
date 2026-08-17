@@ -69,8 +69,29 @@ export function computeFeeAndNet(
  * A reconciliação tem o MESMO risco por um caminho diferente: ela lê o
  * estado do MP num instante qualquer e pode encontrar um `approved` que já
  * foi estornado depois — por isso ela também passa por aqui.
+ *
+ * DUAS GRAFIAS DE CHARGEBACK, de propósito:
+ *
+ * - `charged_back` (com underscore) é a grafia REAL do Mercado Pago — a lista
+ *   de status da API é `pending | approved | authorized | in_process |
+ *   in_mediation | rejected | cancelled | refunded | charged_back`
+ *   (doc "Get payment status / Collection creation results"). É a que chega
+ *   numa notificação e a que a busca devolve.
+ * - `chargeback` (sem underscore) nunca vem do MP. Está aqui porque é a grafia
+ *   do comentário da coluna `status` em `lib/schema.ts` e do plano — ou seja,
+ *   é o que uma linha corrigida à mão no banco pode ter.
+ *
+ * O conjunto precisa cobrir as duas porque ele é lido contra o status GRAVADO
+ * (que pode ter qualquer uma) e contra o status que chega (que tem a do MP).
+ * Deixar `charged_back` de fora significaria: `approved` relido pela
+ * reconciliação sobrescreve um estorno bancário, e a receita volta a contar
+ * sobre dinheiro que o banco já tirou de volta.
  */
-export const TERMINAL_NEGATIVE_STATUSES: ReadonlySet<string> = new Set(["refunded", "chargeback"]);
+export const TERMINAL_NEGATIVE_STATUSES: ReadonlySet<string> = new Set([
+  "refunded",
+  "charged_back",
+  "chargeback",
+]);
 
 export function shouldOverwriteStatus(currentStatus: string, incomingStatus: string): boolean {
   return !(TERMINAL_NEGATIVE_STATUSES.has(currentStatus) && !TERMINAL_NEGATIVE_STATUSES.has(incomingStatus));
