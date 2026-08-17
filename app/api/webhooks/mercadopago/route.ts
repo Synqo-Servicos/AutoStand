@@ -6,6 +6,9 @@ import {
   type UpdatePaymentInput,
 } from "@/lib/db";
 import { notifyPaymentStatus } from "@/lib/email/notify";
+import {
+  computeFeeAndNet, derivePaidAt, grossCentsOf, shouldOverwriteStatus,
+} from "@/lib/mp-payment";
 
 /** Status do preapproval do MP → status interno usado na notificação. */
 const MP_TO_INTERNAL: Record<string, string> = {
@@ -14,51 +17,8 @@ const MP_TO_INTERNAL: Record<string, string> = {
   cancelled: "cancelled",
 };
 
-/**
- * Status "terminais negativos": uma reentrega fora de ordem não pode
- * regredir a linha PRA FORA deles. Cenário real: o `approved` original
- * fica pendente de reenvio (ex.: o banco ficou fora e o POST devolveu
- * 500), o estorno chega e grava `refunded` primeiro, e o retry do
- * `approved` chega DEPOIS — sem essa guarda, o retry sobrescreveria
- * `refunded` de volta pra `approved` e a receita ficaria contada pra
- * sempre sobre um pagamento já devolvido.
- */
-const TERMINAL_NEGATIVE_STATUSES = new Set(["refunded", "chargeback"]);
-
-function shouldOverwriteStatus(currentStatus: string, incomingStatus: string): boolean {
-  return !(TERMINAL_NEGATIVE_STATUSES.has(currentStatus) && !TERMINAL_NEGATIVE_STATUSES.has(incomingStatus));
-}
-
 function getMpClient() {
   return new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
-}
-
-type PaymentGetResult = Awaited<ReturnType<InstanceType<typeof Payment>["get"]>>;
-
-/**
- * Bruto → líquido. Prioridade: `transaction_details.net_received_amount`
- * — o líquido autoritativo que o próprio MP calcula, derivando a taxa por
- * `gross - net`. Sem ele, soma `fee_details[]` filtrando por
- * `fee_payer !== "payer"` (taxa atribuída ao PAGADOR não é despesa nossa;
- * ausência de `fee_payer` é tratada como `collector`, o caso comum — ver
- * `node_modules/mercadopago/dist/clients/payment/commonTypes.d.ts`). Sem
- * nenhum dos dois: nunca inventar a taxa — `net = gross`,
- * `incomplete = true`.
- */
-function computeFeeAndNet(
-  payment: PaymentGetResult, grossCents: number,
-): { feeCents: number | null; netCents: number; incomplete: boolean } {
-  const netReceived = payment.transaction_details?.net_received_amount;
-  if (typeof netReceived === "number") {
-    const netCents = Math.round(netReceived * 100);
-    return { feeCents: grossCents - netCents, netCents, incomplete: false };
-  }
-  const collectorFees = (payment.fee_details ?? []).filter((f) => f.fee_payer !== "payer");
-  if (collectorFees.length === 0) {
-    return { feeCents: null, netCents: grossCents, incomplete: true };
-  }
-  const feeCents = Math.round(collectorFees.reduce((sum, f) => sum + (f.amount ?? 0), 0) * 100);
-  return { feeCents, netCents: grossCents - feeCents, incomplete: false };
 }
 
 function verifySignature(secret: string, xSignature: string, xRequestId: string, dataId: string): boolean {
@@ -110,12 +70,14 @@ async function handlePaymentNotification(dataId: string): Promise<void> {
     return;
   }
 
-  // Reais → centavos, sempre arredondando (nunca truncando).
-  const grossCents = Math.round((payment.transaction_amount ?? 0) * 100);
+  const grossCents = grossCentsOf(payment);
   const { feeCents, netCents, incomplete } = computeFeeAndNet(payment, grossCents);
   const mpPaymentId = String(payment.id ?? dataId);
   const status = String(payment.status ?? "");
-  const paidAt = payment.date_approved ?? payment.date_created ?? new Date().toISOString();
+  // `derivePaidAt` devolve `null` quando o recurso não traz data nenhuma; aqui
+  // o fallback é "agora" — gravar a linha com carimbo aproximado é melhor que
+  // perder a notificação. A reconciliação escolhe o oposto (ver lib/mp-payment.ts).
+  const paidAt = derivePaidAt(payment) ?? new Date().toISOString();
 
   const result = await recordPayment({
     tenant_id: tenant.id,
