@@ -397,6 +397,41 @@ describe("updatePayment", () => {
   });
 
   /**
+   * O maior raio de dano da branch, e o gatilho mais corriqueiro que existe.
+   *
+   * Trocar `.where(eq(...))` por `.where(undefined)` mantinha os 734 testes
+   * verdes. Isso é `UPDATE payments SET ... ` SEM WHERE: uma reentrega de
+   * webhook do Mercado Pago — rotina, não exceção — carimbaria o status, a
+   * taxa, o líquido e o `paid_at` de UM pagamento em TODAS as linhas da
+   * tabela. Todo o histórico fiscal da plataforma vira cópia do último evento
+   * recebido.
+   *
+   * O mock já capturava `updateWhereArgs`; o que faltava era alguém olhar.
+   * Nenhum teste do bloco assere o WHERE — todos asserem o SET —, então o
+   * predicado inteiro podia sumir sem ruído.
+   *
+   * Igualdade exata do SQL compilado e dos params, e não `toContain`: a lição
+   * que este arquivo já aprendeu três vezes é que substring não detecta
+   * CONJUNTO REMOVIDO. Um `contains('"mp_payment_id" =')` passaria feliz com
+   * um WHERE que ganhasse um `OR 1=1` do lado.
+   */
+  it("o WHERE é exatamente mp_payment_id = ? — nunca a tabela inteira", async () => {
+    updateReturning.mockResolvedValueOnce([{ id: 1, mp_payment_id: "mp-1" }]);
+    const { updatePayment } = await import("@/lib/db/payments");
+    await updatePayment("mp-1", { status: "refunded" });
+
+    expect(updateWhereArgs).toHaveBeenCalledTimes(1);
+    const cond = updateWhereArgs.mock.calls[0][0];
+    // Um `.where(undefined)` chega aqui como undefined e o Postgres receberia
+    // um UPDATE sem cláusula nenhuma. Barra isso antes de compilar.
+    expect(cond).toBeDefined();
+
+    const { sql, params } = predicadoDe(cond as SQL);
+    expect(sql.toLowerCase()).toBe('"payments"."mp_payment_id" = $1');
+    expect(params).toEqual(["mp-1"]);
+  });
+
+  /**
    * Herdado de `updatePaymentStatus`, que foi removida por não ter mais
    * chamador nenhum (era da Task 2, substituída por esta na Task 3 da mesma
    * branch). A propriedade, porém, é do caminho do ESTORNO, não daquela
@@ -592,14 +627,34 @@ describe("clearNfse", () => {
     });
   });
 
-  it("o WHERE exige nfse_issued_at IS NOT NULL — não 'desfaz' pagamento que nunca teve nota", async () => {
+  /**
+   * Espelho exato do mutante fechado em `registerNfse` — e aqui o estrago é
+   * pior, porque é destrutivo.
+   *
+   * Apagar `eq(payments.id, paymentId)` do WHERE mantinha os 734 verdes: o
+   * predicado virava só `nfse_issued_at IS NOT NULL`, e UM
+   * `DELETE /api/superadmin/payments/1/nfse` limparia `nfse_number`,
+   * `nfse_issued_at` e `nfse_issued_by` de TODA linha que tem nota. A trilha
+   * de NFS-e inteira da plataforma, de uma vez — e IRRECONSTRUÍVEL, porque
+   * não existe tabela de log: nada guarda qual número estava em qual
+   * pagamento antes.
+   *
+   * O teste antigo usava `toContain('"nfse_issued_at" is not null')`, que
+   * continua verdadeiro depois de remover o `eq(id)`. Substring não detecta
+   * conjunto removido — é a terceira vez que este arquivo tropeça nisso.
+   */
+  it("o WHERE é exatamente id + nfse_issued_at IS NOT NULL — nada a mais, nada a menos", async () => {
     updateReturning.mockResolvedValueOnce([{ id: 1 }]);
     const { clearNfse } = await import("@/lib/db/payments");
     await clearNfse(1);
 
-    const compiled = new PgDialect()
-      .sqlToQuery(updateWhereArgs.mock.calls[0][0] as SQL).sql.toLowerCase();
-    expect(compiled).toContain('"nfse_issued_at" is not null');
+    const { sql, params } = predicadoDe(updateWhereArgs.mock.calls[0][0] as SQL);
+    expect(sql.toLowerCase()).toBe(
+      '("payments"."id" = $1 and "payments"."nfse_issued_at" is not null)',
+    );
+    // O id ligado ao predicado é o que separa "desfaz esta linha" de
+    // "apaga a trilha fiscal da plataforma".
+    expect(params).toEqual([1]);
   });
 
   it("devolve null quando nada foi limpo (id inexistente ou sem nota)", async () => {
