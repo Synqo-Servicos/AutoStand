@@ -67,18 +67,40 @@ export interface Diferenca {
   totalFaltanteCents: number;
 }
 
+/** Item que a importação tentou e não conseguiu. Nunca some em silêncio. */
+export interface ItemFalha {
+  mpPaymentId: string;
+  motivo: string;
+}
+
 /** O que a rota devolve, no `dry` e na importação. */
 export interface ReconciliacaoResultado extends Diferenca {
   competencia: string;
   /** `true` = nada foi gravado; a resposta é só o diff. */
   dry: boolean;
-  /** Quantos o MP devolveu na janela consultada, antes do recorte local. */
-  consultadosMp: number;
+  /**
+   * Pagamentos DA COMPETÊNCIA encontrados no MP. Vale a identidade
+   * `encontradosMp = faltantes + divergentes + jaRegistrados + ignorados`,
+   * para o "N encontrados · M já registrados" da tela fechar. Não é o total
+   * bruto da janela consultada: essa janela é de propósito mais larga que a
+   * competência (ver `buscarNoMp` na rota).
+   */
+  encontradosMp: number;
   ignorados: ItemIgnorado[];
+  /**
+   * Amarra a confirmação ao conjunto que foi mostrado. O `dry` devolve o
+   * token do diff que apareceu na tela; a importação só grava se o diff
+   * recalculado na hora ainda tiver o mesmo. Ver `assinaturaDiferenca`.
+   */
+  token: string;
   /** Sempre 0 no `dry`. Quantas linhas novas o INSERT criou de fato. */
   importados: number;
   /** Sempre 0 no `dry`. Quantos status foram corrigidos. */
   atualizados: number;
+  /** Itens que a importação tentou e falhou — o lote segue, o fato aparece. */
+  falhas: ItemFalha[];
+  /** Quanto ficou para a próxima rodada por causa do teto por execução. */
+  naoProcessados: number;
 }
 
 /**
@@ -191,4 +213,28 @@ export function classificarDiferenca(
     jaRegistrados,
     totalFaltanteCents: faltantes.reduce((soma, f) => soma + f.grossCents, 0),
   };
+}
+
+/**
+ * Texto canônico do conjunto que a tela mostrou — o que a confirmação
+ * realmente confirma.
+ *
+ * Sem isto, o operador confirma um NÚMERO, não um conjunto: a importação
+ * refaria busca e classificação do zero e gravaria o que encontrasse naquele
+ * instante. Para `faltantes` seria inócuo (o `UNIQUE` e o `getPaymentByMpId`
+ * barram o duplicado). Para `divergentes` não: um estorno que chegasse entre
+ * as duas etapas teria o status gravado sem ninguém ter visto — a rota
+ * escreveria uma decisão que o operador nunca tomou.
+ *
+ * Entram a competência e, de cada item, o id e a TRANSIÇÃO exata. Ordenado
+ * para não depender da ordem em que o MP paginou. `jaRegistrados` e
+ * `ignorados` ficam de fora de propósito: eles não geram escrita, e mudança
+ * neles não deveria invalidar uma confirmação legítima.
+ */
+export function assinaturaDiferenca(competencia: string, diff: Diferenca): string {
+  const linhas = [
+    ...diff.faltantes.map((f) => `+${f.mpPaymentId}:${f.status}:${f.grossCents}`),
+    ...diff.divergentes.map((d) => `~${d.mpPaymentId}:${d.statusLocal}>${d.status}`),
+  ].sort();
+  return [competencia, ...linhas].join("|");
 }

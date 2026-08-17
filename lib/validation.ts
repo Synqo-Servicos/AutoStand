@@ -383,4 +383,11 @@ export const reconciliarInputSchema = z.object({
     .string()
     .trim()
     .refine(isValidCompetencia, "use o formato YYYY-MM, com mês entre 01 e 12"),
+  /**
+   * Token do conjunto que a conferência (`?dry=true`) mostrou. Opcional no
+   * schema porque o `dry` não tem o que confirmar; a rota exige na importação.
+   * É ele que faz o operador confirmar um CONJUNTO e não um número — ver
+   * `assinaturaDiferenca` em lib/reconciliacao.ts.
+   */
+  token: z.string().trim().min(1).max(128).optional(),
 });

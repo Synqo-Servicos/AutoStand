@@ -28,14 +28,17 @@ export function ReconciliarButton({ competencia }: { competencia: string }) {
   const [importando, setImportando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  async function chamar(dry: boolean): Promise<ReconciliacaoResultado> {
+  async function chamar(dry: boolean, token?: string): Promise<ReconciliacaoResultado> {
     const url = dry
       ? "/api/superadmin/payments/reconciliar?dry=true"
       : "/api/superadmin/payments/reconciliar";
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ competencia }),
+      // O `token` é o do conjunto que ESTA tela mostrou: a rota recusa importar
+      // se o Mercado Pago mudou desde a conferência. Sem ele, o operador
+      // confirmaria um número em vez de um conjunto.
+      body: JSON.stringify(dry ? { competencia } : { competencia, token }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? "Não foi possível falar com o Mercado Pago.");
@@ -56,10 +59,11 @@ export function ReconciliarButton({ competencia }: { competencia: string }) {
   }
 
   async function importar() {
+    if (!diff) return;
     setErro(null);
     setImportando(true);
     try {
-      const feito = await chamar(false);
+      const feito = await chamar(false, diff.token);
       setDiff(feito);
       toast.success(
         feito.importados === 1
@@ -71,6 +75,10 @@ export function ReconciliarButton({ competencia }: { competencia: string }) {
       router.refresh();
     } catch (err) {
       setErro((err as Error).message);
+      // A conferência anterior não vale mais: ou o Mercado Pago mudou (409),
+      // ou parte do lote entrou. Deixar o diff velho na tela ofereceria de
+      // novo "Importar N" com um N que já não é verdade. Obriga a conferir.
+      setDiff(null);
     } finally {
       setImportando(false);
     }
@@ -135,7 +143,7 @@ function Resultado({ diff }: { diff: ReconciliacaoResultado }) {
     return (
       <p className="mt-4 flex items-center gap-2 text-body-s text-n700">
         <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-        {diff.consultadosMp === 0
+        {diff.encontradosMp === 0
           ? "O Mercado Pago não tem nenhum pagamento neste período."
           : `Tudo conferido — ${diff.jaRegistrados} pagamento${diff.jaRegistrados === 1 ? "" : "s"} do Mercado Pago já ${diff.jaRegistrados === 1 ? "está" : "estão"} registrado${diff.jaRegistrados === 1 ? "" : "s"} aqui.`}
       </p>
@@ -149,7 +157,26 @@ function Resultado({ diff }: { diff: ReconciliacaoResultado }) {
           {diff.importados} pagamento{diff.importados === 1 ? "" : "s"} importado
           {diff.importados === 1 ? "" : "s"}
           {diff.atualizados > 0 && ` · ${diff.atualizados} status corrigido${diff.atualizados === 1 ? "" : "s"}`}.
+          {diff.naoProcessados > 0 &&
+            ` ${diff.naoProcessados} ficaram para a próxima rodada — confira de novo para importar o resto.`}
         </p>
+      )}
+
+      {diff.falhas.length > 0 && (
+        <Bloco
+          titulo={`${diff.falhas.length} pagamento${diff.falhas.length === 1 ? "" : "s"} que o Mercado Pago não devolveu na hora de importar`}
+          resumo="O resto do lote entrou. Confira de novo para tentar só estes."
+          tone="suspended"
+        >
+          {diff.falhas.map((f) => (
+            <Linha
+              key={f.mpPaymentId}
+              titulo={`MP #${f.mpPaymentId}`}
+              detalhe={f.motivo}
+              valor="—"
+            />
+          ))}
+        </Bloco>
       )}
 
       {diff.faltantes.length > 0 && (
@@ -196,9 +223,11 @@ function Resultado({ diff }: { diff: ReconciliacaoResultado }) {
           resumo="Aparecem aqui em vez de sumir — resolva pelo banco se for cobrança de assinatura"
           tone="neutral"
         >
-          {diff.ignorados.map((i) => (
+          {diff.ignorados.map((i, idx) => (
             <Linha
-              key={i.mpPaymentId}
+              // `mpPaymentId` pode ser o placeholder "(sem id)" — o índice
+              // desempata se vier mais de um.
+              key={`${i.mpPaymentId}-${idx}`}
               titulo={`MP #${i.mpPaymentId}`}
               detalhe={i.motivo}
               valor={formatBRLFull(i.grossCents)}
@@ -208,8 +237,8 @@ function Resultado({ diff }: { diff: ReconciliacaoResultado }) {
       )}
 
       <p className="text-body-s text-n600">
-        {diff.consultadosMp} pagamento{diff.consultadosMp === 1 ? "" : "s"} consultado
-        {diff.consultadosMp === 1 ? "" : "s"} no Mercado Pago · {diff.jaRegistrados} já
+        {diff.encontradosMp} pagamento{diff.encontradosMp === 1 ? "" : "s"} de {diff.competencia} no
+        Mercado Pago · {diff.jaRegistrados} já
         {diff.jaRegistrados === 1 ? " estava" : " estavam"} registrado
         {diff.jaRegistrados === 1 ? "" : "s"} aqui.
       </p>
