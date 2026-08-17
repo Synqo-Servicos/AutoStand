@@ -1,8 +1,9 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "./client";
-import { payments, tenants, type PaymentRow } from "@/lib/schema";
+import { coupons, payments, tenants, type PaymentRow } from "@/lib/schema";
 import { periodoDaCompetencia, type PeriodoSemiaberto } from "@/lib/competencia";
 import { getPlan } from "@/lib/plans";
+import { MIN_CHARGEABLE_CENTS, monthlyChargeCents } from "@/lib/coupon-pricing";
 
 /**
  * Camada de dados de `payments` — fonte da verdade sobre receita da
@@ -341,9 +342,36 @@ export async function updatePayment(
 }
 
 export interface RecorrenciaSummary {
+  /**
+   * Receita recorrente do que é de fato COBRADO por mês.
+   *
+   * Três coisas que ela deliberadamente NÃO faz, cada uma por já ter inflado
+   * o número em produção:
+   *  - não conta loja `suspended`. O super-admin suspende pela allowlist de
+   *    update, que altera `tenants.status` e **não** toca `subscription_status`
+   *    (só o webhook do MP mexe nele). A assinatura continua marcada `active`
+   *    para sempre, e a loja suspensa seguia somando mensalidade cheia;
+   *  - não usa preço de tabela: usa `monthlyChargeCents`, que aplica o cupom.
+   *    Cupom de 100% não gera assinatura grátis — gera cobrança de R$ 0,01
+   *    (ver MIN_CHARGEABLE_CENTS). Loja cedida cortesia entrava no MRR pelo
+   *    preço cheio do plano;
+   *  - não inventa plano. `plan` nulo com assinatura ativa é inconsistência de
+   *    dado, não um `basico` — antes o `?? "basico"` fazia surgir mensalidade
+   *    do nada.
+   */
   mrrCents: number;
   ativosPorPlano: Record<string, number>;
   inadimplentes: number;
+  /**
+   * Assinaturas ativas cujo valor cobrado caiu ao piso (cupom que zera a
+   * mensalidade). Contam como cliente, não como receita — e precisam aparecer,
+   * senão a diferença entre "assinaturas ativas" e MRR fica inexplicável.
+   */
+  cortesias: number;
+  /** Lojas suspensas com assinatura ainda marcada ativa — fora do MRR. */
+  suspensos: number;
+  /** Assinatura ativa sem plano definido: inconsistência, fora do MRR. */
+  semPlano: number;
 }
 
 /**
@@ -356,24 +384,49 @@ export interface RecorrenciaSummary {
  * manualmente) cai no Básico, mesmo fallback de `getPlan`.
  */
 export async function getRecorrencia(): Promise<RecorrenciaSummary> {
+  // LEFT JOIN porque a maioria das assinaturas não tem cupom — INNER esconderia
+  // justamente os pagantes de preço cheio, que são o grosso do MRR.
   const rows = await db
-    .select({ plan: tenants.plan, subscription_status: tenants.subscription_status })
+    .select({
+      plan: tenants.plan,
+      subscription_status: tenants.subscription_status,
+      status: tenants.status,
+      coupon: coupons,
+    })
     .from(tenants)
+    .leftJoin(coupons, eq(tenants.coupon_id, coupons.id))
     .where(inArray(tenants.subscription_status, ["active", "past_due"]));
 
   const ativosPorPlano: Record<string, number> = {};
   let mrrCents = 0;
   let inadimplentes = 0;
+  let cortesias = 0;
+  let suspensos = 0;
+  let semPlano = 0;
 
   for (const row of rows) {
-    if (row.subscription_status === "active") {
-      const slug = row.plan ?? "basico";
-      ativosPorPlano[slug] = (ativosPorPlano[slug] ?? 0) + 1;
-      mrrCents += getPlan(row.plan).priceMonthly;
-    } else if (row.subscription_status === "past_due") {
+    if (row.subscription_status === "past_due") {
       inadimplentes += 1;
+      continue;
     }
+    if (row.subscription_status !== "active") continue;
+
+    // Suspensa não fatura, mesmo com a assinatura marcada ativa.
+    if (row.status !== "active") {
+      suspensos += 1;
+      continue;
+    }
+    // Sem plano não dá para saber o que é cobrado — e chutar já custou caro.
+    if (!row.plan) {
+      semPlano += 1;
+      continue;
+    }
+
+    const cobrado = monthlyChargeCents(getPlan(row.plan), row.coupon);
+    ativosPorPlano[row.plan] = (ativosPorPlano[row.plan] ?? 0) + 1;
+    mrrCents += cobrado;
+    if (cobrado <= MIN_CHARGEABLE_CENTS) cortesias += 1;
   }
 
-  return { mrrCents, ativosPorPlano, inadimplentes };
+  return { mrrCents, ativosPorPlano, inadimplentes, cortesias, suspensos, semPlano };
 }
