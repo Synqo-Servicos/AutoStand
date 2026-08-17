@@ -74,13 +74,37 @@ export async function listPaymentsByPeriod(competencia: string): Promise<Payment
     .orderBy(desc(payments.paid_at));
 }
 
-/** Caixa do período. Estorno e chargeback não entram. */
+/**
+ * Uma linha cuja taxa do MP é DESCONHECIDA. Duas formas da mesma coisa: a
+ * flag `incomplete` (posta por `computeFeeAndNet` quando o payload do MP não
+ * permitiu derivar a taxa) e `fee_cents` nulo sem a flag — o que uma linha
+ * gravada antes da coluna existir, ou corrigida à mão no banco, tem.
+ *
+ * As duas importam porque as duas caem no mesmo `?? 0` da soma abaixo, e
+ * portanto inflam o líquido do mesmo jeito. Contar só pela flag deixaria
+ * metade do problema invisível.
+ */
+function taxaDesconhecida(row: { fee_cents: number | null; incomplete: boolean }): boolean {
+  return row.incomplete || row.fee_cents === null;
+}
+
+/**
+ * Caixa do período. Estorno e chargeback não entram.
+ *
+ * `fee ?? 0` trata taxa DESCONHECIDA como taxa ZERO — o líquido sai
+ * superestimado na taxa inteira. A linha não pode ser descartada (o bruto é
+ * real e a competência precisa fechar), então o caixa devolve junto
+ * `incompletos`: quantas linhas entraram assim. Quem exibe é obrigado a
+ * dizer que aquele líquido é um TETO, não um valor — ver `CaixaCard`.
+ * Este número é a única razão de a coluna `incomplete` existir.
+ */
 export async function sumCaixa(competencia: string) {
   const rows = await listPaymentsByPeriod(competencia);
   const ok = rows.filter((r) => r.status === "approved");
   const gross = ok.reduce((a, r) => a + r.gross_cents, 0);
   const fee = ok.reduce((a, r) => a + (r.fee_cents ?? 0), 0);
-  return { gross, fee, netBeforeTax: gross - fee };
+  const incompletos = ok.filter(taxaDesconhecida).length;
+  return { gross, fee, netBeforeTax: gross - fee, incompletos };
 }
 
 /**
@@ -195,28 +219,6 @@ export async function sumGrossBetween(fromISO: string, toISO: string): Promise<n
 }
 
 /**
- * Atualiza o status de um pagamento já registrado — é o caminho do
- * estorno. `recordPayment` usa `onConflictDoNothing`: uma notificação de
- * estorno para um `mp_payment_id` já existente seria descartada por ele, e
- * o pagamento contaria como receita para sempre. Esta função é o que
- * cumpre a regra "estorno muda o status, não vira delete".
- *
- * Idempotente: é um UPDATE puro por `mp_payment_id` (sem incremento nem
- * acúmulo), então aplicar duas vezes com o mesmo status devolve o mesmo
- * resultado. Devolve `null` se o `mp_payment_id` não existir — chamador
- * decide o que fazer (ex.: logar e seguir, não é o caminho comum).
- */
-export async function updatePaymentStatus(
-  mpPaymentId: string, status: string,
-): Promise<PaymentRow | null> {
-  const [row] = await db.update(payments)
-    .set({ status })
-    .where(eq(payments.mp_payment_id, mpPaymentId))
-    .returning();
-  return row ?? null;
-}
-
-/**
  * Lê a linha atual por `mp_payment_id`. Existe pro chamador (o webhook)
  * poder decidir COMO reagir a uma reentrega — ex.: recusar sobrescrever um
  * `refunded` com um `approved` atrasado, ou aproveitar dados melhores que
@@ -247,10 +249,17 @@ export interface UpdatePaymentInput {
 
 /**
  * Aplica um patch parcial a uma linha já existente, por `mp_payment_id`.
- * Mais genérico que `updatePaymentStatus` — usado quando a reentrega de
- * uma notificação de pagamento traz mais do que só um status novo (ver
- * `getPaymentByMpId`). `updatePaymentStatus` continua existindo pro
- * caminho simples "só o status mudou".
+ *
+ * É o caminho do estorno e o de correção de taxa: `recordPayment` usa
+ * `onConflictDoNothing`, então uma notificação para um `mp_payment_id` já
+ * existente seria descartada por ele e o pagamento contaria como receita
+ * para sempre. Esta função é o que cumpre a regra "estorno muda o status,
+ * não vira delete" — e, diferente de um update só de status, também aplica
+ * a taxa/líquido que uma reentrega posterior trouxe (ver `getPaymentByMpId`).
+ *
+ * Idempotente: é um UPDATE puro por `mp_payment_id` (sem incremento nem
+ * acúmulo), então aplicar o mesmo patch duas vezes converge no mesmo
+ * resultado. Devolve `null` se o `mp_payment_id` não existir.
  */
 export async function updatePayment(
   mpPaymentId: string, patch: UpdatePaymentInput,

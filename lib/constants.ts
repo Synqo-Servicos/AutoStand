@@ -208,8 +208,42 @@ export const LEAD_INTERACTION_LABELS: Record<LeadInteractionType, string> = {
 
 // --- Financeiro da plataforma ---
 
-/** Estado do pagamento. Estorno NUNCA vira delete — muda de status. */
-export const PAYMENT_STATUSES = ["approved", "refunded", "chargeback"] as const;
+/**
+ * Vocabulário da coluna `payments.status`. Estorno NUNCA vira delete — muda
+ * de status.
+ *
+ * São os status do Mercado Pago, VERBATIM, porque é isso que fica gravado: o
+ * webhook grava `String(payment.status)` sem traduzir, e a reconciliação lê
+ * o mesmo campo. A lista da API é `pending | approved | authorized |
+ * in_process | in_mediation | rejected | cancelled | refunded |
+ * charged_back` (doc "Get payment status / Collection creation results").
+ *
+ * `charged_back` COM underscore é a grafia real do MP — a que chega numa
+ * notificação. `chargeback` sem underscore nunca vem do MP; está aqui porque
+ * é a grafia do comentário da coluna em `lib/schema.ts` e do plano, ou seja,
+ * o que uma linha corrigida à mão no banco pode ter. As duas precisam ser
+ * reconhecidas — ver `TERMINAL_NEGATIVE_STATUSES` em lib/mp-payment.ts, que
+ * é a lista NÃO inerte e decide se um `approved` atrasado pode reverter um
+ * estorno.
+ *
+ * Esta constante ainda não tem consumidor (`PaymentStatus` não é usado em
+ * lugar nenhum) — foi por isso que ela derivou do dado real sem ninguém
+ * notar. O teste em tests/lib/mp-payment.test.ts a amarra à lista que é
+ * usada de verdade, para a divergência não voltar em silêncio.
+ */
+export const PAYMENT_STATUSES = [
+  "pending",
+  "approved",
+  "authorized",
+  "in_process",
+  "in_mediation",
+  "rejected",
+  "cancelled",
+  "refunded",
+  "charged_back",
+  /** Legado: só existe em linha corrigida à mão. O MP manda `charged_back`. */
+  "chargeback",
+] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 /**

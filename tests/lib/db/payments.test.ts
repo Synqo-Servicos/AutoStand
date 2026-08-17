@@ -166,6 +166,28 @@ describe("listPendingNfse — a fila só pode conter o que ainda não virou nota
       .sqlToQuery(selectWhere.mock.calls[0][0] as SQL).sql.toLowerCase();
     expect(compiled).toContain("and");
   });
+
+  /**
+   * O predicado inteiro da fila, pelo mesmo motivo do teste equivalente em
+   * `registerNfse`: as asserções acima são substrings e substring não
+   * detecta conjunto REMOVIDO. Aqui o mutante perigoso é perder
+   * `nfse_issued_at IS NULL` — a fila voltaria a listar pagamento que já
+   * virou nota, e o contador emitiria a MESMA NFS-e duas vezes na
+   * prefeitura, que é o erro que não tem desfazer dentro deste sistema.
+   */
+  it("o WHERE da fila é exatamente status + nfse_issued_at IS NULL", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { listPendingNfse } = await import("@/lib/db/payments");
+    await listPendingNfse();
+
+    const { sql: compiled, params } = new PgDialect().sqlToQuery(
+      selectWhere.mock.calls[0][0] as SQL,
+    );
+    expect(compiled.toLowerCase()).toBe(
+      '("payments"."status" = $1 and "payments"."nfse_issued_at" is null)',
+    );
+    expect(params).toEqual(["approved"]);
+  });
 });
 
 describe("sumCaixa", () => {
@@ -173,58 +195,64 @@ describe("sumCaixa", () => {
 
   it("soma só pagamentos approved — estorno e chargeback ficam de fora", async () => {
     selectRows.mockResolvedValueOnce([
-      { status: "approved", gross_cents: 10000, fee_cents: 500 },
-      { status: "refunded", gross_cents: 20000, fee_cents: 1000 },
-      { status: "chargeback", gross_cents: 30000, fee_cents: 1500 },
-      { status: "approved", gross_cents: 5000, fee_cents: 250 },
+      { status: "approved", gross_cents: 10000, fee_cents: 500, incomplete: false },
+      { status: "refunded", gross_cents: 20000, fee_cents: 1000, incomplete: false },
+      { status: "chargeback", gross_cents: 30000, fee_cents: 1500, incomplete: false },
+      { status: "approved", gross_cents: 5000, fee_cents: 250, incomplete: false },
     ]);
     const { sumCaixa } = await import("@/lib/db/payments");
     const result = await sumCaixa("2026-08");
-    expect(result).toEqual({ gross: 15000, fee: 750, netBeforeTax: 14250 });
-  });
-});
-
-describe("updatePaymentStatus", () => {
-  beforeEach(() => { vi.clearAllMocks(); updateReturning.mockReset(); });
-
-  it("atualiza o status de um pagamento existente (caminho do estorno)", async () => {
-    updateReturning.mockResolvedValueOnce([{ id: 1, mp_payment_id: "mp-1", status: "refunded" }]);
-    const { updatePaymentStatus } = await import("@/lib/db/payments");
-    const row = await updatePaymentStatus("mp-1", "refunded");
-    expect(row).toEqual({ id: 1, mp_payment_id: "mp-1", status: "refunded" });
-    expect(updateSetArgs).toHaveBeenCalledWith({ status: "refunded" });
+    expect(result).toEqual({ gross: 15000, fee: 750, netBeforeTax: 14250, incompletos: 0 });
   });
 
-  it("devolve null quando o mp_payment_id não existe", async () => {
-    updateReturning.mockResolvedValueOnce([]);
-    const { updatePaymentStatus } = await import("@/lib/db/payments");
-    const row = await updatePaymentStatus("mp-inexistente", "refunded");
-    expect(row).toBeNull();
-  });
+  /**
+   * `fee ?? 0` é o ponto onde uma taxa DESCONHECIDA vira uma taxa de ZERO na
+   * soma — e um líquido superestimado na taxa inteira. O número não pode
+   * deixar de ser somado (o bruto é real e a competência precisa fechar),
+   * então a saída é CONTAR quantas linhas entraram assim, para a tela poder
+   * dizer que aquele líquido é um teto, não um valor.
+   *
+   * Sem esta contagem, `incomplete` é uma coluna que ninguém lê — que era
+   * exatamente o estado antes desta correção.
+   */
+  describe("incompletos — quantas linhas entraram com a taxa desconhecida", () => {
+    it("conta a linha marcada com incomplete", async () => {
+      selectRows.mockResolvedValueOnce([
+        { status: "approved", gross_cents: 24990, fee_cents: null, incomplete: true },
+        { status: "approved", gross_cents: 10000, fee_cents: 500, incomplete: false },
+      ]);
+      const { sumCaixa } = await import("@/lib/db/payments");
+      const result = await sumCaixa("2026-08");
 
-  it("é idempotente — duas chamadas com o mesmo status mandam o mesmo UPDATE e convergem pro mesmo resultado", async () => {
-    const rowAfterUpdate = { id: 1, mp_payment_id: "mp-1", status: "refunded" };
-    // `mockResolvedValueOnce` duas vezes (não `mockResolvedValue` fixo): cada
-    // chamada consome sua própria resposta da fila. Se a implementação
-    // deixasse de chamar `db.update` na segunda invocação (cache, early
-    // return, o que for), a fila ficaria com uma resposta não consumida e
-    // `toHaveBeenCalledTimes(2)` abaixo cairia — diferente de um mock fixo,
-    // que "passaria" mesmo se o código ignorasse a segunda chamada.
-    updateReturning.mockResolvedValueOnce([rowAfterUpdate]);
-    updateReturning.mockResolvedValueOnce([rowAfterUpdate]);
-    const { updatePaymentStatus } = await import("@/lib/db/payments");
+      expect(result.incompletos).toBe(1);
+      // O bruto continua inteiro e a taxa conhecida continua somada — a
+      // linha incompleta não é descartada, só sinalizada.
+      expect(result.gross).toBe(34990);
+      expect(result.fee).toBe(500);
+    });
 
-    const first = await updatePaymentStatus("mp-1", "refunded");
-    const second = await updatePaymentStatus("mp-1", "refunded");
+    /**
+     * `fee_cents` nulo com `incomplete: false` é o que uma linha gravada
+     * antes da coluna existir (ou corrigida à mão no banco) tem. A soma
+     * usa `?? 0` nela do mesmo jeito, então ela infla o líquido do mesmo
+     * jeito — contar só pela flag deixaria esse caso invisível.
+     */
+    it("conta também a linha com fee_cents nulo que não está marcada", async () => {
+      selectRows.mockResolvedValueOnce([
+        { status: "approved", gross_cents: 24990, fee_cents: null, incomplete: false },
+      ]);
+      const { sumCaixa } = await import("@/lib/db/payments");
+      expect((await sumCaixa("2026-08")).incompletos).toBe(1);
+    });
 
-    expect(first).toEqual(rowAfterUpdate);
-    expect(second).toEqual(rowAfterUpdate);
-    // Mesmo SET nas duas chamadas — sem incremento nem acúmulo entre elas,
-    // então a segunda converge pro mesmo resultado que a primeira (o mesmo
-    // que um UPDATE puro faria no banco real).
-    expect(updateSetArgs).toHaveBeenNthCalledWith(1, { status: "refunded" });
-    expect(updateSetArgs).toHaveBeenNthCalledWith(2, { status: "refunded" });
-    expect(updateReturning).toHaveBeenCalledTimes(2);
+    it("não conta linha que não é approved — ela não entra no caixa de qualquer jeito", async () => {
+      selectRows.mockResolvedValueOnce([
+        { status: "refunded", gross_cents: 24990, fee_cents: null, incomplete: true },
+        { status: "approved", gross_cents: 10000, fee_cents: 500, incomplete: false },
+      ]);
+      const { sumCaixa } = await import("@/lib/db/payments");
+      expect((await sumCaixa("2026-08")).incompletos).toBe(0);
+    });
   });
 });
 
@@ -249,7 +277,7 @@ describe("getPaymentByMpId", () => {
 describe("updatePayment", () => {
   beforeEach(() => { vi.clearAllMocks(); updateReturning.mockReset(); });
 
-  it("aplica um patch parcial — não só status, como updatePaymentStatus", async () => {
+  it("aplica um patch parcial — status, taxa e líquido na mesma escrita", async () => {
     updateReturning.mockResolvedValueOnce([
       { id: 1, mp_payment_id: "mp-1", status: "approved", fee_cents: 1200, net_cents: 23790, incomplete: false },
     ]);
@@ -279,6 +307,32 @@ describe("updatePayment", () => {
     const { updatePayment } = await import("@/lib/db/payments");
     const row = await updatePayment("mp-inexistente", { status: "refunded" });
     expect(row).toBeNull();
+  });
+
+  /**
+   * Herdado de `updatePaymentStatus`, que foi removida por não ter mais
+   * chamador nenhum (era da Task 2, substituída por esta na Task 3 da mesma
+   * branch). A propriedade, porém, é do caminho do ESTORNO, não daquela
+   * função: o MP reentrega notificação, e um UPDATE puro por
+   * `mp_payment_id` — sem incremento nem acúmulo — precisa convergir no
+   * mesmo resultado quando aplicado duas vezes.
+   */
+  it("é idempotente — o mesmo patch duas vezes manda o mesmo UPDATE e converge", async () => {
+    const depois = { id: 1, mp_payment_id: "mp-1", status: "refunded" };
+    // `mockResolvedValueOnce` duas vezes (não um mock fixo): cada chamada
+    // consome sua própria resposta. Se a implementação deixasse de chamar
+    // `db.update` na segunda invocação, a fila ficaria com resposta não
+    // consumida e o `toHaveBeenCalledTimes(2)` abaixo cairia.
+    updateReturning.mockResolvedValueOnce([depois]);
+    updateReturning.mockResolvedValueOnce([depois]);
+    const { updatePayment } = await import("@/lib/db/payments");
+
+    expect(await updatePayment("mp-1", { status: "refunded" })).toEqual(depois);
+    expect(await updatePayment("mp-1", { status: "refunded" })).toEqual(depois);
+
+    expect(updateSetArgs).toHaveBeenNthCalledWith(1, { status: "refunded" });
+    expect(updateSetArgs).toHaveBeenNthCalledWith(2, { status: "refunded" });
+    expect(updateReturning).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -328,6 +382,40 @@ describe("registerNfse", () => {
     );
     expect(compiled.toLowerCase()).toContain('"status" =');
     expect(params).toContain("approved");
+  });
+
+  /**
+   * O predicado INTEIRO, não um `contains` de pedaço dele.
+   *
+   * Por que a diferença importa: as duas asserções acima são substrings, e
+   * substring sobrevive a CONJUNTO REMOVIDO. Verificado por mutação —
+   * apagar `eq(payments.id, paymentId)` do WHERE, deixando só
+   * `status = 'approved' AND nfse_issued_at IS NULL`, mantinha a suíte
+   * inteira verde (668/668). E esse é o pior mutante possível deste
+   * arquivo: um único POST em /nfse carimbaria TODA linha aprovada e ainda
+   * não emitida da tabela com o MESMO número de nota — a fila fiscal
+   * esvaziaria de uma vez, e cada pagamento do histórico ficaria vinculado
+   * a uma nota que não é a dele.
+   *
+   * Igualdade exata do SQL compilado + dos params é o que fecha isso: prende
+   * as três condições, a ordem delas, as COLUNAS de cada uma (trocar
+   * `nfse_issued_at` por outra coluna nullable falha aqui) e os valores
+   * ligados. Qualquer conjunto a mais ou a menos derruba.
+   */
+  it("o WHERE é exatamente id + status + nfse_issued_at IS NULL — nada a mais, nada a menos", async () => {
+    updateReturning.mockResolvedValueOnce([{ id: 1 }]);
+    const { registerNfse } = await import("@/lib/db/payments");
+    await registerNfse(42, "123", 7);
+
+    const { sql: compiled, params } = new PgDialect().sqlToQuery(
+      updateWhereArgs.mock.calls[0][0] as SQL,
+    );
+    expect(compiled.toLowerCase()).toBe(
+      '("payments"."id" = $1 and "payments"."status" = $2 and "payments"."nfse_issued_at" is null)',
+    );
+    // O id do pagamento está de fato LIGADO ao predicado — é o conjunto que
+    // separa "carimba esta linha" de "carimba a tabela".
+    expect(params).toEqual([42, "approved"]);
   });
 
   it("registrar duas vezes o mesmo pagamento — a 2ª chamada não altera o número já gravado (devolve null)", async () => {

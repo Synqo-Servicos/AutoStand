@@ -4,7 +4,9 @@ import {
   derivePaidAt,
   grossCentsOf,
   shouldOverwriteStatus,
+  TERMINAL_NEGATIVE_STATUSES,
 } from "@/lib/mp-payment";
+import { PAYMENT_STATUSES } from "@/lib/constants";
 
 /**
  * `lib/mp-payment.ts` nasceu de uma extração: a matemática de taxa/líquido e
@@ -72,6 +74,67 @@ describe("computeFeeAndNet", () => {
     expect(r.feeCents).toBe(251);
     expect(r.netCents).toBe(1739);
   });
+
+  /**
+   * `typeof net === "number"` aceitava ZERO, e zero é o valor que o MP põe no
+   * campo enquanto o líquido ainda não foi liquidado. Um `approved` de
+   * R$ 249,90 com `net_received_amount: 0` gravava `fee_cents: 24990`,
+   * `net_cents: 0` e `incomplete: false` — taxa de 100% do bruto, marcada
+   * como dado COMPLETO. É o oposto exato do que esta função promete.
+   *
+   * O invariante `bruto − taxa = líquido` fecha nos dois ramos (24990 − 24990
+   * = 0), então ele não detecta nada aqui — a única defesa é recusar o número
+   * implausível.
+   *
+   * A regra: o líquido do MP só é autoritativo dentro da faixa plausível
+   * `0 < net <= gross`. Fora dela não inventamos taxa nenhuma — cai para
+   * `fee_details` e, se nem isso houver, `incomplete: true`.
+   */
+  describe("net_received_amount implausível não é dado completo", () => {
+    it("net = 0 com bruto positivo não vira taxa de 100% — marca incomplete", () => {
+      expect(computeFeeAndNet({ transaction_details: { net_received_amount: 0 } }, 24990)).toEqual({
+        feeCents: null,
+        netCents: 24990,
+        incomplete: true,
+      });
+    });
+
+    it("net = 0 mas com fee_details do collector: usa a taxa que existe", () => {
+      const r = computeFeeAndNet(
+        {
+          transaction_details: { net_received_amount: 0 },
+          fee_details: [{ amount: 12, fee_payer: "collector" }],
+        },
+        24990,
+      );
+      expect(r).toEqual({ feeCents: 1200, netCents: 23790, incomplete: false });
+    });
+
+    it("net negativo é recusado — nunca produz líquido negativo", () => {
+      expect(computeFeeAndNet({ transaction_details: { net_received_amount: -5 } }, 24990)).toEqual({
+        feeCents: null,
+        netCents: 24990,
+        incomplete: true,
+      });
+    });
+
+    it("net maior que o bruto é recusado — taxa negativa não existe", () => {
+      expect(
+        computeFeeAndNet({ transaction_details: { net_received_amount: 300 } }, 24990),
+      ).toEqual({ feeCents: null, netCents: 24990, incomplete: true });
+    });
+
+    /**
+     * A fronteira do outro lado: taxa ZERO é legítima (cortesia, promoção),
+     * e `net === gross` é a forma dela. Recusar isso junto com o zero
+     * jogaria um dado bom pra `incomplete` sem motivo.
+     */
+    it("net igual ao bruto é taxa zero legítima, não implausível", () => {
+      expect(
+        computeFeeAndNet({ transaction_details: { net_received_amount: 249.9 } }, 24990),
+      ).toEqual({ feeCents: 0, netCents: 24990, incomplete: false });
+    });
+  });
 });
 
 describe("shouldOverwriteStatus", () => {
@@ -107,6 +170,53 @@ describe("shouldOverwriteStatus", () => {
 
   it("permite a progressão normal pending -> approved", () => {
     expect(shouldOverwriteStatus("pending", "approved")).toBe(true);
+  });
+});
+
+/**
+ * `PAYMENT_STATUSES` (lib/constants.ts) é o VOCABULÁRIO da coluna
+ * `payments.status`. Ele estava descrevendo errado o dado que existe:
+ * listava só `approved | refunded | chargeback`, mas o webhook grava
+ * `String(payment.status)` — a grafia do MP, verbatim — e a grafia real do
+ * chargeback lá é `charged_back`, com underscore. Desde a correção da
+ * sobrescrita de status, é `charged_back` que entra tanto pelo webhook
+ * quanto pela reconciliação.
+ *
+ * A constante é inerte hoje (`PaymentStatus` não tem consumidor), e é
+ * justamente por isso que ela derivou sem ninguém notar. O teste abaixo a
+ * amarra a uma lista que NÃO é inerte — `TERMINAL_NEGATIVE_STATUSES`, que
+ * decide de verdade se um `approved` atrasado pode reverter um estorno.
+ */
+describe("PAYMENT_STATUSES × TERMINAL_NEGATIVE_STATUSES — vocabulário e regra não podem divergir", () => {
+  it("todo status terminal negativo é um status conhecido do vocabulário", () => {
+    for (const status of TERMINAL_NEGATIVE_STATUSES) {
+      expect(PAYMENT_STATUSES).toContain(status);
+    }
+  });
+
+  it("a grafia REAL do MP (`charged_back`) está no vocabulário", () => {
+    expect(PAYMENT_STATUSES).toContain("charged_back");
+  });
+
+  /**
+   * A grafia sem underscore continua no vocabulário de propósito: ela nunca
+   * chega do MP, mas é a que o comentário do schema usa e a que uma linha
+   * corrigida à mão no banco pode ter. Ver a docstring de
+   * `TERMINAL_NEGATIVE_STATUSES`.
+   */
+  it("a grafia legada (`chargeback`) não foi removida — linha corrigida à mão ainda a usa", () => {
+    expect(PAYMENT_STATUSES).toContain("chargeback");
+  });
+
+  /**
+   * `pending` é o caso que prova que a lista precisa ir além dos três
+   * originais: o webhook trata explicitamente a 1ª notificação chegando
+   * `pending` (sem taxa) e a reentrega depois virando `approved`. Esse
+   * valor está na coluna hoje.
+   */
+  it("inclui os status intermediários que o webhook de fato grava", () => {
+    expect(PAYMENT_STATUSES).toContain("pending");
+    expect(PAYMENT_STATUSES).toContain("rejected");
   });
 });
 

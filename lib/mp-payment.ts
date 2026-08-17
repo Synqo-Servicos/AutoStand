@@ -32,14 +32,44 @@ export interface MpFeeSource {
 }
 
 /**
+ * Faixa em que o líquido que o MP declara é PLAUSÍVEL, e portanto digno de
+ * virar taxa gravada: `0 < net <= gross`.
+ *
+ * Por que a faixa existe, e não só `typeof net === "number"`: zero é um valor
+ * que o campo assume de verdade — o recurso traz `net_received_amount: 0`
+ * enquanto o líquido não foi liquidado (pagamento ainda não creditado). Com o
+ * teste de tipo puro, um `approved` de R$ 249,90 com net 0 gravava
+ * `fee_cents: 24990`, `net_cents: 0` e `incomplete: false`: taxa de 100% do
+ * bruto, marcada como dado completo, direto no número que o contador copia
+ * para dentro da nota. O invariante `bruto − taxa = líquido` fecha nesse caso
+ * (24990 − 24990 = 0), então ele não serve de rede aqui.
+ *
+ * Os outros dois lados da faixa são igualmente impossíveis: net negativo
+ * produziria líquido negativo, e net acima do bruto produziria taxa NEGATIVA
+ * (o MP nos pagando mais do que o cliente pagou). Nos três casos a resposta é
+ * a mesma e é a promessa desta função: não inventar taxa.
+ *
+ * `net === gross` fica DENTRO da faixa de propósito — taxa zero é legítima
+ * (cortesia, promoção) e recusá-la marcaria como duvidoso um dado bom.
+ */
+function netEhPlausivel(netCents: number, grossCents: number): boolean {
+  return netCents > 0 && netCents <= grossCents;
+}
+
+/**
  * Bruto → líquido. Prioridade: `transaction_details.net_received_amount`
  * — o líquido autoritativo que o próprio MP calcula, derivando a taxa por
- * `gross - net`. Sem ele, soma `fee_details[]` filtrando por
- * `fee_payer !== "payer"` (taxa atribuída ao PAGADOR não é despesa nossa;
- * ausência de `fee_payer` é tratada como `collector`, o caso comum — ver
+ * `gross - net` — mas só quando ele é plausível (ver `netEhPlausivel`). Sem
+ * ele, soma `fee_details[]` filtrando por `fee_payer !== "payer"` (taxa
+ * atribuída ao PAGADOR não é despesa nossa; ausência de `fee_payer` é tratada
+ * como `collector`, o caso comum — ver
  * `node_modules/mercadopago/dist/clients/payment/commonTypes.d.ts`). Sem
  * nenhum dos dois: nunca inventar a taxa — `net = gross`,
  * `incomplete = true`.
+ *
+ * Um net implausível NÃO encerra a decisão: cai para `fee_details`, que pode
+ * ter a taxa de verdade. Só depois de os dois falharem é que a linha é
+ * marcada como incompleta.
  */
 export function computeFeeAndNet(
   payment: MpFeeSource, grossCents: number,
@@ -47,7 +77,9 @@ export function computeFeeAndNet(
   const netReceived = payment.transaction_details?.net_received_amount;
   if (typeof netReceived === "number") {
     const netCents = Math.round(netReceived * 100);
-    return { feeCents: grossCents - netCents, netCents, incomplete: false };
+    if (netEhPlausivel(netCents, grossCents)) {
+      return { feeCents: grossCents - netCents, netCents, incomplete: false };
+    }
   }
   const collectorFees = (payment.fee_details ?? []).filter((f) => f.fee_payer !== "payer");
   if (collectorFees.length === 0) {

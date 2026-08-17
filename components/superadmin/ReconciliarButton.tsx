@@ -21,6 +21,76 @@ import {
  * Importar em silêncio consertaria o número e esconderia que o caminho
  * principal falhou — e é o caminho principal que precisa ser consertado.
  */
+/** `N pagamento` / `N pagamentos`, sem repetir o ternário em cada frase. */
+function pluralizar(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`;
+}
+
+export interface AvisoImportacao {
+  tone: "success" | "warning" | "error" | "info";
+  texto: string;
+}
+
+/**
+ * Traduz o resultado de uma importação no aviso que a tela dá.
+ *
+ * Existe separada, e pura, por causa de uma regressão da Task 9: quando
+ * TODOS os itens do lote falhavam, a rota respondia 200 e a tela chamava
+ * `toast.success("0 pagamentos importados.")` — visto verde para fracasso
+ * completo, com o bloco de falhas logo abaixo desmentindo o toast. O tom era
+ * fixo; só a contagem variava.
+ *
+ * A regra agora é uma só: o tom acompanha o que ACONTECEU, não o fato de a
+ * requisição ter voltado 200.
+ *
+ * `atualizados` conta como trabalho feito junto com `importados` — corrigir
+ * o status de um estorno é exatamente o que a conferência existe para fazer,
+ * e a versão antiga, que só olhava `importados`, anunciava "0 pagamentos
+ * importados" para um lote que corrigiu meia dúzia de estornos.
+ *
+ * Pura também para poder ser testada sem navegador (não há um nesta
+ * sessão): o componente só escolhe qual `toast.*` chamar a partir do `tone`.
+ */
+export function avisoDaImportacao(r: {
+  importados: number;
+  atualizados: number;
+  falhas: unknown[];
+  naoProcessados: number;
+}): AvisoImportacao {
+  const falhas = r.falhas.length;
+  const gravou = r.importados + r.atualizados;
+
+  const feitos: string[] = [];
+  if (r.importados > 0) {
+    feitos.push(pluralizar(r.importados, "pagamento importado", "pagamentos importados"));
+  }
+  if (r.atualizados > 0) {
+    feitos.push(pluralizar(r.atualizados, "status corrigido", "status corrigidos"));
+  }
+  const falharam = pluralizar(falhas, "pagamento falhou", "pagamentos falharam");
+
+  // Nada entrou e nada falhou: o teto por execução segurou o lote inteiro
+  // (ver `naoProcessados`). Não é erro, mas anunciar sucesso seria a mesma
+  // mentira da regressão, em tom mais baixo.
+  if (gravou === 0 && falhas === 0) {
+    return { tone: "info", texto: "Nada foi importado nesta rodada." };
+  }
+  if (gravou === 0) {
+    return { tone: "error", texto: `Nada foi importado — ${falharam}.` };
+  }
+  if (falhas === 0) {
+    return { tone: "success", texto: `${feitos.join(" · ")}.` };
+  }
+  return { tone: "warning", texto: `${feitos.join(" · ")} · ${falharam}.` };
+}
+
+const avisar: Record<AvisoImportacao["tone"], (texto: string) => void> = {
+  success: (t) => toast.success(t),
+  warning: (t) => toast.warning(t),
+  error: (t) => toast.error(t),
+  info: (t) => toast.info(t),
+};
+
 export function ReconciliarButton({ competencia }: { competencia: string }) {
   const router = useRouter();
   const [diff, setDiff] = useState<ReconciliacaoResultado | null>(null);
@@ -65,11 +135,8 @@ export function ReconciliarButton({ competencia }: { competencia: string }) {
     try {
       const feito = await chamar(false, diff.token);
       setDiff(feito);
-      toast.success(
-        feito.importados === 1
-          ? "1 pagamento importado."
-          : `${feito.importados} pagamentos importados.`,
-      );
+      const aviso = avisoDaImportacao(feito);
+      avisar[aviso.tone](aviso.texto);
       // A página é server component: quem recalcula caixa, RBT12 e fila
       // fiscal com as linhas novas é o servidor, não este estado local.
       router.refresh();
