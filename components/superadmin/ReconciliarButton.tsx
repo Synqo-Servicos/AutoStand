@@ -56,6 +56,7 @@ export function avisoDaImportacao(r: {
   atualizados: number;
   falhas: unknown[];
   naoProcessados: number;
+  pulados: number;
 }): AvisoImportacao {
   const falhas = r.falhas.length;
   const gravou = r.importados + r.atualizados;
@@ -69,10 +70,25 @@ export function avisoDaImportacao(r: {
   }
   const falharam = pluralizar(falhas, "pagamento falhou", "pagamentos falharam");
 
-  // Nada entrou e nada falhou: o teto por execução segurou o lote inteiro
-  // (ver `naoProcessados`). Não é erro, mas anunciar sucesso seria a mesma
-  // mentira da regressão, em tom mais baixo.
+  // Nada entrou e nada falhou tem DUAS causas opostas, e dizer a errada manda
+  // o operador para o lado errado: se o teto segurou o lote, a saída é rodar
+  // de novo; se os itens foram pulados de propósito (linha já existia, ou o
+  // estorno recusou virar `approved` outra vez), não há o que fazer. Antes as
+  // duas viravam "Nada foi importado nesta rodada.", redigido como se o teto
+  // sempre tivesse sido a causa.
   if (gravou === 0 && falhas === 0) {
+    if (r.pulados > 0 && r.naoProcessados === 0) {
+      return {
+        tone: "info",
+        texto: `Nada a importar — ${pluralizar(r.pulados, "pagamento já estava correto aqui", "pagamentos já estavam corretos aqui")}.`,
+      };
+    }
+    if (r.naoProcessados > 0) {
+      return {
+        tone: "info",
+        texto: `Nada entrou nesta rodada — ${r.naoProcessados} ${r.naoProcessados === 1 ? "ficou" : "ficaram"} para a próxima. Confira de novo.`,
+      };
+    }
     return { tone: "info", texto: "Nada foi importado nesta rodada." };
   }
   if (gravou === 0) {
@@ -212,7 +228,7 @@ function Resultado({ diff }: { diff: ReconciliacaoResultado }) {
         <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
         {diff.encontradosMp === 0
           ? "O Mercado Pago não tem nenhum pagamento neste período."
-          : `Tudo conferido — ${diff.jaRegistrados} pagamento${diff.jaRegistrados === 1 ? "" : "s"} do Mercado Pago já ${diff.jaRegistrados === 1 ? "está" : "estão"} registrado${diff.jaRegistrados === 1 ? "" : "s"} aqui.`}
+          : `${diff.jaRegistrados} pagamento${diff.jaRegistrados === 1 ? "" : "s"} do Mercado Pago já ${diff.jaRegistrados === 1 ? "está" : "estão"} registrado${diff.jaRegistrados === 1 ? "" : "s"} aqui. Nada faltando do lado do Mercado Pago.`}
       </p>
     );
   }

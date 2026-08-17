@@ -616,6 +616,46 @@ describe("divergentes: patch completo, não só o status", () => {
    * isto: bruto, loja, plano e cupom são snapshot do momento do pagamento e
    * uma leitura posterior não os reescreve.
    */
+  /**
+   * O `paidAt` que chega em `corrigirDivergente` vem do RESUMO do `/search`;
+   * a função tem o recurso COMPLETO relido em mãos. Gravar o do resumo tendo
+   * o completo é confiar na fonte mais fraca para escrever no registro
+   * fiscal — e o webhook já deriva do completo. `paid_at` decide competência,
+   * mês do DAS e mês da NFS-e, então a divergência não é cosmética.
+   */
+  it("paid_at vem do recurso completo relido, não do resumo da busca", async () => {
+    umaPagina([mpResult({
+      id: "999", status: "approved", date_approved: "2026-08-10T10:00:00.000-03:00",
+    })]);
+    localPending();
+    mocks.paymentGet.mockResolvedValue(mpFull({
+      id: "999", date_approved: "2026-08-12T15:30:00.000-03:00",
+    }));
+    const POST = await route();
+
+    await conferirEImportar(POST);
+
+    const patch = mocks.updatePayment.mock.calls[0][1];
+    expect(patch.paid_at).toBe("2026-08-12T15:30:00.000-03:00");
+    expect(patch.paid_at).not.toBe("2026-08-10T10:00:00.000-03:00");
+  });
+
+  it("se a releitura não trouxer data legível, vale a que já havia sido classificada", async () => {
+    umaPagina([mpResult({
+      id: "999", status: "approved", date_approved: "2026-08-10T10:00:00.000-03:00",
+    })]);
+    localPending();
+    mocks.paymentGet.mockResolvedValue(mpFull({
+      id: "999", date_approved: null, date_created: null,
+    }));
+    const POST = await route();
+
+    await conferirEImportar(POST);
+
+    const patch = mocks.updatePayment.mock.calls[0][1];
+    expect(patch.paid_at).toBe("2026-08-10T10:00:00.000-03:00");
+  });
+
   it("não reescreve o snapshot: nada de bruto, loja, plano ou cupom no patch", async () => {
     umaPagina([mpResult({ id: "999", status: "approved", transaction_amount: 999.99 })]);
     localPending();

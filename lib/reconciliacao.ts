@@ -107,6 +107,16 @@ export interface ReconciliacaoResultado extends Diferenca {
   falhas: ItemFalha[];
   /** Quanto ficou para a próxima rodada por causa do teto por execução. */
   naoProcessados: number;
+  /**
+   * Itens que a rodada TOCOU e decidiu não gravar: a linha já existia, ou
+   * `shouldOverwriteStatus` recusou sobrescrever um estado terminal.
+   *
+   * Separado de `naoProcessados` porque os dois pedem ações OPOSTAS do
+   * operador: o teto pede rodar de novo, o pulado diz que não há o que fazer.
+   * Antes os dois viravam a mesma mensagem, redigida como se o teto sempre
+   * tivesse sido a causa.
+   */
+  pulados: number;
 }
 
 /**

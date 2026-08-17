@@ -15,7 +15,7 @@ import { avisoDaImportacao } from "@/components/superadmin/ReconciliarButton";
 
 /** Resultado mínimo de uma importação, com tudo zerado por padrão. */
 function resultado(over: Partial<Parameters<typeof avisoDaImportacao>[0]> = {}) {
-  return { importados: 0, atualizados: 0, falhas: [], naoProcessados: 0, ...over };
+  return { importados: 0, atualizados: 0, falhas: [], naoProcessados: 0, pulados: 0, ...over };
 }
 
 describe("avisoDaImportacao — o tom acompanha o que de fato aconteceu", () => {
@@ -83,6 +83,38 @@ describe("avisoDaImportacao — o tom acompanha o que de fato aconteceu", () => 
     const aviso = avisoDaImportacao(resultado({ naoProcessados: 5 }));
     expect(aviso.tone).toBe("info");
     expect(aviso.tone).not.toBe("success");
-    expect(aviso.texto).toContain("Nada foi importado");
+    // A afirmação central é o TOM: nada entrou, então nada de verde. O texto
+    // exato passou a distinguir represado de pulado — ver o describe abaixo.
+    expect(aviso.texto).toContain("Nada entrou");
+  });
+});
+
+/**
+ * "Nada entrou e nada falhou" tem duas causas OPOSTAS, e dizer a errada manda
+ * o operador para o lado errado: se o teto por rodada segurou o lote, a saída
+ * é rodar de novo; se os itens foram pulados de propósito — a linha já
+ * existia, ou o estorno recusou virar `approved` outra vez —, não há o que
+ * fazer. Antes as duas viravam "Nada foi importado nesta rodada.", redigido
+ * como se o teto sempre tivesse sido a causa.
+ */
+describe("avisoDaImportacao — pulado não é o mesmo que represado", () => {
+  it("tudo pulado: diz que já estava correto, e não manda conferir de novo", () => {
+    const aviso = avisoDaImportacao(resultado({ pulados: 3 }));
+    expect(aviso.tone).toBe("info");
+    expect(aviso.texto).toContain("já estavam corretos");
+    expect(aviso.texto).not.toContain("próxima");
+  });
+
+  it("teto atingido: diz quanto ficou para depois, e manda conferir de novo", () => {
+    const aviso = avisoDaImportacao(resultado({ naoProcessados: 12 }));
+    expect(aviso.tone).toBe("info");
+    expect(aviso.texto).toContain("12");
+    expect(aviso.texto).toContain("próxima");
+    expect(aviso.texto).not.toContain("já estavam corretos");
+  });
+
+  it("singular concorda quando é um só", () => {
+    expect(avisoDaImportacao(resultado({ pulados: 1 })).texto)
+      .toContain("já estava correto");
   });
 });

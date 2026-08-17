@@ -388,9 +388,15 @@ async function corrigirDivergente(
     // mantém `net = gross`.
     patch.net_cents = atual.gross_cents;
   }
-  // `date_approved` pode ter faltado quando a linha nasceu `pending`; a
-  // leitura atual traz o valor definitivo. Mesmo comportamento do webhook.
-  patch.paid_at = paidAt;
+  // `date_approved` pode ter faltado quando a linha nasceu `pending`, e a
+  // releitura traz o valor definitivo — mesmo comportamento do webhook, que
+  // deriva do recurso COMPLETO. O `paidAt` do parâmetro vem do resumo do
+  // `/search`, que já classificou a competência; usá-lo aqui, com o recurso
+  // completo em mãos, seria confiar no resumo para gravar. Se a releitura não
+  // trouxer data legível, o que estava classificado continua valendo.
+  const paidAtCompleto = derivePaidAt(completo);
+  patch.paid_at =
+    paidAtCompleto && instanteMs(paidAtCompleto) !== null ? paidAtCompleto : paidAt;
 
   await updatePayment(mpPaymentId, patch);
   return { tipo: "atualizado" };
@@ -401,6 +407,17 @@ interface ResultadoImportacao {
   atualizados: number;
   falhas: ItemFalha[];
   naoProcessados: number;
+  /**
+   * Itens que a rodada TOCOU e decidiu não gravar: a linha já existia, ou
+   * `shouldOverwriteStatus` recusou sobrescrever um estado terminal (o
+   * estorno que não pode virar `approved` de novo).
+   *
+   * Sem este número, "nada foi importado" era indistinguível de "o teto por
+   * rodada segurou o lote" — e a UI atribuía ao teto o que na verdade tinha
+   * sido pulado de propósito. São diagnósticos opostos: um pede rodar de
+   * novo, o outro diz que não há o que fazer.
+   */
+  pulados: number;
 }
 
 /**
@@ -445,6 +462,7 @@ async function importar(diff: Diferenca): Promise<ResultadoImportacao> {
     atualizados: resultados.filter((r) => r.tipo === "atualizado").length,
     falhas: resultados.flatMap((r) => (r.tipo === "falha" ? [r.falha] : [])),
     naoProcessados,
+    pulados: resultados.filter((r) => r.tipo === "pulado").length,
   };
 }
 
@@ -486,7 +504,7 @@ export const POST = withFinanceAccess(async (req) => {
   }
 
   const gravado: ResultadoImportacao = dry
-    ? { importados: 0, atualizados: 0, falhas: [], naoProcessados: 0 }
+    ? { importados: 0, atualizados: 0, falhas: [], naoProcessados: 0, pulados: 0 }
     : await importar(diff);
 
   const resultado: ReconciliacaoResultado = {
