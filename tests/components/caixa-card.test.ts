@@ -24,6 +24,8 @@ const CAIXA: CaixaSummary = {
   fee: 1300,
   netBeforeTax: 23690,
   incompletos: 0,
+  estornos: 0,
+  estornosCents: 0,
 };
 
 function render(caixa: CaixaSummary): string {
@@ -71,6 +73,8 @@ describe("CaixaCard — taxa desconhecida aparece onde o número aparece", () =>
     fee: 0,
     netBeforeTax: 24990,
     incompletos: 1,
+    estornos: 0,
+    estornosCents: 0,
   };
 
   it("sem linha incompleta, nenhum aviso polui o card", () => {
@@ -110,5 +114,61 @@ describe("CaixaCard — taxa desconhecida aparece onde o número aparece", () =>
   it("plural concorda quando há mais de uma linha incompleta", () => {
     const html = render({ ...COM_INCOMPLETO, incompletos: 3 });
     expect(html).toContain("3 pagamentos");
+  });
+});
+
+/**
+ * ============================================================================
+ * ESTORNO PRECISA APARECER — ele se subtrai sozinho, e em silêncio
+ * ============================================================================
+ *
+ * Nenhum dos cinco blocos do console lista pagamentos individuais, exceto a
+ * fila pendente. Um `refunded`/`charged_back` simplesmente DEIXA de ser somado
+ * — no bruto, na taxa e na base da RBT12 — retroativamente, inclusive em
+ * competência já apurada. Nada na tela dizia que a subtração aconteceu, e nada
+ * lembrava que uma nota já emitida para aquela cobrança pode precisar de
+ * cancelamento.
+ *
+ * Contar não muda número nenhum: os estornos continuam FORA do bruto e do
+ * líquido. O que muda é o contador conseguir ver que existiram.
+ */
+describe("CaixaCard — estorno visível", () => {
+  const COM_ESTORNO: CaixaSummary = {
+    gross: 24990,
+    fee: 1300,
+    netBeforeTax: 23690,
+    incompletos: 0,
+    estornos: 2,
+    estornosCents: 49980,
+  };
+
+  it("sem estorno no período, a linha não polui o card", () => {
+    const html = render(CAIXA);
+    expect(html).not.toContain("Estornado no período");
+    expect(html).not.toContain("cancelamento");
+  });
+
+  it("com estorno, mostra quantidade e valor — e avisa sobre a nota já emitida", () => {
+    const html = render(COM_ESTORNO);
+    expect(html).toContain("Estornado no período (2)");
+    expect(html).toContain(formatBRLFull(49980));
+    // O que o contador precisa FAZER, não só saber.
+    expect(html).toContain("cancelamento");
+  });
+
+  it("o valor estornado usa formatBRLFull — centavos sobrevivem", () => {
+    // Comparar contra as DUAS funções é o que faz disto uma prova de mutação:
+    // a positiva prende a formatação certa, a negativa mostra que a errada
+    // ("R$ 500", de formatBRL) não está lá. Literal com espaço comum não
+    // serviria — `Intl` emite espaço não-quebrável entre "R$" e o número.
+    const html = render(COM_ESTORNO);
+    expect(html).toContain(formatBRLFull(49980));
+    expect(html).not.toContain(formatBRL(49980));
+  });
+
+  it("estorno NÃO entra no bruto nem no líquido — só é reportado ao lado", () => {
+    const html = render(COM_ESTORNO);
+    expect(html).toContain(formatBRLFull(24990));
+    expect(html).toContain(formatBRLFull(23690));
   });
 });

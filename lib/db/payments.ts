@@ -115,13 +115,35 @@ function taxaDesconhecida(row: { fee_cents: number | null; incomplete: boolean }
  * dizer que aquele líquido é um TETO, não um valor — ver `CaixaCard`.
  * Este número é a única razão de a coluna `incomplete` existir.
  */
+/**
+ * Estorno e chargeback. As duas grafias de chargeback convivem de propósito:
+ * `charged_back` é o que o Mercado Pago manda, `chargeback` é a grafia do
+ * comentário da coluna — o que uma linha corrigida à mão pode ter.
+ */
+const STATUS_ESTORNADOS = ["refunded", "charged_back", "chargeback"];
+
 export async function sumCaixa(competencia: string) {
   const rows = await listPaymentsByPeriod(competencia);
   const ok = rows.filter((r) => r.status === "approved");
   const gross = ok.reduce((a, r) => a + r.gross_cents, 0);
   const fee = ok.reduce((a, r) => a + (r.fee_cents ?? 0), 0);
   const incompletos = ok.filter(taxaDesconhecida).length;
-  return { gross, fee, netBeforeTax: gross - fee, incompletos };
+
+  // Estorno não aparecia em lugar nenhum do console: ele simplesmente deixava
+  // de ser somado, aqui e na base do RBT12, inclusive em meses já apurados —
+  // e uma nota já emitida para aquele pagamento continuava de pé, sem nada
+  // lembrar que talvez precise ser cancelada. Contar não muda número nenhum;
+  // só torna a subtração visível para quem apura.
+  const estornados = rows.filter((r) => STATUS_ESTORNADOS.includes(r.status));
+
+  return {
+    gross,
+    fee,
+    netBeforeTax: gross - fee,
+    incompletos,
+    estornos: estornados.length,
+    estornosCents: estornados.reduce((a, r) => a + r.gross_cents, 0),
+  };
 }
 
 /**
@@ -137,6 +159,25 @@ const NFSE_STATUS_ELEGIVEL = "approved";
 /** Predicado compartilhado de elegibilidade fiscal. Ver `NFSE_STATUS_ELEGIVEL`. */
 function statusGeraNfse() {
   return eq(payments.status, NFSE_STATUS_ELEGIVEL);
+}
+
+/**
+ * O contrário da fila: o que JÁ virou nota na competência.
+ *
+ * Existe porque o contador não conseguia conferir a única escrita que ele faz.
+ * Ele digitava o número, via um toast, a linha sumia da fila — e nenhuma tela
+ * do console voltava a exibir um `nfse_number` gravado. Como desfazer é
+ * `withSuperAdmin` por desenho (ele carimba, mas não descarimba), um número
+ * digitado errado ficava permanente E invisível para quem digitou.
+ *
+ * Recorta pelo MESMO período do resto da tela (`dentroDoPeriodo` sobre
+ * `paid_at`), não por `nfse_issued_at`: a pergunta que o contador faz é "o que
+ * eu emiti referente a este mês", não "o que eu digitei neste mês".
+ */
+export async function listIssuedNfseByPeriod(competencia: string): Promise<PaymentRow[]> {
+  return db.select().from(payments)
+    .where(and(dentroDoPeriodo(periodoDaCompetencia(competencia)), isNotNull(payments.nfse_issued_at)))
+    .orderBy(desc(payments.paid_at));
 }
 
 export async function listPendingNfse(): Promise<PaymentRow[]> {

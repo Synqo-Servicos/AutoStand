@@ -799,3 +799,50 @@ describe("ImpostoCard — bordas que não podem virar tela quebrada", () => {
     }
   });
 });
+
+/**
+ * ============================================================================
+ * O RODAPÉ NÃO PODE LER COMO LISTA EXAUSTIVA
+ * ============================================================================
+ *
+ * O card afirma "Simples Nacional · competência MM/AAAA" e "Receita
+ * considerada" sobre uma base montada puramente de CAIXA RECEBIDO
+ * (`status = approved` sobre `paid_at`). Mas o Simples apura por COMPETÊNCIA
+ * por padrão — regime de caixa exige opção formal, que a empresa pode não ter
+ * feito.
+ *
+ * O rodapé já listava quatro diferenças: segregação de receitas, sublimite
+ * municipal, retenções de ISS e Fator R. Todas ajustam O QUANTO se paga sobre
+ * a mesma receita. Faltava a única que muda QUAL RECEITA ENTRA — e uma lista
+ * que parece completa sem ela torna a divergência do PGDAS-D mais difícil de
+ * notar, não menos.
+ *
+ * Este é o item (1) do relatório da Task 7, que ficou aberto por saber-se sem
+ * resposta: o contador ainda precisa dizer qual regime vale. Enquanto não
+ * disser, a tela tem que declarar a dúvida em vez de escondê-la.
+ */
+describe("ImpostoCard — a ressalva que muda a base, não a alíquota", () => {
+  it("com o valor visível, o rodapé declara que a base é caixa e que o Simples é competência", async () => {
+    const { html } = await renderizar("contador", undefined);
+
+    expect(html).toContain("regime de caixa");
+    expect(html).toContain("compet");
+    // Diz que a divergência é esperada — não deixa o leitor concluir que é bug.
+    expect(html).toContain("diverge do PGDAS-D");
+  });
+
+  it("a ressalva aparece também para o super_admin com a flag ligada", async () => {
+    const { html } = await renderizar("super_admin", "true");
+
+    expect(html).toContain("regime de caixa");
+    expect(html).toContain("diverge do PGDAS-D");
+  });
+
+  it("no estado escondido o rodapé não promete precisão que o card não mostra", async () => {
+    const { props, html } = await renderizar("super_admin", undefined);
+
+    // Sem valor na tela, não há o que ressalvar sobre a base.
+    expect(props.valores).toBeNull();
+    expect(html).not.toContain("diverge do PGDAS-D");
+  });
+});

@@ -204,6 +204,18 @@ function Rodape({
             PGDAS-D: ela segrega receitas, aplica sublimite municipal, retenções de ISS e o
             Fator R do mês, nada disso considerado aqui.
           </p>
+          {/*
+            Esta ressalva vem PRIMEIRO entre as diferenças porque é a única que
+            muda a BASE, e não a alíquota: as outras ajustam o quanto se paga
+            sobre a mesma receita, esta muda qual receita entra. Sem ela o
+            rodapé lia como lista exaustiva, o que tornava a divergência do
+            PGDAS-D mais difícil de notar, não menos.
+          */}
+          <p>
+            A base aqui é o que <strong>entrou</strong> no período (regime de caixa). O Simples
+            apura por <strong>competência</strong> salvo opção formal pelo caixa — se a empresa
+            não fez essa opção, este número diverge do PGDAS-D por construção, não por erro.
+          </p>
           <p>Vence no dia 20 do mês seguinte, ou no próximo dia útil.</p>
           {acimaDoLimite && (
             <p className="text-danger">

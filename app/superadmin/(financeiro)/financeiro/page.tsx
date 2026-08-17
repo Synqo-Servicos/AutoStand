@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { getRecorrencia, listPendingNfse, sumCaixa, sumGrossBetween } from "@/lib/db";
+import { getRecorrencia, listIssuedNfseByPeriod, listPendingNfse, sumCaixa, sumGrossBetween } from "@/lib/db";
 import { competenciaAtual, normalizeCompetencia } from "@/lib/competencia";
 import { consultarBaseRbt12, montarImposto } from "@/lib/finance-config";
 import { CaixaCard } from "@/components/superadmin/CaixaCard";
@@ -29,13 +29,17 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
   const session = await auth().catch(() => null);
   const role = session?.user?.role;
 
-  const [caixa, recorrencia, pendentesNfse, baseRbt12] = await Promise.all([
+  const [caixa, recorrencia, pendentesNfse, emitidasNfse, baseRbt12] = await Promise.all([
     sumCaixa(competencia),
     getRecorrencia(),
     // Fila fiscal não é filtrada pela competência do topo: é "o que falta
     // emitir" agora, não um recorte de mês — nasce zerada e cresce a cada
     // pagamento aprovado, independente de qual competência está selecionada.
     listPendingNfse(),
+    // As JÁ emitidas, essas sim recortadas pela competência do topo: a
+    // pergunta que elas respondem é "o que eu emiti referente a este mês",
+    // e é a única forma de o contador reler o número que ele mesmo digitou.
+    listIssuedNfseByPeriod(competencia),
     // A guarda de competência anterior à abertura (a que impede o `RangeError`
     // de derrubar esta página) mora dentro de `consultarBaseRbt12`, em
     // lib/finance-config.ts — lá ela tem teste; aqui só entra a query.
@@ -71,7 +75,7 @@ export default async function FinanceiroPage({ searchParams }: { searchParams: S
       </div>
 
       <div className="mt-4">
-        <FilaFiscal payments={pendentesNfse} />
+        <FilaFiscal payments={pendentesNfse} emitidas={emitidasNfse} competencia={competencia} />
       </div>
 
       {/* Depois da fila fiscal de propósito: a conferência com o MP é a rede

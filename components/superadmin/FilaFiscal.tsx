@@ -35,6 +35,15 @@ function competenciaDe(paidAt: string): string | null {
 
 interface Props {
   payments: PaymentRow[];
+  /**
+   * As que JÁ viraram nota na competência exibida. Sem isto o contador não
+   * tinha como reler o número que ele mesmo digitou: registrava, via um
+   * toast, a linha sumia da fila, e nenhuma tela voltava a mostrar um
+   * `nfse_number` gravado. Como desfazer é `withSuperAdmin` por desenho, um
+   * dígito errado ficava permanente E invisível para quem errou.
+   */
+  emitidas: PaymentRow[];
+  competencia: string;
 }
 
 /**
@@ -43,7 +52,7 @@ interface Props {
  * número depois. Traz pagador, documento, valor e competência lado a lado
  * com o campo do número: nada disso obriga abrir outra tela pra emitir.
  */
-export function FilaFiscal({ payments }: Props) {
+export function FilaFiscal({ payments, emitidas, competencia }: Props) {
   return (
     <Card>
       <CardHeader>
@@ -73,8 +82,46 @@ export function FilaFiscal({ payments }: Props) {
             ))}
           </ul>
         )}
+        <Emitidas emitidas={emitidas} competencia={competencia} />
       </CardBody>
     </Card>
+  );
+}
+
+/**
+ * O espelho da fila: o que já foi emitido, com o número visível.
+ *
+ * Deliberadamente somente leitura. Corrigir um número é `withSuperAdmin` — o
+ * contador carimba, não descarimba —, então o que esta lista entrega é a
+ * capacidade de CONFERIR e pedir a correção, que é exatamente o que faltava.
+ */
+function Emitidas({ emitidas, competencia }: { emitidas: PaymentRow[]; competencia: string }) {
+  if (emitidas.length === 0) return null;
+
+  const [ano, mes] = competencia.split("-");
+
+  return (
+    <div className="mt-6 border-t border-n100 pt-4">
+      <h3 className="text-body-s font-medium text-ink">
+        Já emitidas em {mes}/{ano} ({emitidas.length})
+      </h3>
+      <p className="mt-0.5 text-body-s text-n600">
+        Confira o número antes de fechar a competência. Corrigir um número já
+        registrado depende de um super-admin.
+      </p>
+      <ul className="mt-3 -mx-6 divide-y divide-n100">
+        {emitidas.map((p) => (
+          <li key={p.id} className="flex items-baseline justify-between gap-3 px-6 py-2">
+            <span className="min-w-0 truncate text-body-s text-n600">{p.tenant_name}</span>
+            <span className="shrink-0 text-body-s text-ink">
+              <span className="tabular-nums">{formatBRLFull(p.gross_cents)}</span>
+              {" · "}
+              <span className="font-medium">NFS-e {p.nfse_number ?? "—"}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

@@ -163,6 +163,49 @@ describe("listPaymentsByPeriod — as duas fronteiras do período", () => {
  * função foi chamada: o mock de `db` ignora o `where`, então qualquer
  * asserção sobre linhas devolvidas sobreviveria à remoção do filtro.
  */
+/**
+ * O espelho da fila: o que JÁ virou nota na competência exibida.
+ *
+ * Existe porque o contador não conseguia conferir a única escrita que ele faz
+ * — registrava o número, a linha sumia da fila, e nenhuma tela voltava a
+ * mostrar um `nfse_number` gravado. Como desfazer é `withSuperAdmin`, um
+ * dígito errado ficava permanente E invisível para quem errou.
+ *
+ * Recorta por `paid_at`, o MESMO período do resto da tela — não por
+ * `nfse_issued_at`. A pergunta do contador é "o que eu emiti referente a este
+ * mês", não "o que eu digitei neste mês": uma nota de agosto registrada em
+ * setembro pertence a agosto, e recortar pela data do carimbo a esconderia
+ * justamente de quem foi conferir.
+ */
+describe("listIssuedNfseByPeriod — o espelho da fila", () => {
+  beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
+
+  it("o WHERE é exatamente o período + nfse_issued_at IS NOT NULL", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { listIssuedNfseByPeriod } = await import("@/lib/db/payments");
+    await listIssuedNfseByPeriod("2026-08");
+
+    const { sql, params } = predicadoDe(selectWhere.mock.calls[0][0] as SQL);
+    expect(sql.toLowerCase()).toBe(
+      '(("payments"."paid_at" >= $1 and "payments"."paid_at" < $2) and "payments"."nfse_issued_at" is not null)',
+    );
+    expect(params).toEqual([AGOSTO_FROM, AGOSTO_TO]);
+  });
+
+  it("usa a MESMA janela que listPaymentsByPeriod — a tela não pode ter dois meses", async () => {
+    selectRows.mockResolvedValue([]);
+    const mod = await import("@/lib/db/payments");
+
+    await mod.listPaymentsByPeriod("2026-08");
+    const daLista = predicadoDe(selectWhere.mock.calls[0][0] as SQL);
+    selectWhere.mockClear();
+    await mod.listIssuedNfseByPeriod("2026-08");
+    const dasEmitidas = predicadoDe(selectWhere.mock.calls[0][0] as SQL);
+
+    expect(dasEmitidas.params).toEqual(daLista.params);
+  });
+});
+
 describe("listPendingNfse — a fila só pode conter o que ainda não virou nota", () => {
   beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
 
@@ -238,7 +281,10 @@ describe("sumCaixa", () => {
     ]);
     const { sumCaixa } = await import("@/lib/db/payments");
     const result = await sumCaixa("2026-08");
-    expect(result).toEqual({ gross: 15000, fee: 750, netBeforeTax: 14250, incompletos: 0 });
+    expect(result).toEqual({
+      gross: 15000, fee: 750, netBeforeTax: 14250, incompletos: 0,
+      estornos: 2, estornosCents: 50000,
+    });
   });
 
   /**

@@ -12,6 +12,14 @@ export interface CaixaSummary {
    * então o líquido acima é um TETO, não um valor. Ver `sumCaixa`.
    */
   incompletos: number;
+  /**
+   * Estornos e chargebacks da competência. Não entram em nenhum dos números
+   * acima — a razão de existirem aqui é justamente essa: eles se subtraem
+   * sozinhos, retroativamente, inclusive de mês já apurado, e antes disto o
+   * console não dava nenhum sinal de que a subtração aconteceu.
+   */
+  estornos: number;
+  estornosCents: number;
 }
 
 /**
@@ -60,7 +68,22 @@ export function CaixaCard({ competencia, caixa }: { competencia: string; caixa: 
             nota={taxaIncerta ? "no máximo" : undefined}
             bold
           />
+          {caixa.estornos > 0 && (
+            <Row
+              label={`Estornado no período (${caixa.estornos})`}
+              value={`− ${formatBRLFull(caixa.estornosCents)}`}
+              nota="já fora dos números acima"
+              muted
+            />
+          )}
         </dl>
+        {caixa.estornos > 0 && (
+          <p className="mt-3 text-body-s text-n600">
+            Estorno já saiu do bruto e da base do imposto, inclusive em competência
+            fechada. Se alguma dessas cobranças já virou nota, ela pode precisar de
+            cancelamento.
+          </p>
+        )}
       </CardBody>
     </Card>
   );

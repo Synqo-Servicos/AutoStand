@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PaymentRow } from "@/lib/schema";
+import { formatBRL, formatBRLFull } from "@/lib/money";
 
 /**
  * `vi.hoisted` não é preferência de estilo: um `const fn = vi.fn()` lido por um
@@ -50,7 +51,7 @@ function pagamento(paidAt: string): PaymentRow {
 
 function render(paidAt: string): string {
   return renderToStaticMarkup(
-    createElement(FilaFiscal, { payments: [pagamento(paidAt)] }),
+    createElement(FilaFiscal, { payments: [pagamento(paidAt)], emitidas: [], competencia: "2026-08" }),
   );
 }
 
@@ -100,5 +101,72 @@ describe("FilaFiscal — competência exibida", () => {
 
   it("mantém o valor em centavos exatos na linha", () => {
     expect(render("2026-08-31T22:00:00.000-03:00")).toContain("249,90");
+  });
+});
+
+/**
+ * ============================================================================
+ * O CONTADOR PRECISA CONSEGUIR CONFERIR O QUE ELE MESMO ESCREVEU
+ * ============================================================================
+ *
+ * Registrar a NFS-e é a ÚNICA escrita que o contador faz no sistema — e era a
+ * única que ele não conseguia reler. O fluxo era: digita o número, aparece um
+ * toast, a linha some da fila, e nenhuma tela de `(financeiro)` voltava a
+ * exibir um `nfse_number` gravado. Como desfazer é `withSuperAdmin` por
+ * desenho (ele carimba, não descarimba), um dígito errado ficava permanente
+ * E invisível para quem errou.
+ */
+function emitido(numero: string, nome: string, grossCents: number): PaymentRow {
+  return {
+    ...pagamento("2026-08-15T10:00:00.000-03:00"),
+    id: Math.floor(grossCents / 10) + numero.length,
+    tenant_name: nome,
+    gross_cents: grossCents,
+    nfse_number: numero,
+    nfse_issued_at: "2026-09-01T12:00:00.000-03:00",
+    nfse_issued_by: 7,
+  } as PaymentRow;
+}
+
+function renderComEmitidas(emitidas: PaymentRow[]): string {
+  return renderToStaticMarkup(
+    createElement(FilaFiscal, {
+      payments: [],
+      emitidas,
+      competencia: "2026-08",
+    }),
+  );
+}
+
+describe("FilaFiscal — as já emitidas", () => {
+  it("sem nenhuma emitida, a seção não aparece", () => {
+    const html = renderComEmitidas([]);
+    expect(html).not.toContain("Já emitidas");
+  });
+
+  it("mostra o número da nota, o pagador e o valor", () => {
+    const html = renderComEmitidas([emitido("2026/1187", "Auto Prime", 24990)]);
+    expect(html).toContain("NFS-e 2026/1187");
+    expect(html).toContain("Auto Prime");
+    expect(html).toContain(formatBRLFull(24990));
+  });
+
+  it("o cabeçalho traz a competência exibida e a contagem", () => {
+    const html = renderComEmitidas([
+      emitido("2026/1187", "Auto Prime", 24990),
+      emitido("2026/1188", "Garagem SP", 16990),
+    ]);
+    expect(html).toContain("Já emitidas em 08/2026 (2)");
+  });
+
+  it("diz que corrigir depende de super-admin — o contador não descarimba", () => {
+    const html = renderComEmitidas([emitido("2026/1187", "Auto Prime", 24990)]);
+    expect(html).toContain("super-admin");
+  });
+
+  it("o valor usa formatBRLFull — este número é conferido contra a nota", () => {
+    const html = renderComEmitidas([emitido("2026/1187", "Auto Prime", 24990)]);
+    expect(html).toContain(formatBRLFull(24990));
+    expect(html).not.toContain(formatBRL(24990));
   });
 });
