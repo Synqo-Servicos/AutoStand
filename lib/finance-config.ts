@@ -5,6 +5,14 @@
  * que a parte do bloco de imposto que erra em silêncio (montagem do array de
  * meses e limites de consulta) seja testável sem subir Postgres.
  *
+ * A única concessão é um `import type` de `ImpostoCardProps`, de
+ * `components/superadmin/ImpostoCard`. É inversão de camada (lib → components),
+ * declarada aqui em vez de escondida: `import type` some na compilação, então
+ * não existe aresta de runtime nem ciclo. A alternativa era `montarImposto`
+ * viver na página, onde os quatro cruzamentos de papel × flag só poderiam ser
+ * testados reimplementando a lógica no teste — provando uma cópia, não o
+ * código que roda.
+ *
  * ============================================================================
  * A REGRA DE VISIBILIDADE (é o ponto desta task)
  * ============================================================================

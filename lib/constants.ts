@@ -247,12 +247,18 @@ export const PAYMENT_STATUSES = [
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 /**
- * Anexo do Simples aplicável a serviço de TI. Depende do fator R
- * (folha ÷ receita bruta), que muda mês a mês — por isso é CONFIGURAÇÃO,
- * não constante de código. Ver FINANCE_ANEXO em lib/finance-config.ts.
+ * O anexo do Simples NÃO mora aqui.
+ *
+ * Ele depende do fator R (folha ÷ receita bruta), que muda mês a mês — é
+ * CONFIGURAÇÃO, não constante de código: `FINANCE_ANEXO` em
+ * lib/finance-config.ts. E a união de tipo vive junto da tabela que ela
+ * indexa, em lib/simples-tabela.ts, para que acrescentar um anexo seja uma
+ * edição só.
+ *
+ * Havia aqui um `SIMPLES_ANEXOS`/`SimplesAnexo` sem nenhuma referência,
+ * duplicando aquela união — duas fontes de verdade para a mesma coisa, uma
+ * delas órfã.
  */
-export const SIMPLES_ANEXOS = ["III", "V"] as const;
-export type SimplesAnexo = (typeof SIMPLES_ANEXOS)[number];
 
 // --- Papéis de usuário ---
 

@@ -272,19 +272,40 @@ describe("listPendingNfse — a fila só pode conter o que ainda não virou nota
 describe("sumCaixa", () => {
   beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
 
-  it("soma só pagamentos approved — estorno e chargeback ficam de fora", async () => {
+  /**
+   * O fixture traz as DUAS grafias de chargeback de propósito. `charged_back`
+   * é a única que o Mercado Pago manda de verdade; `chargeback` é a grafia do
+   * comentário da coluna `status` em lib/schema.ts — o que uma linha corrigida
+   * à mão no banco pode ter. Um fixture só com `chargeback` deixava remover
+   * `charged_back` de `STATUS_ESTORNADOS` com a suíte inteira verde, e o
+   * chargeback REAL sumia da linha "Estornado no período": o único sinal de
+   * que um mês fechado se subtraiu sozinho.
+   */
+  it("soma só pagamentos approved — estorno e chargeback (nas duas grafias) ficam de fora", async () => {
     selectRows.mockResolvedValueOnce([
       { status: "approved", gross_cents: 10000, fee_cents: 500, incomplete: false },
       { status: "refunded", gross_cents: 20000, fee_cents: 1000, incomplete: false },
-      { status: "chargeback", gross_cents: 30000, fee_cents: 1500, incomplete: false },
+      { status: "charged_back", gross_cents: 30000, fee_cents: 1500, incomplete: false },
+      { status: "chargeback", gross_cents: 40000, fee_cents: 2000, incomplete: false },
       { status: "approved", gross_cents: 5000, fee_cents: 250, incomplete: false },
     ]);
     const { sumCaixa } = await import("@/lib/db/payments");
     const result = await sumCaixa("2026-08");
     expect(result).toEqual({
       gross: 15000, fee: 750, netBeforeTax: 14250, incompletos: 0,
-      estornos: 2, estornosCents: 50000,
+      estornos: 3, estornosCents: 90000,
     });
+  });
+
+  it("charged_back sozinho já conta como estorno — é a grafia que o MP manda", async () => {
+    selectRows.mockResolvedValueOnce([
+      { status: "approved", gross_cents: 10000, fee_cents: 500, incomplete: false },
+      { status: "charged_back", gross_cents: 30000, fee_cents: 1500, incomplete: false },
+    ]);
+    const { sumCaixa } = await import("@/lib/db/payments");
+    const result = await sumCaixa("2026-08");
+    expect(result.estornos).toBe(1);
+    expect(result.estornosCents).toBe(30000);
   });
 
   /**
@@ -391,6 +412,28 @@ describe("sumGrossBetween — mesma fronteira de listPaymentsByPeriod", () => {
 
 describe("getPaymentByMpId", () => {
   beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
+
+  /**
+   * Quarta instância da mesma classe fechada em `updatePayment`, `clearNfse` e
+   * `registerNfse`: `.where(undefined)` aqui sobrevivia a 132 testes nos
+   * quatro arquivos dos chamadores. A leitura viraria "a primeira linha da
+   * tabela", e `corrigirDivergente` usa justamente ela para pegar
+   * `gross_cents` — o `net_cents` gravado sairia derivado do bruto de OUTRO
+   * pagamento.
+   */
+  it("o WHERE é exatamente mp_payment_id = ? — não 'a primeira linha da tabela'", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { getPaymentByMpId } = await import("@/lib/db/payments");
+    await getPaymentByMpId("mp-1");
+
+    expect(selectWhere).toHaveBeenCalledTimes(1);
+    const cond = selectWhere.mock.calls[0][0];
+    expect(cond).toBeDefined();
+
+    const { sql, params } = predicadoDe(cond as SQL);
+    expect(sql.toLowerCase()).toBe('"payments"."mp_payment_id" = $1');
+    expect(params).toEqual(["mp-1"]);
+  });
 
   it("devolve a linha quando o mp_payment_id existe", async () => {
     selectRows.mockResolvedValueOnce([{ id: 1, mp_payment_id: "mp-1", status: "approved" }]);

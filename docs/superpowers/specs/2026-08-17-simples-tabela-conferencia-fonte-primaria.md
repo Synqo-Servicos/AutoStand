@@ -1,5 +1,19 @@
 # Verificação da tabela do Simples Nacional (Anexos III e V) contra a fonte primária
 
+> **DOCUMENTO HISTÓRICO — registro de uma verificação, não descrição do código atual.**
+>
+> Ele descreve `lib/simples-tabela.ts` **como o arquivo estava em 17/08/2026, antes
+> das correções que esta própria verificação motivou**. As duas divergências que a
+> seção 6.3 aponta **já foram corrigidas** (commit `9a14982`), e a ressalva de
+> "fontes secundárias" que a seção 1 cita **já foi substituída** pela procedência
+> primária. As âncoras de linha citadas ao longo do texto são as de antes das
+> correções e não valem mais.
+>
+> **O que continua válido, e é a razão de guardar isto:** os 48 números conferem
+> dígito a dígito com a fonte primária, e o calendário de reconferência é
+> **1º/1/2027**, não 2029. Para o estado atual, leia o cabeçalho do próprio
+> `lib/simples-tabela.ts`.
+
 **Data da verificação:** 17/08/2026
 **Arquivo verificado:** `/Users/ulpio/Projects/Synqo/AutoStand/lib/simples-tabela.ts`
 **Veredito:** os 48 números da tabela (2 anexos × 6 faixas × 4 valores) **CONFEREM** com a fonte primária, dígito a dígito. A fórmula e a regra do fator R também conferem. Há **uma divergência factual no comentário** do arquivo (não nos números) sobre a data em que a tabela precisa ser reconferida.
@@ -202,7 +216,7 @@ Mapeamento: Anexo III da LC 123 → **Anexo XX** da LC 214; Anexo V da LC 123 �
 
 **Portanto: em 2026 os anexos vigentes são os da LC 155/2016 — exatamente os que estão no repo.**
 
-### 6.3 ⚠️ Divergência encontrada — no comentário, não nos números
+### 6.3 ⚠️ Divergência encontrada (JÁ CORRIGIDA em `9a14982`) — no comentário, não nos números
 
 O comentário do arquivo (linhas 32-36) afirma:
 

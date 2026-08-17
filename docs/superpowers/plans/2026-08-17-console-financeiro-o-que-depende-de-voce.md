@@ -55,7 +55,7 @@ Se a 3 falhar, a competência desliza conforme a máquina e o sintoma aparece s�
 
 ## 4. Abrir o console no navegador — nenhuma tela desta branch foi vista
 
-Quatro componentes novos (`CaixaCard`, `RecorrenciaCard`, `FilaFiscal`, `ImpostoCard`,
+Cinco componentes novos (`CaixaCard`, `RecorrenciaCard`, `FilaFiscal`, `ImpostoCard`,
 `ReconciliarButton`) foram provados em HTML renderizado — conteúdo, ordem, plural, e a ausência
 do valor de imposto no estado escondido. **Nada foi aberto num browser.** Contraste, quebra de
 linha e proporção não foram vistos por ninguém.
@@ -153,6 +153,3 @@ apoiada só em fonte secundária por causa disso.
   operável pela interface.
 - UI de anexos de contas a pagar (rota GET + upload nos formulários) foi adiada de propósito.
 - Rotação de credenciais — adiada por decisão sua.
-- `lib/schema.ts:366` tem um comentário descrevendo o status de estorno como `chargeback`,
-  quando a grafia real do Mercado Pago é `charged_back`. Hoje é inerte, mas descreve errado o
-  dado que existe.

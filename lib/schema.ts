@@ -91,7 +91,14 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
-  /** 'super_admin' | 'tenant_admin' */
+  /**
+   * `'super_admin' | 'tenant_admin' | 'contador'`.
+   *
+   * `contador` é externo e vê SÓ o módulo financeiro do console: quem decide
+   * é `hasFinanceAccess` (lib/finance-access.ts), e `withSuperAdmin`
+   * deliberadamente não o reconhece, para que tela antiga continue negando
+   * por padrão.
+   */
   role: text("role").notNull().default("tenant_admin"),
   /** Senha provisória → força troca no 1º login (admin provisionado pelo super-admin). */
   must_change_password: boolean("must_change_password").notNull().default(false),
@@ -363,7 +370,18 @@ export const payments = pgTable("payments", {
   gross_cents: integer("gross_cents").notNull(),
   fee_cents: integer("fee_cents"),
   net_cents: integer("net_cents"),
-  /** 'approved' | 'refunded' | 'chargeback' */
+  /**
+   * `'approved' | 'pending' | 'refunded' | 'charged_back'` — o que o Mercado
+   * Pago manda. Chargeback é `charged_back`, COM underscore; a grafia
+   * `chargeback` nunca vem do MP.
+   *
+   * Os conjuntos que decidem estorno (`STATUS_ESTORNADOS` em lib/db/payments.ts
+   * e `TERMINAL_NEGATIVE_STATUSES` em lib/mp-payment.ts) aceitam AS DUAS de
+   * propósito: `charged_back` é o que chega pela API, `chargeback` é o que uma
+   * linha corrigida à mão no banco pode ter. Não troque uma pela outra — com só
+   * `chargeback` no conjunto, a guarda não cobria chargeback nenhum, e um
+   * `approved` relido sobrescrevia um estorno bancário.
+   */
   status: text("status").notNull(),
   /**
    * Instante ABSOLUTO da aprovação — `timestamptz`, nunca `timestamp`.

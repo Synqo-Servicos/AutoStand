@@ -530,6 +530,41 @@ describe("importação (sem ?dry)", () => {
     expect(body.importados).toBe(0);
   });
 
+  /**
+   * A fiação rota → UI dos `pulados`. `avisoDaImportacao` tem teste, mas com
+   * fixture montada na mão: se a ROTA parar de contar, a mensagem volta calada
+   * ao bug que ela existe para corrigir — atribuir ao teto por rodada o que na
+   * verdade foi pulado de propósito. São diagnósticos opostos: um pede rodar
+   * de novo, o outro diz que não há o que fazer.
+   */
+  it("reporta `pulados` — o que a rodada tocou e decidiu não gravar", async () => {
+    umaPagina([mpResult({ id: "999" }), mpResult({ id: "1000" })]);
+    // As duas linhas já existem: nada a importar, e nada represado.
+    mocks.getPaymentByMpId.mockResolvedValue({ id: 42, mp_payment_id: "999", status: "approved" });
+    const POST = await route();
+
+    const body = await (await conferirEImportar(POST)).json();
+
+    expect(body.pulados).toBe(2);
+    expect(body.importados).toBe(0);
+    expect(body.naoProcessados).toBe(0);
+    expect(body.falhas).toEqual([]);
+  });
+
+  it("importado e pulado convivem na mesma rodada, cada um na sua contagem", async () => {
+    umaPagina([mpResult({ id: "999" }), mpResult({ id: "1000" })]);
+    mocks.getPaymentByMpId
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 42, mp_payment_id: "1000", status: "approved" });
+    mocks.recordPayment.mockResolvedValueOnce({ created: true });
+    const POST = await route();
+
+    const body = await (await conferirEImportar(POST)).json();
+
+    expect(body.importados).toBe(1);
+    expect(body.pulados).toBe(1);
+  });
+
   it("conta como importado só o que o INSERT criou de fato", async () => {
     umaPagina([mpResult({ id: "999" }), mpResult({ id: "1000" })]);
     mocks.recordPayment
