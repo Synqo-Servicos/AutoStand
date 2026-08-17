@@ -482,6 +482,26 @@ describe("importação (sem ?dry)", () => {
     expect(body.importados).toBe(1);
   });
 
+  /**
+   * A importação não é transacional. Se o MP cair no meio, o que já entrou
+   * fica — e a mensagem tem que dizer isso, porque a saída é rodar a
+   * conferência de novo (que é idempotente), não achar que nada aconteceu.
+   */
+  it("MP falhando no meio da importação: o que já entrou fica, e a mensagem avisa", async () => {
+    umaPagina([mpResult({ id: "999" }), mpResult({ id: "1000" })]);
+    mocks.paymentGet
+      .mockResolvedValueOnce(mpFull({ id: "999" }))
+      .mockRejectedValueOnce(new Error("MP fora do ar"));
+    const POST = await route();
+
+    const res = await POST(post({ competencia: "2026-08" }), ctx());
+    const body = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(mocks.recordPayment).toHaveBeenCalledTimes(1);
+    expect(body.error).toMatch(/rode a conferência de novo/i);
+  });
+
   it("estorno perdido pelo webhook vira atualização de status, não linha nova", async () => {
     umaPagina([mpResult({ id: "999", status: "refunded" })]);
     mocks.listPaymentsByPeriod.mockResolvedValue([

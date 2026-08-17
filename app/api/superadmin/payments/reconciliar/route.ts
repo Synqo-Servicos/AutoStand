@@ -238,8 +238,14 @@ async function importar(
       completo = await client.get({ id: faltante.mpPaymentId });
     } catch (err) {
       console.error("[reconciliar] falha ao reler pagamento no MP:", faltante.mpPaymentId, err);
+      // A importação não é transacional: os faltantes anteriores a este JÁ
+      // foram gravados. Parar aqui é o certo (a alternativa seria gravar linha
+      // sem taxa), mas a mensagem não pode fingir que nada aconteceu — a
+      // saída é rodar a conferência de novo, que é idempotente e mostra
+      // exatamente o que sobrou.
       throw new ApiError(
-        "Não consegui reler os detalhes do pagamento no Mercado Pago. Nada foi importado além do que já apareceu.",
+        "O Mercado Pago falhou no meio da importação. Parte dos pagamentos pode já ter entrado — " +
+          "rode a conferência de novo para ver o que ainda falta.",
         502,
       );
     }
