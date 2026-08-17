@@ -17,6 +17,7 @@ import {
   TRANSACTION_TYPES, TRANSMISSIONS, TX_REQUIRES_VEHICLE, VEHICLE_STATUS,
 } from "@/lib/constants";
 import { DOC_MAX_BYTES, DOC_MIMES, PRESIGN_KINDS } from "@/lib/blob-constants";
+import { isValidCompetencia } from "@/lib/competencia";
 
 const positiveInt = z.number().int().positive();
 const nonNegativeInt = z.number().int().min(0);
@@ -366,4 +367,27 @@ export const marketplaceOptInSchema = z.object({
 /** POST /api/superadmin/payments/[id]/nfse — número colado pelo contador após emitir no portal. */
 export const nfseInputSchema = z.object({
   numero: z.string().trim().min(1).max(60),
+});
+
+/**
+ * POST /api/superadmin/payments/reconciliar — competência a comparar com o
+ * Mercado Pago.
+ *
+ * O predicado vem de `lib/competencia.ts` em vez de um regex repetido aqui:
+ * é o MESMO formato que `periodBounds` (lib/db/payments.ts) entende, e
+ * `periodBounds` não valida nada — `"abc"` estoura RangeError e `"2026-13"`
+ * rola em silêncio para 2027-01, calculando um período errado sem avisar.
+ */
+export const reconciliarInputSchema = z.object({
+  competencia: z
+    .string()
+    .trim()
+    .refine(isValidCompetencia, "use o formato YYYY-MM, com mês entre 01 e 12"),
+  /**
+   * Token do conjunto que a conferência (`?dry=true`) mostrou. Opcional no
+   * schema porque o `dry` não tem o que confirmar; a rota exige na importação.
+   * É ele que faz o operador confirmar um CONJUNTO e não um número — ver
+   * `assinaturaDiferenca` em lib/reconciliacao.ts.
+   */
+  token: z.string().trim().min(1).max(128).optional(),
 });
