@@ -115,6 +115,59 @@ describe("listPaymentsByPeriod — fronteira do período", () => {
   });
 });
 
+/**
+ * A fila fiscal é o gatilho de uma ação irreversível fora do sistema: o
+ * contador lê esta lista e emite NFS-e na prefeitura. Um pagamento que
+ * reaparece aqui vira nota emitida DUAS VEZES — e o 409 de `registerNfse`
+ * não protege disso, porque ele só dispara quando o contador volta pra
+ * registrar o número, ou seja, depois de a nota já existir juridicamente.
+ *
+ * Por isso os testes abaixo provam a FORMA do SQL (condição real compilada
+ * por `PgDialect`, mesma técnica de `listPaymentsByPeriod`), não que a
+ * função foi chamada: o mock de `db` ignora o `where`, então qualquer
+ * asserção sobre linhas devolvidas sobreviveria à remoção do filtro.
+ */
+describe("listPendingNfse — a fila só pode conter o que ainda não virou nota", () => {
+  beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
+
+  it("o WHERE exige nfse_issued_at IS NULL — pagamento já emitido não volta pra fila", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { listPendingNfse } = await import("@/lib/db/payments");
+    await listPendingNfse();
+
+    const condition = selectWhere.mock.calls[0][0] as SQL;
+    const compiled = new PgDialect().sqlToQuery(condition).sql.toLowerCase();
+    // Coluna nomeada de propósito: um `is null` solto poderia vir de
+    // qualquer outra coluna nullable e o teste passaria por acidente.
+    expect(compiled).toContain('"nfse_issued_at" is null');
+  });
+
+  it("o WHERE exige status = 'approved' — estorno e chargeback não entram na fila", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { listPendingNfse } = await import("@/lib/db/payments");
+    await listPendingNfse();
+
+    const { sql: compiled, params } = new PgDialect().sqlToQuery(
+      selectWhere.mock.calls[0][0] as SQL,
+    );
+    // O valor viaja como parâmetro ($1), não inline no SQL — por isso a
+    // asserção é em duas partes: a coluna aparece na condição, e
+    // "approved" é o valor de fato ligado a ela.
+    expect(compiled.toLowerCase()).toContain('"status" =');
+    expect(params).toContain("approved");
+  });
+
+  it("as duas condições andam juntas num AND — nenhuma delas sozinha basta", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { listPendingNfse } = await import("@/lib/db/payments");
+    await listPendingNfse();
+
+    const compiled = new PgDialect()
+      .sqlToQuery(selectWhere.mock.calls[0][0] as SQL).sql.toLowerCase();
+    expect(compiled).toContain("and");
+  });
+});
+
 describe("sumCaixa", () => {
   beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
 
