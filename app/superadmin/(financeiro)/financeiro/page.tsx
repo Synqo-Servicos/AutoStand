@@ -1,4 +1,5 @@
 import { getRecorrencia, sumCaixa } from "@/lib/db";
+import { normalizeCompetencia } from "@/lib/competencia";
 import { CaixaCard } from "@/components/superadmin/CaixaCard";
 import { RecorrenciaCard } from "@/components/superadmin/RecorrenciaCard";
 
@@ -15,7 +16,10 @@ function competenciaAtual(): string {
 
 export default async function FinanceiroPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
-  const competencia = sp.competencia?.slice(0, 7) || competenciaAtual();
+  // Valor de fora do formato (ausente, lixo, mês fora de 01–12) cai na
+  // competência atual — nunca em 500, nunca num período calculado errado
+  // em silêncio. Ver lib/competencia.ts.
+  const competencia = normalizeCompetencia(sp.competencia, competenciaAtual());
 
   const [caixa, recorrencia] = await Promise.all([
     sumCaixa(competencia),
