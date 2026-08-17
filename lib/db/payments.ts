@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "./client";
 import { payments, tenants, type PaymentRow } from "@/lib/schema";
 import { getPlan } from "@/lib/plans";
@@ -83,10 +83,39 @@ export async function sumCaixa(competencia: string) {
   return { gross, fee, netBeforeTax: gross - fee };
 }
 
+/**
+ * Status que gera NFS-e. Um só, e num lugar só: `listPendingNfse` (quem
+ * MONTA a fila) e `registerNfse` (quem CARIMBA a linha) leem daqui, então
+ * não podem divergir. A regra é "se um pagamento não pode entrar na fila,
+ * ele também não pode ser carimbado" — se as duas condições fossem escritas
+ * à mão em cada função, afrouxar uma e esquecer a outra reabriria
+ * exatamente o buraco que este predicado fecha.
+ */
+const NFSE_STATUS_ELEGIVEL = "approved";
+
+/** Predicado compartilhado de elegibilidade fiscal. Ver `NFSE_STATUS_ELEGIVEL`. */
+function statusGeraNfse() {
+  return eq(payments.status, NFSE_STATUS_ELEGIVEL);
+}
+
 export async function listPendingNfse(): Promise<PaymentRow[]> {
   return db.select().from(payments)
-    .where(and(eq(payments.status, "approved"), isNull(payments.nfse_issued_at)))
+    .where(and(statusGeraNfse(), isNull(payments.nfse_issued_at)))
     .orderBy(desc(payments.paid_at));
+}
+
+/**
+ * Lê a linha por id primário. Existe para a rota de NFS-e poder EXPLICAR
+ * por que o carimbo não pegou: `registerNfse` devolve `null` para três
+ * causas distintas (id inexistente, nota já registrada, status que não gera
+ * nota) e uma única query com `RETURNING` não as separa. Só é chamada no
+ * caminho de erro — o caminho feliz continua sendo uma query só.
+ */
+export async function getPaymentById(paymentId: number): Promise<PaymentRow | null> {
+  const [row] = await db.select().from(payments)
+    .where(eq(payments.id, paymentId))
+    .limit(1);
+  return row ?? null;
 }
 
 /**
@@ -97,9 +126,17 @@ export async function listPendingNfse(): Promise<PaymentRow[]> {
  * prefeitura, mas o rastro dela aqui se perderia, e esse rastro é a razão
  * de estes campos existirem (Task 1).
  *
- * Devolve `null` quando o UPDATE não afeta nenhuma linha — id inexistente
- * OU nota já registrada não são distinguíveis aqui (uma única query); o
- * chamador decide como responder aos dois casos.
+ * O `status` entra no WHERE pelo mesmo predicado que monta a fila
+ * (`statusGeraNfse`). Sem ele, o WHERE era `id = ? AND nfse_issued_at IS
+ * NULL`: uma sessão de `contador` — a credencial mais fraca com acesso a
+ * esta rota — podia varrer os ids 1..N e carimbar TODA linha de `payments`,
+ * inclusive `refunded`, `chargeback` e `pending`, que a fila nunca mostra.
+ * A fila esvaziava e não havia caminho de volta (ver `clearNfse`).
+ *
+ * Devolve `null` quando o UPDATE não afeta nenhuma linha — id inexistente,
+ * nota já registrada OU status que não gera nota não são distinguíveis aqui
+ * (uma única query); o chamador usa `getPaymentById` para separar os três e
+ * responder com a causa certa.
  */
 export async function registerNfse(
   paymentId: number, numero: string, userId: number,
@@ -110,7 +147,40 @@ export async function registerNfse(
       nfse_issued_at: sql`CURRENT_TIMESTAMP`,
       nfse_issued_by: userId,
     })
-    .where(and(eq(payments.id, paymentId), isNull(payments.nfse_issued_at)))
+    .where(and(
+      eq(payments.id, paymentId),
+      statusGeraNfse(),
+      isNull(payments.nfse_issued_at),
+    ))
+    .returning();
+  return row ?? null;
+}
+
+/**
+ * Desfaz o registro de NFS-e de um pagamento: limpa os três campos e
+ * devolve a linha para a fila. É o inverso exato de `registerNfse`.
+ *
+ * Por que existe: `registerNfse` era a ÚNICA escrita em `nfse_*` no
+ * sistema, então um número digitado errado — ou um carimbo em massa por
+ * credencial abusada — era permanente, e a recuperação exigia acesso direto
+ * ao Postgres de produção. Isto é o caminho mínimo de volta.
+ *
+ * Quem pode chamar NÃO é decidido aqui: a rota `DELETE` usa
+ * `withSuperAdmin`, não `withFinanceAccess` — o `contador` carimba, mas não
+ * descarimba. Ver app/api/superadmin/payments/[id]/nfse/route.ts.
+ *
+ * O `isNotNull` no WHERE mantém a simetria com `registerNfse`: sem ele, a
+ * função devolveria 200 para pagamento que nunca teve nota, e o chamador
+ * não teria como distinguir "desfiz" de "não havia nada a desfazer".
+ */
+export async function clearNfse(paymentId: number): Promise<PaymentRow | null> {
+  const [row] = await db.update(payments)
+    .set({
+      nfse_number: null,
+      nfse_issued_at: null,
+      nfse_issued_by: null,
+    })
+    .where(and(eq(payments.id, paymentId), isNotNull(payments.nfse_issued_at)))
     .returning();
   return row ?? null;
 }

@@ -115,6 +115,59 @@ describe("listPaymentsByPeriod — fronteira do período", () => {
   });
 });
 
+/**
+ * A fila fiscal é o gatilho de uma ação irreversível fora do sistema: o
+ * contador lê esta lista e emite NFS-e na prefeitura. Um pagamento que
+ * reaparece aqui vira nota emitida DUAS VEZES — e o 409 de `registerNfse`
+ * não protege disso, porque ele só dispara quando o contador volta pra
+ * registrar o número, ou seja, depois de a nota já existir juridicamente.
+ *
+ * Por isso os testes abaixo provam a FORMA do SQL (condição real compilada
+ * por `PgDialect`, mesma técnica de `listPaymentsByPeriod`), não que a
+ * função foi chamada: o mock de `db` ignora o `where`, então qualquer
+ * asserção sobre linhas devolvidas sobreviveria à remoção do filtro.
+ */
+describe("listPendingNfse — a fila só pode conter o que ainda não virou nota", () => {
+  beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
+
+  it("o WHERE exige nfse_issued_at IS NULL — pagamento já emitido não volta pra fila", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { listPendingNfse } = await import("@/lib/db/payments");
+    await listPendingNfse();
+
+    const condition = selectWhere.mock.calls[0][0] as SQL;
+    const compiled = new PgDialect().sqlToQuery(condition).sql.toLowerCase();
+    // Coluna nomeada de propósito: um `is null` solto poderia vir de
+    // qualquer outra coluna nullable e o teste passaria por acidente.
+    expect(compiled).toContain('"nfse_issued_at" is null');
+  });
+
+  it("o WHERE exige status = 'approved' — estorno e chargeback não entram na fila", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { listPendingNfse } = await import("@/lib/db/payments");
+    await listPendingNfse();
+
+    const { sql: compiled, params } = new PgDialect().sqlToQuery(
+      selectWhere.mock.calls[0][0] as SQL,
+    );
+    // O valor viaja como parâmetro ($1), não inline no SQL — por isso a
+    // asserção é em duas partes: a coluna aparece na condição, e
+    // "approved" é o valor de fato ligado a ela.
+    expect(compiled.toLowerCase()).toContain('"status" =');
+    expect(params).toContain("approved");
+  });
+
+  it("as duas condições andam juntas num AND — nenhuma delas sozinha basta", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { listPendingNfse } = await import("@/lib/db/payments");
+    await listPendingNfse();
+
+    const compiled = new PgDialect()
+      .sqlToQuery(selectWhere.mock.calls[0][0] as SQL).sql.toLowerCase();
+    expect(compiled).toContain("and");
+  });
+});
+
 describe("sumCaixa", () => {
   beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
 
@@ -255,7 +308,26 @@ describe("registerNfse", () => {
 
     const condition = updateWhereArgs.mock.calls[0][0] as SQL;
     const compiled = new PgDialect().sqlToQuery(condition).sql.toLowerCase();
-    expect(compiled).toContain("is null");
+    expect(compiled).toContain('"nfse_issued_at" is null');
+  });
+
+  /**
+   * Sem predicado de status, o `where` era `id = ? AND nfse_issued_at IS
+   * NULL` — qualquer linha de `payments` podia ser carimbada. Uma sessão de
+   * `contador` (a credencial mais fraca do console) mandando POST para os
+   * ids 1..N esvaziaria a fila carimbando também `refunded`, `chargeback` e
+   * `pending`, que a UI nunca mostra.
+   */
+  it("o WHERE exige status = 'approved' — refunded/chargeback/pending não podem ser carimbados", async () => {
+    updateReturning.mockResolvedValueOnce([{ id: 1 }]);
+    const { registerNfse } = await import("@/lib/db/payments");
+    await registerNfse(1, "123", 7);
+
+    const { sql: compiled, params } = new PgDialect().sqlToQuery(
+      updateWhereArgs.mock.calls[0][0] as SQL,
+    );
+    expect(compiled.toLowerCase()).toContain('"status" =');
+    expect(params).toContain("approved");
   });
 
   it("registrar duas vezes o mesmo pagamento — a 2ª chamada não altera o número já gravado (devolve null)", async () => {
@@ -285,5 +357,95 @@ describe("registerNfse", () => {
     const { registerNfse } = await import("@/lib/db/payments");
     const row = await registerNfse(999, "123", 7);
     expect(row).toBeNull();
+  });
+});
+
+/**
+ * Invariante entre as duas funções, não sobre cada uma: se um pagamento não
+ * pode ENTRAR na fila, ele também não pode ser CARIMBADO. As duas condições
+ * são montadas a partir do mesmo predicado em lib/db/payments.ts; este teste
+ * é o que impede alguém de afrouxar uma das duas e deixar a outra para trás.
+ */
+describe("listPendingNfse × registerNfse — critério de elegibilidade compartilhado", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    selectRows.mockReset();
+    updateReturning.mockReset();
+  });
+
+  it("os dois WHEREs ligam o MESMO status — fila e carimbo não podem divergir", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    updateReturning.mockResolvedValueOnce([{ id: 1 }]);
+    const { listPendingNfse, registerNfse } = await import("@/lib/db/payments");
+
+    await listPendingNfse();
+    await registerNfse(1, "123", 7);
+
+    const dialect = new PgDialect();
+    const fila = dialect.sqlToQuery(selectWhere.mock.calls[0][0] as SQL);
+    const carimbo = dialect.sqlToQuery(updateWhereArgs.mock.calls[0][0] as SQL);
+
+    // O status elegível é o mesmo nas duas queries. `registerNfse` liga o id
+    // além dele, então a comparação é por conteúdo do status, não pelo array
+    // inteiro de params.
+    const statusDaFila = fila.params.filter((p) => typeof p === "string");
+    expect(statusDaFila).toEqual(["approved"]);
+    expect(carimbo.params).toContain("approved");
+
+    // E as duas exigem que a nota ainda não exista.
+    expect(fila.sql.toLowerCase()).toContain('"nfse_issued_at" is null');
+    expect(carimbo.sql.toLowerCase()).toContain('"nfse_issued_at" is null');
+  });
+});
+
+/**
+ * Caminho de reversão — restrito a `super_admin` na rota (ver
+ * tests/api/payments-nfse.test.ts). Aqui só a forma do SQL.
+ */
+describe("clearNfse", () => {
+  beforeEach(() => { vi.clearAllMocks(); updateReturning.mockReset(); });
+
+  it("limpa os três campos de NFS-e — nenhum resíduo de vínculo fica pra trás", async () => {
+    updateReturning.mockResolvedValueOnce([{ id: 1, nfse_number: null }]);
+    const { clearNfse } = await import("@/lib/db/payments");
+    await clearNfse(1);
+
+    expect(updateSetArgs).toHaveBeenCalledWith({
+      nfse_number: null,
+      nfse_issued_at: null,
+      nfse_issued_by: null,
+    });
+  });
+
+  it("o WHERE exige nfse_issued_at IS NOT NULL — não 'desfaz' pagamento que nunca teve nota", async () => {
+    updateReturning.mockResolvedValueOnce([{ id: 1 }]);
+    const { clearNfse } = await import("@/lib/db/payments");
+    await clearNfse(1);
+
+    const compiled = new PgDialect()
+      .sqlToQuery(updateWhereArgs.mock.calls[0][0] as SQL).sql.toLowerCase();
+    expect(compiled).toContain('"nfse_issued_at" is not null');
+  });
+
+  it("devolve null quando nada foi limpo (id inexistente ou sem nota)", async () => {
+    updateReturning.mockResolvedValueOnce([]);
+    const { clearNfse } = await import("@/lib/db/payments");
+    expect(await clearNfse(999)).toBeNull();
+  });
+});
+
+describe("getPaymentById", () => {
+  beforeEach(() => { vi.clearAllMocks(); selectRows.mockReset(); });
+
+  it("devolve a linha quando o id existe", async () => {
+    selectRows.mockResolvedValueOnce([{ id: 1, status: "refunded" }]);
+    const { getPaymentById } = await import("@/lib/db/payments");
+    expect(await getPaymentById(1)).toEqual({ id: 1, status: "refunded" });
+  });
+
+  it("devolve null quando o id não existe", async () => {
+    selectRows.mockResolvedValueOnce([]);
+    const { getPaymentById } = await import("@/lib/db/payments");
+    expect(await getPaymentById(999)).toBeNull();
   });
 });
