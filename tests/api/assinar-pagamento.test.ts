@@ -28,7 +28,7 @@ function req(body: unknown) {
 describe("POST /api/assinar/pagamento", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    verifyPaymentToken.mockReturnValue({ tenantId: 7, planSlug: "basico", couponId: null });
+    verifyPaymentToken.mockReturnValue({ tenantId: 7, planSlug: "pro", couponId: null });
     getTenantById.mockResolvedValue({ id: 7, slug: "loja", subscription_status: "incomplete", custom_domain: null });
     getCouponById.mockResolvedValue(null);
     claimTenantForCheckout.mockResolvedValue(true);

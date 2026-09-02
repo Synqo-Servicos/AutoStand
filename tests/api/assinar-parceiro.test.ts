@@ -42,10 +42,10 @@ function req(body: unknown) {
   return { json: async () => body, headers: new Headers() } as never;
 }
 
-const BASICO_CENTS = 16990;
+const PRO_CENTS = 24990;
 
 const VALID = {
-  plan: "basico", slug: "minhaloja", dealership_name: "Minha Loja",
+  plan: "pro", slug: "minhaloja", dealership_name: "Minha Loja",
   document: "52998224725",
   admin_name: "João", admin_email: "joao@loja.com", admin_password: "senha1234",
   partner_code: "joao-despachante", coupon_code: null, turnstile_token: "tok",
@@ -90,7 +90,7 @@ describe("POST /api/assinar — parceiro é atribuição, não desconto", () => 
     // O parceiro tem 15% configurado no painel — e mesmo assim o valor é cheio.
     // Se um dia isso mudar (decisão comercial), a faixa de indicação em
     // app/(public)/assinar/page.tsx precisa voltar a prometer o desconto.
-    expect(json.amount).toBe(BASICO_CENTS);
+    expect(json.amount).toBe(PRO_CENTS);
   });
 
   it("modo redirect: createCheckoutSession não recebe parceiro (só tenant, plano e cupom)", async () => {
@@ -133,7 +133,7 @@ describe("POST /api/assinar — parceiro é atribuição, não desconto", () => 
     const json = await res.json();
 
     expect(res.status).toBe(201);
-    expect(json.amount).toBe(15291); // 16990 - 10%
+    expect(json.amount).toBe(22491); // 24990 - 10%
   });
 });
 

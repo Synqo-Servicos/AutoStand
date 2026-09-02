@@ -16,7 +16,7 @@ export interface LayoutConfig {
   cardsPerRow: 3 | 4;
 }
 
-/** Layout aplicado a tenants que ainda não customizaram (ou no plano Básico). */
+/** Layout aplicado a tenants que ainda não customizaram. */
 export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   heroStyle: "gradient",
   heroImageUrl: null,

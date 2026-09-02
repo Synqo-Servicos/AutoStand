@@ -379,9 +379,9 @@ export interface RecorrenciaSummary {
  * quem assina AGORA (estado corrente da assinatura), não sobre o que entrou
  * de caixa num período. Por isso não recebe `competencia`.
  *
- * MRR usa o preço de tabela do plano corrente (lib/plans.ts), não o valor
- * historicamente pago — um tenant sem `plan` gravado (provisionado
- * manualmente) cai no Básico, mesmo fallback de `getPlan`.
+ * MRR usa o preço de tabela do plano corrente (lib/plans.ts) com o cupom
+ * aplicado, não o valor historicamente pago. Tenant sem `plan` gravado
+ * (provisionado manualmente) NÃO entra no MRR — conta em `semPlano`.
  */
 export async function getRecorrencia(): Promise<RecorrenciaSummary> {
   // LEFT JOIN porque a maioria das assinaturas não tem cupom — INNER esconderia

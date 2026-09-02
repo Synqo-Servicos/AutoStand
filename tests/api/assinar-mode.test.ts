@@ -31,7 +31,7 @@ function req(body: unknown) {
 }
 
 const VALID = {
-  plan: "basico", slug: "minhaloja", dealership_name: "Minha Loja",
+  plan: "pro", slug: "minhaloja", dealership_name: "Minha Loja",
   document: "52998224725",
   admin_name: "João", admin_email: "joao@loja.com", admin_password: "senha1234",
   partner_code: "", coupon_code: null, turnstile_token: "tok",
@@ -69,10 +69,10 @@ describe("POST /api/assinar — modo de checkout", () => {
     const json = await res.json();
     expect(res.status).toBe(201);
     expect(json.paymentToken).toBe("signed.token");
-    expect(json.amount).toBe(16990);
+    expect(json.amount).toBe(24990);
     expect(json.checkoutUrl).toBeUndefined();
     expect(createCheckoutSession).not.toHaveBeenCalled();
-    expect(signPaymentToken).toHaveBeenCalledWith({ tenantId: 42, planSlug: "basico", couponId: null });
+    expect(signPaymentToken).toHaveBeenCalledWith({ tenantId: 42, planSlug: "pro", couponId: null });
   });
 
   it("400 quando o documento é inválido", async () => {

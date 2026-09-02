@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ApiError, withSuperAdmin } from "@/lib/api";
 import { getTenantById, setTenantSubscriptionState } from "@/lib/db";
 import { createTransparentSubscription } from "@/lib/checkout";
-import { getPlan } from "@/lib/plans";
+import { ENTRY_PLAN, getPlan } from "@/lib/plans";
 import { assertDiagTenant, diagCoupon } from "@/lib/diag";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -39,7 +39,7 @@ export const POST = withSuperAdmin(async (req, { userId }) => {
   try {
     result = await createTransparentSubscription(
       tenant,
-      getPlan("basico"),
+      getPlan(ENTRY_PLAN),
       diagCoupon(userId),
       cardToken,
       payerEmail,

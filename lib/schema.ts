@@ -50,7 +50,7 @@ export const tenants = pgTable("tenants", {
   contact_cta_body: text("contact_cta_body"),
 
   // Billing. Null em tenants provisionados manualmente pelo super-admin.
-  plan: text("plan"), // PlanSlug — 'basico' | 'pro' | 'premium'
+  plan: text("plan"), // PlanSlug — 'pro' | 'premium' ('basico' é legado, lido como 'pro')
   /** ID da assinatura Mercado Pago (Preapproval). */
   mp_subscription_id: text("mp_subscription_id"),
   /** 'incomplete' | 'processing' | 'active' | 'past_due' | 'cancelled' (grafia usada em MP_STATUS_MAP; 'processing' = claim transitório do checkout, ver claimTenantForCheckout) */

@@ -22,10 +22,10 @@ vi.mock("mercadopago", () => {
 });
 
 const PLAN = {
-  slug: "basico",
-  name: "Básico",
-  priceMonthly: 16990,
-  mpPlanId: "plan_basico_id",
+  slug: "pro",
+  name: "Pro",
+  priceMonthly: 24990,
+  mpPlanId: "plan_pro_id",
 } as any;
 
 const TENANT = { id: 1, slug: "autoprime", custom_domain: null } as any;
@@ -60,7 +60,7 @@ describe("createCheckoutSession", () => {
 
     expect(mockPlanCreate).toHaveBeenCalledOnce();
     const body = mockPlanCreate.mock.calls[0][0].body;
-    expect(body.auto_recurring.transaction_amount).toBeCloseTo(169.9, 1);
+    expect(body.auto_recurring.transaction_amount).toBeCloseTo(249.9, 1);
     // back_url volta pro painel da PRÓPRIA loja (subdomínio), nunca o host
     // da plataforma — senão dá 404 + sessão perdida após pagar.
     expect(body.back_url).toMatch(/^https:\/\/autoprime\..+\/admin\/assinatura$/);
@@ -74,7 +74,7 @@ describe("createCheckoutSession", () => {
 
     const body = mockPlanCreate.mock.calls[0][0].body;
     expect(body.reason).toContain("10%");
-    expect(body.auto_recurring.transaction_amount).toBeCloseTo(152.91, 1);
+    expect(body.auto_recurring.transaction_amount).toBeCloseTo(224.91, 1);
     expect(body.back_url).toMatch(/^https:\/\/autoprime\..+\/admin\/assinatura$/);
     expect(result).toContain("plan_created_123");
   });
@@ -111,7 +111,7 @@ describe("createCheckoutSession", () => {
 
     const body = mockPlanCreate.mock.calls[0][0].body;
     expect(body.auto_recurring.free_trial).toEqual({ frequency: 1, frequency_type: "months" });
-    expect(body.auto_recurring.transaction_amount).toBeCloseTo(169.9, 1);
+    expect(body.auto_recurring.transaction_amount).toBeCloseTo(249.9, 1);
   });
 
   it("usa custom_domain no back_url quando configurado", async () => {
@@ -160,13 +160,13 @@ describe("createTransparentSubscription", () => {
 
   it("cria PreApproval com card_token, e-mail, status authorized e valor com cupom fixo", async () => {
     const { createTransparentSubscription } = await import("@/lib/checkout");
-    const res = await createTransparentSubscription(TENANT, PLAN, makeCoupon("fixed", 16890), "card_tok_abc", "comprador@teste.com");
+    const res = await createTransparentSubscription(TENANT, PLAN, makeCoupon("fixed", 24890), "card_tok_abc", "comprador@teste.com");
     const body = mockPreApprovalCreate.mock.calls[0][0].body;
     expect(body.card_token_id).toBe("card_tok_abc");
     expect(body.payer_email).toBe("comprador@teste.com");
     expect(body.status).toBe("authorized");
     expect(body.external_reference).toBe("1");
-    expect(body.auto_recurring.transaction_amount).toBeCloseTo(1.0, 2); // 16990-16890 = 100c = R$1,00
+    expect(body.auto_recurring.transaction_amount).toBeCloseTo(1.0, 2); // 24990-24890 = 100c = R$1,00
     expect(body.back_url).toMatch(/^https:\/\/autoprime\..+\/admin\/assinatura$/);
     expect(res).toEqual({ id: "sub_123", status: "authorized", statusDetail: "accredited" });
   });
@@ -186,7 +186,7 @@ describe("createTransparentSubscription", () => {
 
   it("cupom fixed igual à mensalidade: piso único, sem divergência com a prévia", async () => {
     const { createTransparentSubscription } = await import("@/lib/checkout");
-    const coupon = makeCoupon("fixed", 16990);
+    const coupon = makeCoupon("fixed", 24990);
     await createTransparentSubscription(TENANT, PLAN, coupon, "tok", "c@t.com");
 
     const body = mockPreApprovalCreate.mock.calls[0][0].body;
@@ -199,7 +199,7 @@ describe("createTransparentSubscription", () => {
     await createTransparentSubscription(TENANT, PLAN, makeCoupon("free_month", null), "tok", "c@t.com");
     const body = mockPreApprovalCreate.mock.calls[0][0].body;
     expect(body.auto_recurring.free_trial).toEqual({ frequency: 1, frequency_type: "months" });
-    expect(body.auto_recurring.transaction_amount).toBeCloseTo(169.9, 1);
+    expect(body.auto_recurring.transaction_amount).toBeCloseTo(249.9, 1);
   });
 
   it("envia notification_url explícito, apontando pro apex da plataforma", async () => {

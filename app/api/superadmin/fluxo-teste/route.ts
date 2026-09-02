@@ -3,6 +3,7 @@ import { ApiError, withSuperAdmin } from "@/lib/api";
 import { createTenant, getTenantById, deleteTenant } from "@/lib/db";
 import { cancelMpSubscription } from "@/lib/checkout";
 import { assertDiagTenant, diagAmountCents } from "@/lib/diag";
+import { ENTRY_PLAN } from "@/lib/plans";
 
 function tenantIdParam(req: Request): number {
   const raw = new URL(req.url).searchParams.get("tenantId");
@@ -24,7 +25,7 @@ export const POST = withSuperAdmin(async () => {
   const tenant = await createTenant({
     slug,
     name: "Diagnóstico",
-    plan: "basico",
+    plan: ENTRY_PLAN,
     status: "suspended",
     subscription_status: "incomplete",
   });
