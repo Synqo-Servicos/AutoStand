@@ -8,6 +8,8 @@
 **Legenda de disponibilidade por plano:**
 🟢 Todos os planos · 🔵 Pro e Premium · 🟣 Apenas Premium
 
+> Com o Básico descontinuado (set/2026), 🟢 e 🔵 passaram a marcar o mesmo conjunto — a marcação fica porque distingue o que é capability gated do que nunca foi.
+
 ---
 
 # Parte A — Painel da Loja (`/admin`)

@@ -35,7 +35,7 @@ para seguir o código (fonte da verdade):
 
 | Tema | Nota antiga dizia | Código (vigente) | Arquivos corrigidos |
 |---|---|---|---|
-| Preço do plano Básico | R$ 149 | **R$ 169,90** | `Planos e Preços.md`, `Decisões.md`, `Milestone 2.md` |
+| Plano Básico | R$ 149 → R$ 169,90 | **descontinuado** (set/2026) | `Planos e Preços.md`, `Decisões.md`, `Milestone 2.md` |
 | Preço do plano Pro | R$ 349,90 | **R$ 249,90** (ago/2026) | `Planos e Preços.md`, `Decisões.md`, `Milestone 2.md`, `04-Posicionamento-e-Vendas.md` |
 | Preço do plano Premium | R$ 599 → R$ 499,90 | **R$ 349,90** (ago/2026) | `Planos e Preços.md`, `Decisões.md`, `Milestone 2.md`, `04-Posicionamento-e-Vendas.md` |
 | Gateway de pagamento | Stripe | **Mercado Pago** (Preapproval) | `Visão Geral.md`, `Decisões.md`, `Modelo de Dados.md`, `Roadmap.md`, `Onboarding.md`, `SPEC-evolucao.md`, `Milestone 2.md` |

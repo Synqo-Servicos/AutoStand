@@ -69,26 +69,30 @@ atendimento consultivo e evolução contínua do produto.
 
 ## 5. Planos e preços
 
-> Valores e recursos conforme `lib/plans.ts` (fonte da verdade, jun/2026).
+> Valores e recursos conforme `lib/plans.ts` (fonte da verdade, set/2026).
 > Sem limite de veículos em nenhum plano.
 
-| | **Básico** | **Pro** ⭐ *(mais escolhido)* | **Premium** |
-|---|---|---|---|
-| **Preço/mês** | **R$ 169,90** | **R$ 249,90** | **R$ 349,90** |
-| Site + vitrine + CRM de leads | ✓ | ✓ | ✓ |
-| Cores da marca | ✓ | ✓ | ✓ |
-| Subdomínio `loja.autostand.com.br` | ✓ | ✓ | ✓ |
-| Painel completo (estoque, financeiro, transações, vendedores, documentos) | ✓ | ✓ | ✓ |
-| Domínio próprio | — | ✓ | ✓ |
-| Customização de layout (hero, cards, seções) | — | ✓ | ✓ |
-| Gerador de post para Instagram | — | ✓ | ✓ |
-| Análise de IA da vitrine | — | — | ✓ |
-| Inteligência de demanda | — | — | ✓ |
+| | **Pro** | **Premium** ⭐ |
+|---|---|---|
+| **Preço/mês** | **R$ 249,90** | **R$ 349,90** |
+| Site + vitrine + CRM de leads | ✓ | ✓ |
+| Cores da marca | ✓ | ✓ |
+| Subdomínio `loja.autostand.com.br` | ✓ | ✓ |
+| Painel completo (estoque, financeiro, transações, vendedores, documentos) | ✓ | ✓ |
+| Domínio próprio | ✓ | ✓ |
+| Customização de layout (hero, cards, seções) | ✓ | ✓ |
+| Gerador de post para Instagram | ✓ | ✓ |
+| Análise de IA da vitrine | — | ✓ |
+| Inteligência de demanda | — | ✓ |
 
 ### A leitura de cada plano (como recomendar)
-- **Básico — "estar online de forma decente":** o essencial para tirar a loja do caderno e ter site com a cor da marca no subdomínio. Para quem está começando a se digitalizar.
-- **Pro — "parecer uma marca de verdade":** domínio próprio, site customizado e gerador de post para Instagram. Para a loja que quer presença profissional. **É o plano âncora** (recomende-o por padrão).
+- **Pro — "a loja inteira online":** site no domínio próprio da loja, com layout e cores da marca, painel completo, CRM de leads e gerador de post para Instagram. **É o plano âncora** (recomende-o por padrão).
 - **Premium — "o sistema decidindo junto":** tudo do Pro + análise de IA da vitrine + inteligência de demanda (saber o que o mercado procura). Para quem quer vantagem de dado que **nenhum concorrente entrega**.
+
+> **O Básico (R$ 169,90) foi descontinuado em set/2026.** Ele vendia "site" — e a AutoCerto
+> dá site de graça no plano de R$ 150. Nunca ofereça "o site" como argumento: o que se vende
+> é o site **com CRM e domínio próprio** por menos do que o equivalente lá (R$ 300), e a
+> inteligência de demanda, que não existe no catálogo do concorrente.
 
 ---
 
@@ -130,7 +134,7 @@ atendimento consultivo e evolução contínua do produto.
 | "Já pago um portal." | O portal te mostra como anúncio genérico e não te dá gestão. Aqui você tem **site próprio + painel + leads no seu CRM**, e ainda aparece no nosso marketplace. |
 | "É caro." | É mensalidade fixa **sem comissão por venda**. Um carro a mais vendido no mês já paga o plano — e o painel te mostra a margem real de cada um. |
 | "Não tenho tempo/saco pra sistema." | Foi feito pra revenda, não pra TI. Cadastra o carro com foto e tá no ar. Fluxos curtos, sem treinamento longo. |
-| "Tenho poucos carros." | Não tem limite de veículos e o Básico cabe no bolso de quem está começando. Você cresce de plano quando quiser. |
+| "Tenho poucos carros." | Não tem limite de veículos e a mensalidade é fixa: com 5 ou 50 carros, o preço é o mesmo. Um carro a mais vendido no ano já paga a plataforma. |
 | "E se eu não gostar?" | Sem fidelidade. E tem a loja-demo pra você ver funcionando antes. |
 | "Meu cliente compra no WhatsApp mesmo." | Ótimo — o site e o marketplace **alimentam seu WhatsApp** com leads qualificados e organizados, sem você perder contato. |
 
