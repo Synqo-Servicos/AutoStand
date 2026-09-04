@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/api";
 import { discountedPriceCents } from "@/lib/coupon-pricing";
-import { getPlan } from "@/lib/plans";
+import { ENTRY_PLAN, PLANS, getPlan } from "@/lib/plans";
 import type { CouponRow } from "@/lib/schema";
 
 /**
@@ -9,14 +9,19 @@ import type { CouponRow } from "@/lib/schema";
  * via Checkout Transparente) para não duplicar o cupom sintético nem a guarda.
  */
 
-/** Cupom sintético (NÃO persistido) que derruba o Básico p/ R$1,00 — só diag. */
+/** O diagnóstico cobra R$ 1,00 de um cartão real — nunca o preço de tabela. */
+const DIAG_CHARGE_CENTS = 100;
+
+/** Cupom sintético (NÃO persistido) que derruba o plano de entrada p/ R$1,00 — só diag. */
 export function diagCoupon(userId: number): CouponRow {
   return {
     id: -1,
     code: "DIAG",
     description: "diagnóstico",
     discount_type: "fixed",
-    discount_value: 16890,
+    // Derivado do preço VIGENTE: um valor fixo aqui vira cobrança de verdade
+    // no cartão de quem rodar o diagnóstico assim que a tabela mudar.
+    discount_value: PLANS[ENTRY_PLAN].priceMonthly - DIAG_CHARGE_CENTS,
     max_uses: 1,
     used_count: 0,
     expires_at: null,
@@ -26,9 +31,9 @@ export function diagCoupon(userId: number): CouponRow {
   } as CouponRow;
 }
 
-/** Valor cobrado no diagnóstico (Básico com o cupom DIAG), em centavos. */
+/** Valor cobrado no diagnóstico (plano de entrada com o cupom DIAG), em centavos. */
 export function diagAmountCents(): number {
-  return discountedPriceCents(getPlan("basico"), diagCoupon(0));
+  return discountedPriceCents(getPlan(ENTRY_PLAN), diagCoupon(0));
 }
 
 /** Barreira de segurança: rotas de diagnóstico só operam tenants `diag-`. */

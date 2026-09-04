@@ -44,13 +44,14 @@ aliases:
 
 ## Precificação
 
-Tiers a **R$ 169,90 / R$ 249,90 / R$ 349,90** (vigente ago/2026 — fonte: `lib/plans.ts`; histórico: R$149/349/599 → R$169,90/349,90/499,90 em jun/2026 → atual). Racional:
+Tiers a **R$ 249,90 / R$ 349,90** (vigente set/2026 — fonte: `lib/plans.ts`; histórico: R$149/349/599 → R$169,90/349,90/499,90 em jun/2026 → R$169,90/249,90/349,90 em ago/2026 → Básico descontinuado em set/2026). Racional:
 
 - Precificar **pelo valor**, não pelo custo — uma concessionária que vende 1 carro a mais por causa do site já pagou o ano.
 - Custo marginal de infra por tenant é baixo (~R$10–30/mês); o custo real que escala é o **tempo de suporte** — daí a importância da customização self-service.
 - Argumento de venda: **mensalidade fixa, sem comissão por venda** (vs. Webmotors/iCarros).
 - **Escada compactada (ago/2026):** o degrau Básico→Pro era +106%, o que travava a migração pro tier-alvo. Agora 1x / 1,47x / 2,06x — o upgrade pro Pro custa +R$80. O topo caiu porque R$499,90 estava acima do que a revenda independente aceita.
-- **Domínio próprio fica incluído no Pro**, sem cobrança à parte: um `.com.br` custa ~R$3,33/mês, não sustenta linha de cobrança própria, e `customDomain` é a feature-âncora do tier. Quando o cliente não tem domínio, registra-se e repassa-se **no custo, uma vez só** — e o registro fica no nome do cliente, não da Synqo.
+- **Básico descontinuado (set/2026):** o tier de entrada vendia "site" contra uma AutoCerto que dá site de graça no plano de R$ 150 — argumento perdido de saída. Restaram dois planos e uma divisória que o catálogo do concorrente não tem: o site inteiro (R$ 249,90) vs. a inteligência de demanda (R$ 349,90). Escada de 1x / 1,40x. Nenhuma capability mudou de lado; o degrau de baixo saiu.
+- **Domínio próprio fica incluído nos dois planos**, sem cobrança à parte: um `.com.br` custa ~R$3,33/mês, não sustenta linha de cobrança própria, e `customDomain` é a feature-âncora do tier. Quando o cliente não tem domínio, registra-se e repassa-se **no custo, uma vez só** — e o registro fica no nome do cliente, não da Synqo.
 
 ## Arquitetura / Técnico
 

@@ -165,7 +165,7 @@ export function TenantForm({ tenant }: Props) {
           </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Plano" helperText="Define as capabilities. Vazio = capabilities do Básico.">
+          <Field label="Plano" helperText="Define as capabilities. Vazio = capabilities do Pro, o plano de entrada.">
             {(f) => (
               <Select
                 id={f.id}

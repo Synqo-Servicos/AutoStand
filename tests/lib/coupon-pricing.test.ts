@@ -7,7 +7,7 @@ import {
 import type { Plan } from "@/lib/plans";
 import type { CouponRow } from "@/lib/schema";
 
-const PLAN = { slug: "basico", name: "Básico", priceMonthly: 16990 } as unknown as Plan;
+const PLAN = { slug: "pro", name: "Pro", priceMonthly: 24990 } as unknown as Plan;
 
 function makeCoupon(discount_type: string, discount_value: number | null): CouponRow {
   return {
@@ -27,18 +27,18 @@ function makeCoupon(discount_type: string, discount_value: number | null): Coupo
 
 describe("discountedPriceCents", () => {
   it("percentage: abate o percentual da mensalidade", () => {
-    expect(discountedPriceCents(PLAN, makeCoupon("percentage", 10))).toBe(15291);
-    expect(discountedPriceCents(PLAN, makeCoupon("percentage", 50))).toBe(8495);
+    expect(discountedPriceCents(PLAN, makeCoupon("percentage", 10))).toBe(22491);
+    expect(discountedPriceCents(PLAN, makeCoupon("percentage", 50))).toBe(12495);
   });
 
   it("fixed: abate o valor em centavos", () => {
-    expect(discountedPriceCents(PLAN, makeCoupon("fixed", 5000))).toBe(11990);
-    expect(discountedPriceCents(PLAN, makeCoupon("fixed", 16890))).toBe(100);
+    expect(discountedPriceCents(PLAN, makeCoupon("fixed", 5000))).toBe(19990);
+    expect(discountedPriceCents(PLAN, makeCoupon("fixed", 24890))).toBe(100);
   });
 
   it("free_month (e tipo desconhecido): mensalidade cheia — o grátis é trial no MP", () => {
-    expect(discountedPriceCents(PLAN, makeCoupon("free_month", null))).toBe(16990);
-    expect(discountedPriceCents(PLAN, makeCoupon("tipo_novo", 999))).toBe(16990);
+    expect(discountedPriceCents(PLAN, makeCoupon("free_month", null))).toBe(24990);
+    expect(discountedPriceCents(PLAN, makeCoupon("tipo_novo", 999))).toBe(24990);
   });
 
   // --- Piso: cupom que zera o plano ---
@@ -51,7 +51,7 @@ describe("discountedPriceCents", () => {
   });
 
   it("fixed igual ao preço do plano: devolve o mínimo cobrável", () => {
-    expect(discountedPriceCents(PLAN, makeCoupon("fixed", 16990))).toBe(MIN_CHARGEABLE_CENTS);
+    expect(discountedPriceCents(PLAN, makeCoupon("fixed", 24990))).toBe(MIN_CHARGEABLE_CENTS);
   });
 
   it("fixed maior que o preço do plano: devolve o mínimo cobrável (não negativo)", () => {
@@ -66,8 +66,8 @@ describe("discountedPriceCents", () => {
     for (const c of [
       makeCoupon("percentage", 100),
       makeCoupon("percentage", 101),
-      makeCoupon("fixed", 16990),
-      makeCoupon("fixed", 20000),
+      makeCoupon("fixed", 24990),
+      makeCoupon("fixed", 30000),
     ]) {
       expect(discountedPriceCents(PLAN, c)).toBeGreaterThan(0);
     }
@@ -76,7 +76,7 @@ describe("discountedPriceCents", () => {
 
 describe("monthlyChargeCents", () => {
   it("sem cupom: mensalidade cheia", () => {
-    expect(monthlyChargeCents(PLAN, null)).toBe(16990);
+    expect(monthlyChargeCents(PLAN, null)).toBe(24990);
   });
 
   it("com cupom: mesmo número de discountedPriceCents", () => {

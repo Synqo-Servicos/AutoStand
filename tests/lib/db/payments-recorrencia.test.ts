@@ -60,7 +60,7 @@ function cupomPercentual(valor: number) {
 }
 
 const PRECO_PRO = 24990;
-const PRECO_BASICO = 16990;
+const PRECO_PREMIUM = 34990;
 const ZERADO = { mrrCents: 0, ativosPorPlano: {}, inadimplentes: 0, cortesias: 0, suspensos: 0, semPlano: 0 };
 
 describe("getRecorrencia — só entra no MRR quem paga", () => {
@@ -68,13 +68,13 @@ describe("getRecorrencia — só entra no MRR quem paga", () => {
 
   it("conta ativos por plano e soma o que é cobrado de cada um", async () => {
     mocks.selectRows.mockResolvedValueOnce([
-      linha(), linha(), linha({ plan: "basico" }),
+      linha(), linha(), linha({ plan: "premium" }),
       linha({ plan: "premium", subscription_status: "past_due" }),
     ]);
     const { getRecorrencia } = await import("@/lib/db/payments");
     expect(await getRecorrencia()).toEqual({
-      mrrCents: PRECO_PRO * 2 + PRECO_BASICO,
-      ativosPorPlano: { pro: 2, basico: 1 },
+      mrrCents: PRECO_PRO * 2 + PRECO_PREMIUM,
+      ativosPorPlano: { pro: 2, premium: 1 },
       inadimplentes: 1, cortesias: 0, suspensos: 0, semPlano: 0,
     });
   });
@@ -132,13 +132,13 @@ describe("getRecorrencia — só entra no MRR quem paga", () => {
   });
 
   /** Este caso AFIRMAVA o fallback. Agora afirma que ele não existe mais. */
-  it("assinatura ativa SEM PLANO não vira basico — não inventa mensalidade", async () => {
+  it("assinatura ativa SEM PLANO não vira o plano de entrada — não inventa mensalidade", async () => {
     mocks.selectRows.mockResolvedValueOnce([linha({ plan: null })]);
     const { getRecorrencia } = await import("@/lib/db/payments");
     const r = await getRecorrencia();
 
     expect(r.mrrCents).toBe(0);
-    expect(r.mrrCents).not.toBe(PRECO_BASICO);
+    expect(r.mrrCents).not.toBe(PRECO_PRO);
     expect(r.ativosPorPlano).toEqual({});
     expect(r.semPlano).toBe(1);
   });

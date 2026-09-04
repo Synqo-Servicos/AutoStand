@@ -8,21 +8,21 @@ describe("payment-token", () => {
   it("assina e verifica um payload válido dentro do prazo", async () => {
     const { signPaymentToken, verifyPaymentToken } = await import("@/lib/payment-token");
     const now = 1_000_000;
-    const token = signPaymentToken({ tenantId: 7, planSlug: "basico", couponId: 3 }, now);
-    expect(verifyPaymentToken(token, now + 60)).toEqual({ tenantId: 7, planSlug: "basico", couponId: 3 });
+    const token = signPaymentToken({ tenantId: 7, planSlug: "pro", couponId: 3 }, now);
+    expect(verifyPaymentToken(token, now + 60)).toEqual({ tenantId: 7, planSlug: "pro", couponId: 3 });
   });
 
   it("rejeita token expirado (> 30 min)", async () => {
     const { signPaymentToken, verifyPaymentToken } = await import("@/lib/payment-token");
     const now = 1_000_000;
-    const token = signPaymentToken({ tenantId: 7, planSlug: "basico", couponId: null }, now);
+    const token = signPaymentToken({ tenantId: 7, planSlug: "pro", couponId: null }, now);
     expect(verifyPaymentToken(token, now + 30 * 60 + 1)).toBeNull();
   });
 
   it("rejeita assinatura adulterada", async () => {
     const { signPaymentToken, verifyPaymentToken } = await import("@/lib/payment-token");
     const now = 1_000_000;
-    const token = signPaymentToken({ tenantId: 7, planSlug: "basico", couponId: null }, now);
+    const token = signPaymentToken({ tenantId: 7, planSlug: "pro", couponId: null }, now);
     const tampered = token.slice(0, -2) + (token.endsWith("aa") ? "bb" : "aa");
     expect(verifyPaymentToken(tampered, now + 1)).toBeNull();
   });

@@ -126,7 +126,7 @@ export function SignupForm({
       {/* Plano */}
       <fieldset>
         <legend className={labelClass}>Plano</legend>
-        <div className="mt-2 grid gap-3 sm:grid-cols-3">
+        <div className="mt-2 grid gap-3 sm:grid-cols-2">
           {PLAN_SLUGS.map((s) => {
             const selected = plan === s;
             return (

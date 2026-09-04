@@ -74,7 +74,7 @@ Configurável (`/admin/personalizar`, todos os planos): cores, hero (título/sub
 
 **Re-tiering de capabilities (proposta)**
 
-- `customColors`, `customTexts` (novo — todos os campos acima), `socialLinks` (novo) e `customAbout` (novo) → **Básico+**
+- `customColors`, `customTexts` (novo — todos os campos acima), `socialLinks` (novo) e `customAbout` (novo) → **todos os planos**
 - `layoutConfig` (estilos visuais) → Pro+
 - `customDomain` → Premium
 - `instagramPost`, `aiAnalysis`, `marketInsights` → Premium

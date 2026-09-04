@@ -34,8 +34,8 @@ describe("superadmin/fluxo-teste/pagar", () => {
     // usa o cupom DIAG (R$1) pelo mesmo createTransparentSubscription do cliente
     expect(createTransparentSubscription).toHaveBeenCalledWith(
       expect.objectContaining({ id: 7, slug: "diag-abc" }),
-      expect.objectContaining({ slug: "basico" }),
-      expect.objectContaining({ discount_type: "fixed", discount_value: 16890 }),
+      expect.objectContaining({ slug: "pro" }),
+      expect.objectContaining({ discount_type: "fixed", discount_value: 24890 }),
       "card_tok",
       "diag@autostand.com.br",
     );

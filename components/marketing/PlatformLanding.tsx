@@ -87,7 +87,7 @@ export function PlatformLanding({ partnerCode }: { partnerCode?: string }) {
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-eyebrow font-semibold uppercase text-signal">Planos</p>
             <h2 className="mt-3 font-display text-h2 font-semibold text-ink">
-              Um plano para cada momento da loja.
+              Dois planos. A diferença é a inteligência.
             </h2>
             <p className="mt-4 text-body text-n600">
               Mensalidade fixa, sem comissão por venda. Sem fidelidade. O site

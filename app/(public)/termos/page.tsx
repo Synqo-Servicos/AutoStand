@@ -56,7 +56,7 @@ export default function TermosPage() {
         <ul>
           <li>
             A contratação se dá por <strong>assinatura mensal recorrente</strong>,
-            nos valores do plano escolhido (Básico, Pro ou Premium), exibidos no
+            nos valores do plano escolhido (Pro ou Premium), exibidos no
             momento da contratação.
           </li>
           <li>

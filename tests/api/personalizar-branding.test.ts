@@ -31,6 +31,25 @@ vi.mock("@/lib/auth", () => ({
   getApiTenantId: vi.fn().mockResolvedValue(7),
 }));
 
+/**
+ * Com o Básico descontinuado, TODO plano vendido tem `layoutConfig` — a guarda
+ * do servidor deixou de ser alcançável por slug. Mockando só `capabilitiesFor`
+ * ela continua coberta, e volta a valer sozinha se um tier sem layout voltar.
+ */
+const CAPS_PADRAO = {
+  customColors: true,
+  layoutConfig: true,
+  customDomain: true,
+  instagramPost: true,
+  aiAnalysis: false,
+  marketInsights: false,
+};
+const capabilitiesFor = vi.fn();
+vi.mock("@/lib/plans", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/plans")>();
+  return { ...actual, capabilitiesFor };
+});
+
 const patch = (body: unknown) => ({ json: async () => body }) as never;
 const ctx = () => ({ params: Promise.resolve({}) }) as never;
 
@@ -70,6 +89,7 @@ const route = () => import("@/app/api/personalizar/route");
 
 beforeEach(() => {
   vi.clearAllMocks();
+  capabilitiesFor.mockReturnValue(CAPS_PADRAO);
   getTenantById.mockResolvedValue(tenant());
   updateTenant.mockImplementation(async (_id: number, p: Record<string, unknown>) => ({
     ...tenant(),
@@ -184,7 +204,7 @@ describe("PATCH /api/personalizar — hero (guarda cross-tenant)", () => {
   });
 
   it("plano sem a capability ignora layout_config (gating segue no servidor)", async () => {
-    getTenantById.mockResolvedValue(tenant({ plan: "basico" }));
+    capabilitiesFor.mockReturnValue({ ...CAPS_PADRAO, layoutConfig: false });
     const { PATCH } = await route();
     const res = await PATCH(patch({ ...layout(NEW_HERO_KEY), slogan: "oi" }), ctx());
     expect(res.status).toBe(200);

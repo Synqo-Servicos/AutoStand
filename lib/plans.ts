@@ -1,11 +1,16 @@
 /**
  * Planos da plataforma (AutoStand) e suas capabilities.
  *
- * Os 3 tiers são diferenciados por funcionalidade — não há limite de veículos
+ * São 2 tiers, diferenciados por funcionalidade — não há limite de veículos
  * (o mercado-alvo é homogêneo demais para a contagem segmentar planos).
+ * O Pro entrega o site inteiro; o Premium acrescenta a inteligência.
+ *
+ * O tier "Básico" (R$ 169,90, sem domínio próprio) foi DESCONTINUADO: ele
+ * vendia "site" contra um concorrente que dá site de graça. Slugs gravados
+ * como `basico` caem no Pro — ver `getPlan`.
  */
 
-export type PlanSlug = "basico" | "pro" | "premium";
+export type PlanSlug = "pro" | "premium";
 
 export interface PlanCapabilities {
   /** Editar as cores da marca. Disponível em todos os planos. */
@@ -33,20 +38,6 @@ export interface Plan {
 }
 
 export const PLANS: Record<PlanSlug, Plan> = {
-  basico: {
-    slug: "basico",
-    name: "Básico",
-    priceMonthly: 16990,   // R$ 169,90
-    mpPlanId: process.env.MERCADOPAGO_PLAN_BASICO,
-    capabilities: {
-      customColors: true,
-      layoutConfig: false,
-      customDomain: false,
-      instagramPost: false,
-      aiAnalysis: false,
-      marketInsights: false,
-    },
-  },
   pro: {
     slug: "pro",
     name: "Pro",
@@ -77,18 +68,24 @@ export const PLANS: Record<PlanSlug, Plan> = {
   },
 };
 
+/** O plano de entrada — o que um tenant recebe quando não há plano gravado. */
+export const ENTRY_PLAN: PlanSlug = "pro";
+
 export const PLAN_SLUGS = Object.keys(PLANS) as PlanSlug[];
 
 export function isPlanSlug(value: unknown): value is PlanSlug {
   return typeof value === "string" && value in PLANS;
 }
 
-/** Plano por slug. Aceita o valor cru do banco (string | null) e cai no Básico. */
+/**
+ * Plano por slug. Aceita o valor cru do banco (string | null) e cai no Pro —
+ * inclusive para o legado `basico`, cujo tier não existe mais.
+ */
 export function getPlan(slug: string | null | undefined): Plan {
-  return isPlanSlug(slug) ? PLANS[slug] : PLANS.basico;
+  return isPlanSlug(slug) ? PLANS[slug] : PLANS[ENTRY_PLAN];
 }
 
-/** Capabilities do plano. Tenant sem plano definido cai nas capabilities do Básico. */
+/** Capabilities do plano. Tenant sem plano definido cai nas capabilities do Pro. */
 export function capabilitiesFor(slug: string | null | undefined): PlanCapabilities {
   return getPlan(slug).capabilities;
 }
